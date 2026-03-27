@@ -221,14 +221,29 @@ export function AuthProvider({ children }) {
     const updates = { username: username.toLowerCase() }
     if (displayName) updates.display_name = displayName
 
-    // Try upsert to handle both existing and missing profiles
+    // Use update (not upsert) to preserve existing fields like role/premium status
     const { data, error } = await supabase
       .from('profiles')
-      .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
+      .update(updates)
+      .eq('id', user.id)
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      // If profile doesn't exist yet, fall back to insert (preserving any known role)
+      if (error.code === 'PGRST116') {
+        const { data: created, error: insertErr } = await supabase
+          .from('profiles')
+          .insert({ id: user.id, ...updates })
+          .select()
+          .single()
+        if (insertErr) throw insertErr
+        if (created) setProfile(created)
+        setNeedsProfileSetup(false)
+        return created
+      }
+      throw error
+    }
     if (data) setProfile(data)
     setNeedsProfileSetup(false)
     return data

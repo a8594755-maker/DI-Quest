@@ -67,10 +67,14 @@ function ProfileSetupModal({ isOpen, onClose }) {
     setPromoStatus(null)
     setPromoMessage('')
     try {
-      await redeemCode(promoCode)
+      const result = await redeemCode(promoCode)
       setPromoStatus('success')
       setPromoMessage(t('promo.success', 'Premium activated! All content unlocked.'))
       setPromoCode('')
+      // Force re-render with updated premium status
+      if (result?.role === 'premium') {
+        setLocalPremium(true)
+      }
     } catch (err) {
       setPromoStatus('error')
       if (err.message === 'INVALID_CODE') {
@@ -83,7 +87,9 @@ function ProfileSetupModal({ isOpen, onClose }) {
     }
   }
 
-  const isPremium = profile?.role === 'premium'
+  // Track premium status locally to update immediately after promo code redemption
+  const [localPremium, setLocalPremium] = useState(false)
+  const isPremium = profile?.role === 'premium' || localPremium
 
   return (
     <AnimatePresence>
