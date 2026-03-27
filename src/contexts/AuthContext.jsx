@@ -118,58 +118,75 @@ export function AuthProvider({ children }) {
   }, [user])
 
   // Listen to auth state changes
-  // Supabase v2 fires INITIAL_SESSION on subscribe, so we don't need a separate getSession() call.
-  // Calling both causes an auth token lock race condition.
   useEffect(() => {
     let initialSessionHandled = false
 
-    // Safety timeout: give more time when exchanging OAuth code
-    const hasAuthCode = window.location.search.includes('code=')
-    const timeoutMs = hasAuthCode ? 10000 : 3000
+    // Safety timeout
     const loadingTimeout = setTimeout(() => {
       setLoading(prev => {
         if (prev) console.warn('Auth loading timeout — forcing load complete')
         return false
       })
-    }, timeoutMs)
+    }, 10000)
+
+    const handleSession = async (session) => {
+      if (session?.user) {
+        setUser(session.user)
+        setIsGuest(false)
+        await fetchProfile(session.user.id, session.user.user_metadata)
+      } else {
+        setUser(null)
+        setProfile(null)
+        if (!initialSessionHandled) {
+          const wasGuest = localStorage.getItem('di-quest-guest')
+          if (wasGuest) setIsGuest(true)
+        }
+      }
+      initialSessionHandled = true
+      clearTimeout(loadingTimeout)
+      setLoading(false)
+    }
+
+    // If URL has OAuth code, exchange it explicitly first
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        if (error) {
+          console.error('Code exchange failed:', error.message)
+          // Fall back to existing session
+          supabase.auth.getSession().then(({ data: d }) => handleSession(d.session))
+        } else {
+          handleSession(data.session)
+        }
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname)
+      })
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
-        // Skip redundant TOKEN_REFRESHED events — just update the user object
         if (event === 'TOKEN_REFRESHED' && session?.user) {
           setUser(session.user)
           return
         }
-
-        if (session?.user) {
-          setUser(session.user)
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setProfile(null)
           setIsGuest(false)
-          await fetchProfile(session.user.id, session.user.user_metadata)
-          // Clean up OAuth code from URL to prevent stale code exchange on refresh
-          if (window.location.search.includes('code=')) {
-            window.history.replaceState({}, '', window.location.pathname)
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null)
-          setProfile(null)
-        } else if (!session) {
-          setUser(null)
-          setProfile(null)
-          // On initial load with no session, check for guest mode
-          if (!initialSessionHandled) {
-            const wasGuest = localStorage.getItem('di-quest-guest')
-            if (wasGuest) setIsGuest(true)
-          }
+          clearTimeout(loadingTimeout)
+          setLoading(false)
+          return
         }
+        // Skip if we already handled via explicit code exchange
+        if (code && initialSessionHandled) return
+        await handleSession(session)
       } catch (err) {
-        // Ignore lock contention errors — session is still valid
         if (err?.message?.includes('Lock')) {
           console.warn('Auth lock contention (safe to ignore):', err.message)
           return
         }
         console.error('Auth state change error:', err)
-      } finally {
-        initialSessionHandled = true
         clearTimeout(loadingTimeout)
         setLoading(false)
       }

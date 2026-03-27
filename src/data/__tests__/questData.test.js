@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { BRANCHES, getBranch, getBranchForWorld } from '../branches'
 
 describe('branches', () => {
-  it('has 5 learning tracks', () => {
-    expect(BRANCHES).toHaveLength(5)
+  it('has 6 learning tracks', () => {
+    expect(BRANCHES).toHaveLength(6)
   })
 
   it('each branch has required fields', () => {
