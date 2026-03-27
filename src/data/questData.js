@@ -9,26 +9,28 @@ import { sqlWorlds } from './worlds/sql'
 import { sqlWorldsEn } from './worlds/sql_en'
 import { pythonWorlds } from './worlds/python'
 import { diProductWorlds } from './worlds/diProduct'
+import { diProductWorldsEn } from './worlds/diProduct_en'
 
-function getSqlWorldsForLang() {
-  return i18n.language === 'en' ? sqlWorldsEn : sqlWorlds
+function forLang(zh, en) {
+  return i18n.language === 'en' ? en : zh
 }
 
 export function getWorlds() {
   return [
     ...businessAnalysisWorlds,
-    ...getSqlWorldsForLang(),
+    ...forLang(sqlWorlds, sqlWorldsEn),
     ...pythonWorlds,
-    ...diProductWorlds,
+    ...forLang(diProductWorlds, diProductWorldsEn),
   ].sort((a, b) => a.id - b.id)
 }
 
-// Backwards-compatible static export (used by components that don't need reactivity)
+// Backwards-compatible static export — Proxy delegates all access to getWorlds()
 export const WORLDS = new Proxy([], {
   get(target, prop) {
     const worlds = getWorlds()
-    if (prop === Symbol.iterator) return worlds[Symbol.iterator].bind(worlds)
-    return worlds[prop]
+    const value = worlds[prop]
+    if (typeof value === 'function') return value.bind(worlds)
+    return value
   },
 })
 

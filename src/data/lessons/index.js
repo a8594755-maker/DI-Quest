@@ -29,9 +29,18 @@ import world23_en from './world23_en'
 import world24_en from './world24_en'
 import world25_en from './world25_en'
 import world26_en from './world26_en'
+import world9_en from './world9_en'
+import world10_en from './world10_en'
+import world11_en from './world11_en'
+import world12_en from './world12_en'
+import world13_en from './world13_en'
+import world14_en from './world14_en'
 import world39 from './world39'
 import world40 from './world40'
 import world41 from './world41'
+import world39_en from './world39_en'
+import world40_en from './world40_en'
+import world41_en from './world41_en'
 
 const lessons = {
   1: world1,
@@ -69,10 +78,19 @@ import i18n from '../../i18n'
 
 const lessonsEn = {
   4: world4_en,
+  9: world9_en,
+  10: world10_en,
+  11: world11_en,
+  12: world12_en,
+  13: world13_en,
+  14: world14_en,
   23: world23_en,
   24: world24_en,
   25: world25_en,
   26: world26_en,
+  39: world39_en,
+  40: world40_en,
+  41: world41_en,
 }
 
 export function getWorldLesson(worldId) {
