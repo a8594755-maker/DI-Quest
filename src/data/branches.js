@@ -44,6 +44,14 @@ export const BRANCHES = [
     worldIds: [48, 49, 50, 51, 52, 53],
     zhOnly: true,
   },
+  {
+    id: 'supply-chain',
+    name: '供應鏈管理路線',
+    emoji: '🔗',
+    description: '從供應鏈全貌到風險永續，掌握 Supply Chain + Data + IT 的核心競爭力',
+    color: 'from-teal-500 to-emerald-500',
+    worldIds: [54, 55, 56, 57, 58, 59, 60, 61],
+  },
 ]
 
 import i18n from '../i18n'

@@ -61,6 +61,10 @@
     "professional-english": {
       "name": "Professional English Track",
       "description": "From project presentations to interview conversations — practical workplace English"
+    },
+    "supply-chain": {
+      "name": "Supply Chain Management Track",
+      "description": "From supply chain overview to risk & sustainability — master Supply Chain + Data + IT core competencies"
     }
   }
 }

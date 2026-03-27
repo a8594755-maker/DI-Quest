@@ -88,6 +88,14 @@ import world50 from './world50'
 import world51 from './world51'
 import world52 from './world52'
 import world53 from './world53'
+import world54 from './world54'
+import world55 from './world55'
+import world56 from './world56'
+import world57 from './world57'
+import world58 from './world58'
+import world59 from './world59'
+import world60 from './world60'
+import world61 from './world61'
 
 const lessons = {
   1: world1,
@@ -138,6 +146,14 @@ const lessons = {
   51: world51,
   52: world52,
   53: world53,
+  54: world54,
+  55: world55,
+  56: world56,
+  57: world57,
+  58: world58,
+  59: world59,
+  60: world60,
+  61: world61,
 }
 
 import i18n from '../../i18n'
@@ -191,6 +207,14 @@ const lessonsEn = {
   51: world51,
   52: world52,
   53: world53,
+  54: world54,
+  55: world55,
+  56: world56,
+  57: world57,
+  58: world58,
+  59: world59,
+  60: world60,
+  61: world61,
 }
 
 export function getWorldLesson(worldId) {
@@ -493,6 +517,27 @@ const QUEST_SECTION_MAP = {
   '53-3': '53-3：履歷子彈點',
   '53-4': '53-4：Slack / 工作溝通',
   '53-5': '53-5（Boss）：寫作綜合',
+  // ── 供應鏈管理路線（World 54-61）──
+  '54-1': '54-1：供應鏈角色與流向',
+  '54-2': '54-2：供應鏈關鍵概念',
+  '54-3': '54-3：供應鏈績效指標',
+  '55-1': '55-1：需求預測基礎',
+  '55-2': '55-2：庫存控制模型',
+  '55-3': '55-3：庫存策略與平衡',
+  '56-1': '56-1：採購流程與文件',
+  '56-2': '56-2：供應商評估與績效',
+  '56-3': '56-3：採購策略實戰',
+  '57-1': '57-1：運輸模式與物流',
+  '57-2': '57-2：倉儲作業與自動化',
+  '57-3': '57-3：物流實戰與 OTIF',
+  '58-1': '58-1：ERP 基礎與模組',
+  '58-2': '58-2：供應鏈系統生態',
+  '59-1': '59-1：供應鏈 KPI 與 Dashboard',
+  '59-2': '59-2：AI 驅動的供應鏈',
+  '60-1': '60-1：流程分析工具',
+  '60-2': '60-2：KPI 設計與持續改善',
+  '61-1': '61-1：供應鏈風險管理',
+  '61-2': '61-2：ESG 與永續供應鏈',
 }
 
 // 回傳顯示用的章節標題

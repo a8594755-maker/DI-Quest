@@ -61,6 +61,10 @@
     "professional-english": {
       "name": "職場英文路線",
       "description": "從專案介紹到面試對答，練出職場即戰力英文"
+    },
+    "supply-chain": {
+      "name": "供應鏈管理路線",
+      "description": "從供應鏈全貌到風險永續，掌握 Supply Chain + Data + IT 的核心競爭力"
     }
   }
 }

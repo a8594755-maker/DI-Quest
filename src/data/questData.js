@@ -18,6 +18,8 @@ import { businessAnalysisExtraWorlds } from './worlds/businessAnalysisExtra'
 import { businessAnalysisExtraWorldsEn } from './worlds/businessAnalysisExtra_en'
 import { professionalEnglishWorlds } from './worlds/professionalEnglish'
 import { professionalEnglishExtraWorlds } from './worlds/professionalEnglishExtra'
+import { supplyChainWorlds } from './worlds/supplyChain'
+import { supplyChainWorldsEn } from './worlds/supplyChain_en'
 
 function forLang(zh, en) {
   return i18n.language === 'en' ? en : zh
@@ -33,6 +35,7 @@ export function getWorlds() {
     ...forLang(businessAnalysisExtraWorlds, businessAnalysisExtraWorldsEn),
     ...forLang(professionalEnglishWorlds, professionalEnglishWorlds),
     ...forLang(professionalEnglishExtraWorlds, professionalEnglishExtraWorlds),
+    ...forLang(supplyChainWorlds, supplyChainWorldsEn),
   ].sort((a, b) => a.id - b.id)
 }
 
