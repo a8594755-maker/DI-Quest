@@ -5,7 +5,7 @@
     "list": "Friend List",
     "pending": "Pending Requests",
     "addFriend": "Add Friend",
-    "searchPlaceholder": "Search by username...",
+    "searchPlaceholder": "Search by name or @username...",
     "noFriends": "No friends yet. Invite your friends to learn together!",
     "noPending": "No pending friend requests",
     "noResults": "No matching users found",
@@ -27,7 +27,7 @@
     "myUsername": "My Username",
     "copyUsername": "Copy username",
     "shareInvite": "Share your invite link",
-    "searchHint": "Search by username or display name",
+    "searchHint": "Search by display name, or use @username for exact match",
     "orShareLink": "Or share your invite link to add friends"
   },
   "leaderboard": {

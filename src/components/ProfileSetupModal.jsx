@@ -41,10 +41,18 @@ function ProfileSetupModal({ isOpen, onClose }) {
 
     setSaving(true)
     try {
-      await completeProfileSetup({ username: trimmed, displayName: displayName.trim() || trimmed })
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), 10000)
+      )
+      await Promise.race([
+        completeProfileSetup({ username: trimmed, displayName: displayName.trim() || trimmed }),
+        timeout,
+      ])
       onClose()
     } catch (err) {
-      if (err.message?.includes('duplicate') || err.code === '23505') {
+      if (err.message === 'TIMEOUT') {
+        setError(t('profile.timeout', 'Request timed out. Please try again.'))
+      } else if (err.message?.includes('duplicate') || err.code === '23505') {
         setError(t('profile.usernameTaken', 'This username is already taken'))
       } else {
         setError(err.message)

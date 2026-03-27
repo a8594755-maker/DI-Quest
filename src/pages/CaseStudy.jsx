@@ -95,13 +95,24 @@ function CaseStudy() {
   }
 
   const handleOpenEndedSubmit = (score) => {
-    setAnswerCorrect(score >= 60)
-    completeChallenge(score)
+    const passed = score >= 60
+    setAnswerCorrect(passed)
+    if (passed) {
+      completeChallenge(score)
+    }
   }
 
   const currentIndex = quest ? quest.challenges.findIndex(c => c.id === Number(challengeId)) : -1
   const prevChallenge = quest?.challenges[currentIndex - 1]
   const nextChallenge = quest?.challenges[currentIndex + 1]
+
+  // Compute next quest in the same world (for post-completion navigation)
+  const nextQuestInWorld = (() => {
+    if (!world || !quest) return null
+    const questIndex = world.quests.findIndex(q => q.id === questId)
+    if (questIndex < 0 || questIndex >= world.quests.length - 1) return null
+    return world.quests[questIndex + 1]
+  })()
 
   const getDifficultyLabel = (diff) => {
     if (diff === 'easy') return t('case:caseStudy.difficultyBasic')
@@ -405,6 +416,23 @@ function CaseStudy() {
                 <span className="hidden sm:inline">{t('case:caseStudy.nextQuestion')}</span>
                 <span className="sm:hidden">{t('case:caseStudy.nextQuestion')}</span>
                 <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+            {submitted && !nextChallenge && nextQuestInWorld && (
+              <button
+                onClick={() => navigate(`/di-quest/quest/${worldId}/${nextQuestInWorld.id}`)}
+                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-xs sm:text-sm"
+              >
+                <span>{t('case:caseStudy.nextQuest', '前往下一關')}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+            {submitted && !nextChallenge && !nextQuestInWorld && (
+              <button
+                onClick={() => navigate(`/di-quest/map`)}
+                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors text-xs sm:text-sm"
+              >
+                <span>{t('case:caseStudy.backToMap', '回到地圖')}</span>
               </button>
             )}
           </div>

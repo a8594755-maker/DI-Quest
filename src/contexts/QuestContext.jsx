@@ -136,6 +136,9 @@ function reducer(state, action) {
     }
 
     case 'DAILY_CHECKIN': {
+      // Prevent duplicate check-in XP
+      if (state.checkedInToday) return state
+
       const today = new Date().toISOString().slice(0, 10)
       const bonus = action.payload?.bonusXp || 0
       const todayStats = state.analytics.dailyStats[today] || { challengesCompleted: 0, xpEarned: 0, timeSpentMs: 0 }

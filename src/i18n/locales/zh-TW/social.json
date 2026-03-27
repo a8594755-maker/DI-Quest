@@ -5,7 +5,7 @@
     "list": "好友列表",
     "pending": "待處理邀請",
     "addFriend": "加好友",
-    "searchPlaceholder": "搜尋使用者名稱...",
+    "searchPlaceholder": "搜尋名稱或 @使用者名稱...",
     "noFriends": "還沒有好友，快去邀請朋友一起學習吧！",
     "noPending": "沒有待處理的好友邀請",
     "noResults": "找不到符合的使用者",
@@ -27,7 +27,7 @@
     "myUsername": "我的使用者名稱",
     "copyUsername": "複製使用者名稱",
     "shareInvite": "分享邀請連結給朋友",
-    "searchHint": "搜尋使用者名稱或顯示名稱",
+    "searchHint": "搜尋顯示名稱，或用 @使用者名稱 精確搜尋",
     "orShareLink": "或分享邀請連結來加好友"
   },
   "leaderboard": {

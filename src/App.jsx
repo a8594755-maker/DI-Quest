@@ -14,6 +14,7 @@ const NPCChat = lazy(() => import('./pages/NPCChat'))
 const LessonView = lazy(() => import('./pages/LessonView'))
 const ReviewQueue = lazy(() => import('./pages/ReviewQueue'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const FriendsPage = lazy(() => import('./pages/FriendsPage'))
 
 function Loading() {
@@ -29,6 +30,7 @@ function App() {
     <Suspense fallback={<Loading />}>
       <Routes>
         <Route path="di-quest/login" element={<LoginPage />} />
+        <Route path="di-quest/reset-password" element={<ResetPasswordPage />} />
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="di-quest" element={<DIQuest />}>
             <Route index element={<BranchSelect />} />

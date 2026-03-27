@@ -9,16 +9,26 @@ export function useFriends() {
   const [loading, setLoading] = useState(true)
 
   const fetchFriends = useCallback(async () => {
-    if (!isAuthenticated || !user) return
+    if (!isAuthenticated || !user) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
 
     try {
       // Get accepted friendships where user is either requester or addressee
-      const { data: friendships } = await supabase
+      const { data: friendships, error: friendshipsErr } = await supabase
         .from('friendships')
         .select('id, requester_id, addressee_id, status')
         .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
         .eq('status', 'accepted')
+
+      if (friendshipsErr) {
+        console.error('Error fetching friendships:', friendshipsErr)
+        setFriends([])
+        setPendingRequests([])
+        return
+      }
 
       if (friendships && friendships.length > 0) {
         const friendIds = friendships.map(f =>
@@ -35,11 +45,17 @@ export function useFriends() {
       }
 
       // Get pending incoming requests
-      const { data: pending } = await supabase
+      const { data: pending, error: pendingErr } = await supabase
         .from('friendships')
         .select('id, requester_id, created_at')
         .eq('addressee_id', user.id)
         .eq('status', 'pending')
+
+      if (pendingErr) {
+        console.error('Error fetching pending requests:', pendingErr)
+        setPendingRequests([])
+        return
+      }
 
       if (pending && pending.length > 0) {
         const requesterIds = pending.map(p => p.requester_id)
@@ -57,6 +73,8 @@ export function useFriends() {
       }
     } catch (err) {
       console.error('Error fetching friends:', err)
+      setFriends([])
+      setPendingRequests([])
     } finally {
       setLoading(false)
     }
@@ -68,12 +86,25 @@ export function useFriends() {
 
   const searchUsers = async (query) => {
     if (!query || query.length < 2) return []
-    const { data } = await supabase
+
+    // Support @username for exact username search
+    const isUsernameSearch = query.startsWith('@')
+    const searchTerm = isUsernameSearch ? query.slice(1) : query
+    if (!searchTerm) return []
+
+    let q = supabase
       .from('profiles')
       .select('id, username, display_name, avatar_url, total_xp, streak_days')
-      .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
       .neq('id', user?.id)
       .limit(10)
+
+    if (isUsernameSearch) {
+      q = q.ilike('username', `%${searchTerm}%`)
+    } else {
+      q = q.or(`username.ilike.%${searchTerm}%,display_name.ilike.%${searchTerm}%`)
+    }
+
+    const { data } = await q
     return data || []
   }
 

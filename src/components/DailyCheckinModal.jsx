@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -11,10 +11,15 @@ import AnimatedNumber from './AnimatedNumber'
 
 function DailyCheckinModal({ isOpen, onClose }) {
   const { t } = useTranslation('social')
-  const { streakDays, totalXp, analytics, dispatch, longestStreak = 0, streakFreezes = 1 } = useQuest()
+  const { streakDays, totalXp, analytics, dispatch, longestStreak = 0, streakFreezes = 1, checkedInToday } = useQuest()
   const { isAuthenticated, user } = useAuth()
-  const [checkedIn, setCheckedIn] = useState(false)
+  const [checkedIn, setCheckedIn] = useState(checkedInToday)
   const [bonusXp, setBonusXp] = useState(0)
+
+  // Sync if checkedInToday changes (e.g. loaded from storage after mount)
+  useEffect(() => {
+    if (checkedInToday) setCheckedIn(true)
+  }, [checkedInToday])
 
   // Daily XP goal
   const dailyGoal = 50

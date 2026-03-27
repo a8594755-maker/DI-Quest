@@ -18,6 +18,11 @@ export function AuthProvider({ children }) {
       .eq('id', userId)
       .maybeSingle()
 
+    if (error) {
+      console.error('Error fetching profile:', error)
+      return null
+    }
+
     // Profile doesn't exist — create it (user was created before migration)
     if (!data) {
       const meta = userMeta || {}
@@ -96,14 +101,18 @@ export function AuthProvider({ children }) {
   }, [user])
 
   // Listen to auth state changes
+  // Supabase v2 fires INITIAL_SESSION on subscribe, so we don't need a separate getSession() call.
+  // Calling both causes an auth token lock race condition.
   useEffect(() => {
-    // Safety timeout: if loading takes more than 5 seconds, force it to stop
+    let initialSessionHandled = false
+
+    // Safety timeout: if loading takes more than 8 seconds, force it to stop
     const loadingTimeout = setTimeout(() => {
       setLoading(prev => {
         if (prev) console.warn('Auth loading timeout — forcing load complete')
         return false
       })
-    }, 5000)
+    }, 8000)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
@@ -114,29 +123,16 @@ export function AuthProvider({ children }) {
         } else {
           setUser(null)
           setProfile(null)
+          // On initial load with no session, check for guest mode
+          if (!initialSessionHandled) {
+            const wasGuest = localStorage.getItem('di-quest-guest')
+            if (wasGuest) setIsGuest(true)
+          }
         }
       } catch (err) {
         console.error('Auth state change error:', err)
       } finally {
-        clearTimeout(loadingTimeout)
-        setLoading(false)
-      }
-    })
-
-    // Check initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      try {
-        if (session?.user) {
-          setUser(session.user)
-          setIsGuest(false)
-          await fetchProfile(session.user.id, session.user.user_metadata)
-        } else {
-          const wasGuest = localStorage.getItem('di-quest-guest')
-          if (wasGuest) setIsGuest(true)
-        }
-      } catch (err) {
-        console.error('Get session error:', err)
-      } finally {
+        initialSessionHandled = true
         clearTimeout(loadingTimeout)
         setLoading(false)
       }
@@ -183,6 +179,18 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('di-quest-guest')
   }
 
+  const resetPasswordForEmail = async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/di-quest/reset-password',
+    })
+    if (error) throw error
+  }
+
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) throw error
+  }
+
   const continueAsGuest = () => {
     setIsGuest(true)
     localStorage.setItem('di-quest-guest', 'true')
@@ -194,29 +202,14 @@ export function AuthProvider({ children }) {
     const updates = { username: username.toLowerCase() }
     if (displayName) updates.display_name = displayName
 
-    // Try update first, then upsert if needed
+    // Try upsert to handle both existing and missing profiles
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates)
-      .eq('id', user.id)
+      .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
       .select()
       .single()
 
-    if (error) {
-      // If update failed (no row), try insert
-      if (error.code === 'PGRST116') {
-        const { data: inserted, error: insertError } = await supabase
-          .from('profiles')
-          .insert({ id: user.id, ...updates })
-          .select()
-          .single()
-        if (insertError) throw insertError
-        if (inserted) setProfile(inserted)
-        setNeedsProfileSetup(false)
-        return inserted
-      }
-      throw error
-    }
+    if (error) throw error
     if (data) setProfile(data)
     setNeedsProfileSetup(false)
     return data
@@ -238,6 +231,8 @@ export function AuthProvider({ children }) {
       signIn,
       signInWithGoogle,
       signOut,
+      resetPasswordForEmail,
+      updatePassword,
       continueAsGuest,
       completeProfileSetup,
       fetchProfile,

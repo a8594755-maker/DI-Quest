@@ -20,6 +20,11 @@ function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled =
     onAnswer?.(isCorrect, selected)
   }
 
+  const handleRetry = () => {
+    setSelected(null)
+    setSubmitted(false)
+  }
+
   const getOptionStyle = (optionId) => {
     if (!submitted) {
       if (selected === optionId) {
@@ -82,13 +87,20 @@ function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled =
         ))}
       </div>
 
-      {!submitted && (
+      {!submitted ? (
         <button
           onClick={handleSubmit}
           disabled={!selected || disabled}
           className="mt-4 w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium touch-manipulation"
         >
           {t('multipleChoice.confirm')}
+        </button>
+      ) : submitted && selected !== correctAnswer && !disabled && (
+        <button
+          onClick={handleRetry}
+          className="mt-4 w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-brand-accent text-white rounded-lg hover:bg-amber-600 transition-colors font-medium touch-manipulation"
+        >
+          {t('multipleChoice.retry', '再試一次')}
         </button>
       )}
     </div>

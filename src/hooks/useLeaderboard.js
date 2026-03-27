@@ -16,14 +16,16 @@ export function useLeaderboard(friendIds = []) {
     try {
       // Get leaderboard for friends + self
       const ids = [...new Set([...friendIds, user.id])]
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('weekly_leaderboard')
         .select('*')
         .in('id', ids)
 
+      if (error) console.error('Error fetching leaderboard:', error)
       setEntries(data || [])
     } catch (err) {
       console.error('Error fetching leaderboard:', err)
+      setEntries([])
     } finally {
       setLoading(false)
     }

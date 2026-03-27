@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import DOMPurify from 'dompurify'
 import { getWorldLesson } from '../data/lessons'
 import { WORLDS } from '../data/questData'
 import { getBranchForWorld } from '../data/branches'
@@ -206,7 +207,7 @@ function LessonView() {
                 tr: ({ children }) => <tr className="hover:bg-slate-800/50">{children}</tr>,
               }}
             >
-              {lesson}
+              {DOMPurify.sanitize(lesson)}
             </ReactMarkdown>
           </article>
         </div>

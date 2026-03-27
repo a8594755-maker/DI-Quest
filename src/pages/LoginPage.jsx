@@ -9,9 +9,9 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 function LoginPage() {
   const { t } = useTranslation('auth')
   const navigate = useNavigate()
-  const { signIn, signUp, signInWithGoogle, continueAsGuest } = useAuth()
+  const { signIn, signUp, signInWithGoogle, continueAsGuest, resetPasswordForEmail } = useAuth()
 
-  const [mode, setMode] = useState('signin') // 'signin' | 'signup'
+  const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'forgot'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -21,6 +21,7 @@ function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [signUpSuccess, setSignUpSuccess] = useState(false)
+  const [resetEmailSent, setResetEmailSent] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -28,6 +29,12 @@ function LoginPage() {
     setLoading(true)
 
     try {
+      if (mode === 'forgot') {
+        await resetPasswordForEmail(email)
+        setResetEmailSent(true)
+        setLoading(false)
+        return
+      }
       if (mode === 'signup') {
         if (password !== confirmPassword) {
           setError(t('error.passwordMismatch'))
@@ -63,6 +70,30 @@ function LoginPage() {
   const handleGuest = () => {
     continueAsGuest()
     navigate('/di-quest', { replace: true })
+  }
+
+  if (resetEmailSent) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md bg-brand-dark border border-slate-700 rounded-2xl p-8 text-center"
+        >
+          <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Mail className="w-8 h-8 text-emerald-400" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">{t('forgot.checkEmail')}</h2>
+          <p className="text-slate-400 text-sm mb-6">{t('forgot.checkEmailDesc')}</p>
+          <button
+            onClick={() => { setResetEmailSent(false); setMode('signin') }}
+            className="btn-primary"
+          >
+            {t('signup.backToLogin')}
+          </button>
+        </motion.div>
+      </div>
+    )
   }
 
   if (signUpSuccess) {
@@ -115,6 +146,18 @@ function LoginPage() {
         {/* Card */}
         <div className="bg-brand-dark border border-slate-700 rounded-2xl p-6 sm:p-8">
           {/* Tabs */}
+          {mode === 'forgot' ? (
+            <div className="mb-6">
+              <button
+                onClick={() => { setMode('signin'); setError('') }}
+                className="text-sm text-slate-400 hover:text-white transition-colors"
+              >
+                &larr; {t('signup.backToLogin')}
+              </button>
+              <h2 className="text-lg font-bold text-white mt-2">{t('forgot.title')}</h2>
+              <p className="text-slate-400 text-sm mt-1">{t('forgot.desc')}</p>
+            </div>
+          ) : (
           <div className="flex mb-6 bg-slate-800 rounded-lg p-1">
             {['signin', 'signup'].map((tab) => (
               <button
@@ -130,6 +173,7 @@ function LoginPage() {
               </button>
             ))}
           </div>
+          )}
 
           {/* Error */}
           <AnimatePresence>
@@ -208,8 +252,20 @@ function LoginPage() {
             </div>
 
             {/* Password */}
+            {mode !== 'forgot' && (
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">{t('common.password')}</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm text-slate-400">{t('common.password')}</label>
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('forgot'); setError('') }}
+                    className="text-xs text-brand-primary hover:underline"
+                  >
+                    {t('forgot.link')}
+                  </button>
+                )}
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
@@ -230,10 +286,11 @@ function LoginPage() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* Confirm Password */}
             <AnimatePresence>
-              {mode === 'signup' && (
+              {mode === 'signup' && mode !== 'forgot' && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -263,11 +320,12 @@ function LoginPage() {
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-              {mode === 'signin' ? t('signin.submit') : t('signup.submit')}
+              {mode === 'forgot' ? t('forgot.submit') : mode === 'signin' ? t('signin.submit') : t('signup.submit')}
             </button>
           </form>
 
-          {/* Divider */}
+          {/* Divider + Google + Guest (hidden in forgot mode) */}
+          {mode !== 'forgot' && (<>
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-slate-700" />
             <span className="text-slate-500 text-xs">{t('common.orContinueWith')}</span>
@@ -298,10 +356,11 @@ function LoginPage() {
             </button>
             <p className="text-slate-600 text-xs mt-1">{t('common.guestNote')}</p>
           </div>
+          </>)}
         </div>
 
         {/* Switch mode */}
-        <p className="text-center text-slate-400 text-sm mt-4">
+        {mode !== 'forgot' && <p className="text-center text-slate-400 text-sm mt-4">
           {mode === 'signin' ? t('signin.noAccount') : t('signup.hasAccount')}{' '}
           <button
             onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError('') }}
@@ -309,7 +368,7 @@ function LoginPage() {
           >
             {mode === 'signin' ? t('signin.signUpLink') : t('signup.signInLink')}
           </button>
-        </p>
+        </p>}
       </motion.div>
     </div>
   )

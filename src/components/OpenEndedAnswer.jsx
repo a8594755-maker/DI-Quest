@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useApiUsage } from '../hooks/useApiUsage'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import DOMPurify from 'dompurify'
 
 function OpenEndedAnswer({ prompt, evaluationCriteria = [], sampleAnswer, scenario, onSubmit, disabled = false }) {
   const { t } = useTranslation('case')
@@ -17,6 +18,7 @@ function OpenEndedAnswer({ prompt, evaluationCriteria = [], sampleAnswer, scenar
   const [evaluation, setEvaluation] = useState(null)
   const [error, setError] = useState(null)
   const [showSample, setShowSample] = useState(false)
+  const [lastScore, setLastScore] = useState(null)
 
   const handleSubmit = async () => {
     if (!answer.trim() || isEvaluating || disabled) return
@@ -72,6 +74,7 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
 
       const scoreMatch = result.match(/分數[：:]\s*(\d+)/)
       const score = scoreMatch ? parseInt(scoreMatch[1]) : 70
+      setLastScore(score)
 
       onSubmit?.(score)
     } catch (err) {
@@ -116,7 +119,7 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
             onChange={(e) => setAnswer(e.target.value)}
             disabled={disabled || isEvaluating}
             placeholder={t('openEnded.placeholder')}
-            className="w-full h-48 px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors resize-y text-sm leading-relaxed disabled:opacity-50"
+            className="w-full h-48 px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors resize-y text-base leading-relaxed disabled:opacity-50"
           />
 
           <div className="flex items-center justify-between mt-3">
@@ -180,9 +183,23 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
               {t('openEnded.aiCoachTitle')}
             </h4>
             <div className="prose prose-sm prose-invert max-w-none text-slate-300">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{evaluation}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{DOMPurify.sanitize(evaluation)}</ReactMarkdown>
             </div>
           </div>
+
+          {lastScore !== null && lastScore < 60 && !disabled && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <p className="text-amber-400 text-sm mb-3">
+                {t('openEnded.belowThreshold', '分數未達 60 分，請參考建議後重新作答。')}
+              </p>
+              <button
+                onClick={() => { setEvaluation(null); setLastScore(null); setAnswer('') }}
+                className="px-4 py-2 bg-brand-accent text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
+              >
+                {t('openEnded.retryBtn', '重新作答')}
+              </button>
+            </div>
+          )}
 
           {sampleAnswer && (
             <div>
