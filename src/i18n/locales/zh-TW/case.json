@@ -40,6 +40,9 @@
     "moreHints": "需要更多提示？(-20 XP)",
     "backToLesson": "回去看教材",
     "hintBtn": "提示",
+    "scenarioTab": "情境資料",
+    "answerTab": "作答",
+    "goToAnswer": "前往作答",
     "difficultyBasic": "基礎",
     "difficultyAdvanced": "進階",
     "difficultyChallenge": "挑戰"

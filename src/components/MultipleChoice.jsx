@@ -39,23 +39,23 @@ function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled =
 
   return (
     <div>
-      <h3 className="text-lg font-medium text-white mb-4">{question}</h3>
-      <div className="space-y-3">
+      <h3 className="text-base sm:text-lg font-medium text-white mb-3 sm:mb-4">{question}</h3>
+      <div className="space-y-2.5 sm:space-y-3">
         {options.map((option) => (
           <motion.button
             key={option.id}
             onClick={() => handleSelect(option.id)}
             disabled={submitted || disabled}
-            className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 ${getOptionStyle(option.id)}`}
+            className={`w-full text-left p-3 sm:p-4 rounded-lg border-2 transition-all duration-200 touch-manipulation ${getOptionStyle(option.id)}`}
             whileHover={!submitted && !disabled ? { scale: 1.01 } : {}}
-            whileTap={!submitted && !disabled ? { scale: 0.99 } : {}}
+            whileTap={!submitted && !disabled ? { scale: 0.98 } : {}}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2.5 sm:gap-3">
               <span className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-300">
                 {option.id}
               </span>
-              <div className="flex-1">
-                <p className="text-slate-200">{option.text}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-200 text-sm sm:text-base">{option.text}</p>
                 {submitted && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -63,13 +63,13 @@ function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled =
                     className="mt-2"
                   >
                     {option.id === correctAnswer && (
-                      <div className="flex items-start gap-2 text-emerald-400 text-sm">
+                      <div className="flex items-start gap-2 text-emerald-400 text-xs sm:text-sm">
                         <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <span>{option.explanation}</span>
                       </div>
                     )}
                     {option.id === selected && selected !== correctAnswer && (
-                      <div className="flex items-start gap-2 text-red-400 text-sm">
+                      <div className="flex items-start gap-2 text-red-400 text-xs sm:text-sm">
                         <XCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <span>{option.explanation}</span>
                       </div>
@@ -86,7 +86,7 @@ function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled =
         <button
           onClick={handleSubmit}
           disabled={!selected || disabled}
-          className="mt-4 px-6 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          className="mt-4 w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium touch-manipulation"
         >
           {t('multipleChoice.confirm')}
         </button>

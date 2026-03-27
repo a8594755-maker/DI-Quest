@@ -40,6 +40,9 @@
     "moreHints": "Need more hints? (-20 XP)",
     "backToLesson": "Back to lesson",
     "hintBtn": "Hint",
+    "scenarioTab": "Scenario",
+    "answerTab": "Answer",
+    "goToAnswer": "Go to Answer",
     "difficultyBasic": "Basic",
     "difficultyAdvanced": "Advanced",
     "difficultyChallenge": "Challenge"
