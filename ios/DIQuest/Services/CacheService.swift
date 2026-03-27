@@ -1,4 +1,4 @@
-import WebKit
+import Foundation
 
 @MainActor
 final class CacheService: ObservableObject {
@@ -21,11 +21,16 @@ final class CacheService: ObservableObject {
     }
 
     func clearCache() async {
-        let types = WKWebsiteDataStore.allWebsiteDataTypes()
-        await WKWebsiteDataStore.default().removeData(
-            ofTypes: types,
-            modifiedSince: Date(timeIntervalSince1970: 0)
-        )
+        let cacheURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+        if let cacheURL {
+            let contents = (try? FileManager.default.contentsOfDirectory(
+                at: cacheURL,
+                includingPropertiesForKeys: nil
+            )) ?? []
+            for fileURL in contents {
+                try? FileManager.default.removeItem(at: fileURL)
+            }
+        }
         await calculateCacheSize()
     }
 }
