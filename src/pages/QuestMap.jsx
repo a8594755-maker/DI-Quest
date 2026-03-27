@@ -54,8 +54,8 @@ function QuestMap() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">關卡地圖</h2>
-        <p className="text-slate-400">選擇一個世界開始你的學習之旅</p>
+        <h2 className="text-3xl font-bold text-white mb-2">Case Study 地圖</h2>
+        <p className="text-slate-400">選擇一個主題開始你的面試準備之旅</p>
       </div>
 
       <div className="grid gap-4">
@@ -116,7 +116,7 @@ function QuestMap() {
                       <div className="w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center">
                         <span className="text-brand-primary text-sm">📖</span>
                       </div>
-                      <span className="flex-1 font-medium text-brand-primary">閱讀講義</span>
+                      <span className="flex-1 font-medium text-brand-primary">閱讀教材</span>
                       <span className="text-slate-500 text-sm">先讀再練</span>
                     </Link>
                     {world.quests.map((quest, index) => {

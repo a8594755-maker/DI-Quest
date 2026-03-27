@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Sparkles, BookOpen, Code, HelpCircle, Map } from 'lucide-react'
+import { Send, Bot, User, Sparkles, BookOpen, HelpCircle, Map, BarChart3 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuest } from '../contexts/QuestContext'
 import { WORLDS } from '../data/questData'
@@ -8,70 +8,70 @@ import { chatWithDeepSeek } from '../utils/deepseek'
 
 // ── 知識庫：每個主題的解釋 ────────────────────────────────
 const KNOWLEDGE = {
-  '變數': {
-    content: '在 JavaScript 中，變數就像是一個有名字的箱子，你可以把值放進去：\n\n• `let` — 可以改的變數（推薦）\n• `const` — 不能改的常數（更推薦）\n• `var` — 舊語法，有 scope 陷阱，不推薦\n\n```js\nconst name = "小迪";\nlet score = 0;\nscore = 100; // OK！\n// name = "大迪"; // 錯！const 不能改\n```',
-    suggestions: ['什麼是 scope？', '什麼時候用 let vs const？', '回到地圖'],
+  'kpi': {
+    content: 'KPI（Key Performance Indicator）是衡量業務表現的關鍵指標：\n\n面試中常見的 KPI 概念：\n• **Leading Indicator** — 預測未來的指標（如：pipeline 數量預測營收）\n• **Lagging Indicator** — 結果指標（如：本月營收、客戶流失率）\n• **Guardrail Metric** — 確保你在改善一個指標時沒有傷害其他面向\n\n例：提升 conversion rate 時，guardrail 可以是退貨率或客訴數。\n\n面試技巧：提到 KPI 時永遠要說清楚「對誰而言」和「為什麼這個指標重要」。',
+    suggestions: ['什麼是 funnel analysis？', '什麼是 retention？', '回到地圖'],
   },
-  '函式': {
-    content: '函式是一段可以重複使用的程式碼：\n\n```js\n// 函式宣告\nfunction add(a, b) {\n  return a + b;\n}\n\n// 箭頭函式（更簡潔）\nconst add = (a, b) => a + b;\n```\n\n在 DI 專案中，`calculator.js` 裡面全是純函式 — 給相同輸入永遠得到相同輸出，不修改外部狀態。',
-    suggestions: ['什麼是純函式？', '什麼是箭頭函式？', '回到地圖'],
+  'metrics': {
+    content: '面試中常被問到的 Metrics 概念：\n\n• **North Star Metric** — 最能代表產品核心價值的單一指標\n• **Input vs Output Metrics** — 你能控制的 vs 結果\n• **Ratio vs Absolute** — 比率指標更能跨期比較\n\n範例：\n• Uber 的 North Star：完成的乘車次數\n• Airbnb 的 North Star：預訂住宿天數\n• Slack 的 North Star：每日發送訊息數\n\n面試技巧：永遠能解釋「為什麼選這個指標」而不是另一個。',
+    suggestions: ['什麼是 KPI？', '什麼是 A/B testing？', '回到地圖'],
   },
-  '純函式': {
-    content: '純函式有兩個特性：\n1. **相同輸入 → 相同輸出**（不依賴外部變數）\n2. **沒有副作用**（不修改外部狀態）\n\n```js\n// ✅ 純函式\nfunction add(a, b) { return a + b; }\n\n// ❌ 不純 — 依賴外部變數\nlet tax = 0.05;\nfunction total(price) { return price * (1 + tax); }\n\n// ❌ 不純 — 修改外部狀態\nlet count = 0;\nfunction inc() { count++; return count; }\n```\n\nDI 專案的 `calculator.js` 全是純函式，這讓測試變得超簡單！',
-    suggestions: ['為什麼純函式重要？', '什麼是副作用？', '回到地圖'],
+  'funnel': {
+    content: 'Funnel Analysis（漏斗分析）是拆解使用者旅程的核心方法：\n\n典型電商漏斗：\n瀏覽 (100%) → 加入購物車 (30%) → 開始結帳 (15%) → 完成付款 (8%)\n\n分析重點：\n1. 找到最大的 drop-off（流失最多的那一步）\n2. 按 segment 切開看（mobile vs desktop、新客 vs 舊客）\n3. 看趨勢變化（是突然掉還是逐漸下降）\n\n面試中被問到「指標下降」時，funnel 幾乎永遠是第一個分析工具。',
+    suggestions: ['什麼是 segmentation？', '什麼是 cohort？', '回到地圖'],
   },
-  'scope': {
-    content: 'Scope（作用域）決定了變數在哪裡可以被存取：\n\n• **Block scope** — `let`/`const` 只活在 `{}` 裡面\n• **Function scope** — `var` 活在整個函式裡\n• **Global scope** — 最外層宣告的全域變數\n\n```js\nif (true) {\n  let x = 1;\n  var y = 2;\n}\n// console.log(x); // 錯！x 在 block 外不存在\nconsole.log(y); // 2 — var 逃出了 block！\n```\n\n這就是為什麼我們不推薦 `var`。',
-    suggestions: ['什麼是閉包？', '什麼是變數？', '回到地圖'],
+  'segmentation': {
+    content: 'Segmentation（分群）是把使用者按特徵分組分析：\n\n常見的切分維度：\n• **人口統計** — 年齡、地區、語言\n• **行為** — 使用頻率、功能使用、消費金額\n• **來源** — organic vs paid、referral vs direct\n• **時間** — 新用戶 vs 老用戶、註冊時間\n\n為什麼重要？\n總體數據可能隱藏真相。例：整體 retention 持平，但新用戶 retention 大幅下降，只是被老用戶稀釋了。\n\n面試口訣：「我會先按 segment 切開看，看問題是 across the board 還是集中在某個群體。」',
+    suggestions: ['什麼是 cohort？', '什麼是 funnel？', '回到地圖'],
+  },
+  'retention': {
+    content: 'Retention（留存率）衡量用戶是否持續回來使用產品：\n\n常見 retention 指標：\n• **D1 / D7 / D30** — 第 1/7/30 天還有多少人回來\n• **Weekly Retention** — 每週回訪率\n• **Logo Retention vs Revenue Retention** — B2B 常用\n\nRetention 是最重要的 product-market fit 指標之一。\n如果 retention curve 最後趨於平穩（flatten），代表有一群核心用戶留下來了。\n如果一路往下掉到 0，代表產品沒有 product-market fit。\n\n面試技巧：討論 retention 時要指出你會用 cohort analysis 來追蹤。',
+    suggestions: ['什麼是 cohort？', '什麼是 KPI？', '回到地圖'],
+  },
+  'cohort': {
+    content: 'Cohort Analysis（世代分析）把用戶按「加入時間」分組追蹤：\n\n為什麼不直接看整體？\n因為整體數據會混合不同時期的用戶，掩蓋真實趨勢。\n\n範例：\n• 1 月 cohort：D7 retention = 40%\n• 2 月 cohort：D7 retention = 35%\n• 3 月 cohort：D7 retention = 28%\n→ 明顯看出新用戶的留存在惡化！\n\n但如果只看整體 DAU，可能因為用戶基數還在增長而看起來正常。\n\nCohort 是面試中最能展示分析深度的工具之一。',
+    suggestions: ['什麼是 retention？', '什麼是 segmentation？', '回到地圖'],
   },
   'sql': {
-    content: '在 DI 專案中，Supabase（基於 PostgreSQL）是我們的資料庫。基本 SQL 語法：\n\n```sql\n-- 查詢資料\nSELECT name, stock FROM products WHERE stock < 10;\n\n-- 排序\nSELECT * FROM orders ORDER BY created_at DESC;\n\n-- 聚合\nSELECT category, AVG(price) FROM products GROUP BY category;\n\n-- JOIN 關聯\nSELECT o.id, p.name\nFROM orders o\nJOIN products p ON o.product_id = p.id;\n```',
-    suggestions: ['什麼是 JOIN？', '什麼是 GROUP BY？', '回到地圖'],
+    content: '面試中的 SQL 思維（不用真的寫程式碼，但要會說邏輯）：\n\n面試官可能問：「你要怎麼查過去 30 天每個 channel 的轉換率？」\n\n你的回答架構：\n1. 需要哪些 table？（users, events, transactions）\n2. 怎麼 JOIN？（用 user_id 關聯）\n3. 怎麼 filter？（WHERE event_date >= 30 days ago）\n4. 怎麼 aggregate？（GROUP BY channel, COUNT + 比率計算）\n\n重點概念：\n• JOIN = 合併不同表的資料\n• GROUP BY = 按維度分組聚合\n• Window Function = 排名、移動平均、前後比較\n• Subquery = 先算出中間結果再繼續分析',
+    suggestions: ['什麼是 KPI？', '什麼是 dashboard？', '回到地圖'],
   },
-  'async': {
-    content: 'JavaScript 的非同步就像叫外賣 — 你不用站在門口等，可以先做別的事：\n\n```js\n// Promise\nfetch("/api/data")\n  .then(res => res.json())\n  .then(data => console.log(data));\n\n// async/await（更好讀）\nasync function getData() {\n  const res = await fetch("/api/data");\n  const data = await res.json();\n  return data;\n}\n```\n\nDI 專案的 `aiProxyService.js` 大量使用 async/await 來處理 API 呼叫。',
-    suggestions: ['什麼是 Promise？', '什麼是 EventBus？', '回到地圖'],
+  'dashboard': {
+    content: 'Dashboard 設計是面試常見題型：\n\n設計 dashboard 的思路：\n1. **給誰看？** — C-level、PM、營運團隊需要看不同東西\n2. **回答什麼問題？** — 每個 dashboard 應該回答 2-3 個核心問題\n3. **指標選擇** — North Star + 3-5 個 supporting metrics + guardrails\n4. **時間粒度** — 日報、週報、月報各有不同用途\n\n好 dashboard 的原則：\n• 一眼能看出「事情好不好」\n• 能引導下一步行動（actionable）\n• 不超過 8-10 個指標（太多就是噪音）',
+    suggestions: ['什麼是 KPI？', '什麼是 process mapping？', '回到地圖'],
   },
-  'eventbus': {
-    content: 'EventBus（事件匯流排）是發布/訂閱模式的實作：\n\n```js\n// 訂閱：我對「庫存變動」感興趣\nbus.on("inventory-change", (data) => {\n  console.log(`${data.product} 庫存變成 ${data.stock}`);\n});\n\n// 發布：庫存真的變了！\nbus.emit("inventory-change", { product: "螺絲", stock: 42 });\n```\n\n好處是：發送者和接收者不需要互相知道對方存在，降低耦合度。\n\nDI 專案中 `eventBus.js` 用它來串接不同模組。',
-    suggestions: ['什麼是 Semaphore？', '什麼是 Circuit Breaker？', '回到地圖'],
+  'process': {
+    content: 'Process Mapping（流程圖）是分析商業流程的基礎：\n\n步驟：\n1. 列出所有步驟（從觸發到完成）\n2. 標出每一步的負責人\n3. 標出每一步的平均時間\n4. 找出 bottleneck（最慢的那一步）\n\nBottleneck（瓶頸）識別方法：\n• 哪一步等待時間最長？\n• 哪一步需要最多人工介入？\n• 哪一步最常出錯需要 rework？\n\n面試中常被問：「如果要改善這個流程，你會先做什麼？」\n答案永遠是：先畫出流程，找到 bottleneck，改那個。',
+    suggestions: ['什麼是 A/B testing？', '什麼是 dashboard？', '回到地圖'],
   },
-  'semaphore': {
-    content: 'Semaphore（信號量）限制同時執行的任務數量：\n\n想像一間有 3 個座位的餐廳：\n- 前 3 位客人可以直接入座\n- 第 4 位客人必須等\n- 有人離開後，等待的人才能進去\n\n```js\nconst sem = new AsyncSemaphore(3);\nawait sem.acquire(); // 搶到座位\n// ... 做事 ...\nsem.release(); // 離開座位\n```\n\nDI 專案中用 Semaphore 限制同時發送的 AI API 請求數量，避免被限速。',
-    suggestions: ['什麼是 async/await？', '什麼是 Circuit Breaker？', '回到地圖'],
+  'ab testing': {
+    content: 'A/B Testing（實驗設計）是驗證假設的標準方法：\n\n基本架構：\n1. **假設**：改變 X 會讓 Y 提升\n2. **對照組 vs 實驗組**：隨機分配用戶\n3. **衡量指標**：primary metric + guardrail metrics\n4. **樣本量和時間**：要跑多久才有足夠信心\n\n常見陷阱：\n• 太早結束實驗（false positive）\n• Novelty effect（新鮮感導致的假提升）\n• Selection bias（分組不隨機）\n• 只看 primary metric 忽略 guardrail\n\n面試技巧：提到實驗時要能說出「我要觀察什麼指標」和「什麼情況下我不會做 A/B test」。',
+    suggestions: ['什麼是 KPI？', '什麼是 segmentation？', '回到地圖'],
   },
-  'circuit breaker': {
-    content: 'Circuit Breaker（熔斷器）保護系統不被連續錯誤壓垮：\n\n三個狀態：\n- **CLOSED**（正常）→ 請求正常通過\n- **OPEN**（熔斷）→ 連續失敗太多次，直接拒絕請求\n- **HALF_OPEN**（試探）→ 冷卻後讓一個請求通過測試\n\n就像家裡的電路跳閘 — 過載時自動斷電保護，等穩定了再手動合回去。\n\nDI 專案的 `aiProxyService.js` 用它保護 AI API 呼叫。',
-    suggestions: ['什麼是 Semaphore？', '什麼是 ReAct 迴圈？', '回到地圖'],
+  'recommendation': {
+    content: '面試中「提出建議」的框架：\n\n結構化建議的 4 步驟：\n1. **問題摘要** — 用一句話說清楚問題是什麼\n2. **分析發現** — 數據告訴你什麼（2-3 個 key findings）\n3. **建議行動** — 優先順序排列的具體建議\n4. **衡量成功** — 怎麼知道建議有效\n\nPrioritization 框架：\n• **Impact vs Effort** — 2×2 matrix\n• **ICE Score** — Impact × Confidence × Ease\n• **RICE** — Reach × Impact × Confidence / Effort\n\n面試技巧：永遠從 high impact + low effort 的建議開始講。',
+    suggestions: ['什麼是 A/B testing？', '什麼是 process mapping？', '回到地圖'],
   },
-  'react迴圈': {
-    content: 'ReAct（Reasoning + Acting）是 AI Agent 的核心模式：\n\n```\n迴圈：\n  1. 思考（Thought）— 分析目前狀況\n  2. 行動（Action）— 選擇並呼叫工具\n  3. 觀察（Observation）— 看工具回傳了什麼\n  → 回到 1，直到找到答案\n```\n\nDI 專案的 `chatAgentLoop.js` 就是這個模式的實作！\n\nAgent 不是「一次回答」，而是「多步推理」。',
-    suggestions: ['什麼是 Agent？', '什麼是 async/await？', '回到地圖'],
-  },
-  'bom': {
-    content: 'BOM（Bill of Materials，物料清單）是製造業的核心概念：\n\n一台車的 BOM：\n```\n車 (×1)\n├── 引擎 (×1)\n│   ├── 活塞 (×4)\n│   └── 火星塞 (×4)\n├── 輪胎 (×4)\n└── 座椅 (×5)\n```\n\n「BOM 展開」就是遞迴把這棵樹攤平，算出所有零件的需求量。\n\nDI 專案的 `bomCalculator.js` 中的 `explodeBOM()` 就是做這件事 — 它用遞迴 + 環路偵測來處理複雜的 BOM 結構。',
-    suggestions: ['什麼是遞迴？', '什麼是安全庫存？', '回到地圖'],
-  },
-  '安全庫存': {
-    content: '安全庫存是為了應對不確定性而額外儲備的庫存量：\n\n公式：**安全庫存 = Z × σ × √LT**\n\n• Z = 服務水準對應的 Z 分數（95% → 1.65，99% → 2.33）\n• σ = 需求的標準差（需求波動度）\n• LT = 前置時間（天數）\n\n例如：需求標準差 20，前置時間 7 天，95% 服務水準：\n→ 1.65 × 20 × √7 ≈ 87 個\n\nDI 專案中 `calculator.js` 的 `calculateDaysToStockout` 會用到安全庫存來判斷缺貨風險。',
-    suggestions: ['什麼是 BOM？', '什麼是風險量化？', '回到地圖'],
+  'prioritization': {
+    content: 'Prioritization（排序優先級）是面試的核心能力：\n\n常用框架：\n• **2×2 Matrix** — Impact vs Effort，先做右上角（高影響低成本）\n• **ICE** — 每個選項打 Impact / Confidence / Ease 分數\n• **MoSCoW** — Must have / Should have / Could have / Won\'t have\n\n面試中的應用場景：\n• 「你有 3 個建議，先做哪個？」\n• 「資源有限，你怎麼決定？」\n• 「stakeholder 意見不同，怎麼排序？」\n\n永遠能解釋你的排序邏輯，而不是只說「我覺得 A 比較重要」。',
+    suggestions: ['什麼是 recommendation？', '什麼是 KPI？', '回到地圖'],
   },
 }
 
 // ── 關鍵字匹配 ────────────────────────────────────────────
 const KEYWORD_MAP = [
-  { keywords: ['變數', 'let', 'const', 'var', 'variable'], topic: '變數' },
-  { keywords: ['函式', 'function', '箭頭', 'arrow'], topic: '函式' },
-  { keywords: ['純函式', 'pure function', '副作用'], topic: '純函式' },
-  { keywords: ['scope', '作用域', '閉包'], topic: 'scope' },
-  { keywords: ['sql', 'select', 'where', 'join', 'group by', '資料庫', '查詢'], topic: 'sql' },
-  { keywords: ['async', 'await', 'promise', '非同步', '異步'], topic: 'async' },
-  { keywords: ['eventbus', 'event bus', '事件', 'pub/sub', '發布訂閱'], topic: 'eventbus' },
-  { keywords: ['semaphore', '信號量', '並發', '限流'], topic: 'semaphore' },
-  { keywords: ['circuit breaker', '熔斷', '斷路'], topic: 'circuit breaker' },
-  { keywords: ['react loop', 'react 迴圈', 'reasoning', 'agent 思考'], topic: 'react迴圈' },
-  { keywords: ['bom', '物料', '展開', '零件'], topic: 'bom' },
-  { keywords: ['安全庫存', 'safety stock', '服務水準'], topic: '安全庫存' },
+  { keywords: ['kpi', '指標', 'leading', 'lagging', 'guardrail', 'north star'], topic: 'kpi' },
+  { keywords: ['metric', '衡量', '成功指標', 'success metric'], topic: 'metrics' },
+  { keywords: ['funnel', '漏斗', 'drop-off', 'conversion', '轉換率'], topic: 'funnel' },
+  { keywords: ['segmentation', '分群', '分段', 'segment', '使用者分群'], topic: 'segmentation' },
+  { keywords: ['retention', '留存', '回訪', '流失'], topic: 'retention' },
+  { keywords: ['cohort', '世代', '世代分析'], topic: 'cohort' },
+  { keywords: ['sql', 'join', 'group by', '資料庫', '查詢', 'query'], topic: 'sql' },
+  { keywords: ['dashboard', '儀表板', '報表', '視覺化'], topic: 'dashboard' },
+  { keywords: ['process', '流程', 'bottleneck', '瓶頸', 'process mapping'], topic: 'process' },
+  { keywords: ['a/b test', 'ab test', '實驗', 'experiment', '假設驗證'], topic: 'ab testing' },
+  { keywords: ['recommendation', '建議', '改善', '行動方案'], topic: 'recommendation' },
+  { keywords: ['prioritization', '優先', '排序', 'ice', 'rice', 'impact'], topic: 'prioritization' },
 ]
 
 function findTopic(input) {
@@ -92,8 +92,8 @@ function getProgressResponse(questStatus, challengeStatus, totalXp, levelInfo) {
 
   if (completedQuests === 0) {
     return {
-      content: `你還沒完成任何關卡！建議從「World 1: JavaScript 基礎」開始。先閱讀講義，再去挑戰！\n\n第一關非常簡單 — 就是宣告一些變數。你可以的！💪`,
-      suggestions: ['帶我去 World 1', '什麼是變數？', '有什麼建議？'],
+      content: `你還沒完成任何關卡！建議從「World 1: 問題拆解基礎」開始。先閱讀講義，再去挑戰！\n\n第一關是學會分類問題 — Business / Product / System。你可以的！💪`,
+      suggestions: ['帶我去 World 1', '什麼是 KPI？', '有什麼建議？'],
     }
   }
 
@@ -127,12 +127,14 @@ function getAdviceResponse(questStatus) {
 
   const world = WORLDS[currentWorldIndex]
   const tips = {
-    1: '建議先花 10 分鐘讀完 World 1 的講義，了解變數、函式、條件式這些基礎。挑戰中的程式碼都是從真實的 DI 專案來的，不是虛構的範例！',
-    2: 'World 2 的重點是「純函式」和「驗證」。記住：好的函式只做一件事，而且相同輸入永遠給相同輸出。BOM 遞迴 Boss 有點難 — 先搞懂基本遞迴再去挑戰。',
-    3: 'SQL 的關鍵是理解「聲明式」思維 — 你告訴資料庫你「要什麼」，而不是「怎麼做」。先掌握 SELECT + WHERE，再學 JOIN 和 GROUP BY。',
-    4: 'React 的核心就是：資料 → UI。把資料的變化想成「狀態機」，UI 只是狀態的映射。Context、useEffect 都是圍繞這個概念設計的。',
-    5: 'Agent 模式的世界！async/await 是基礎中的基礎，EventBus 讓模組解耦，Semaphore 控制並發，Circuit Breaker 保護系統。一步步來！',
-    6: '最後一個世界！這裡不只是寫程式，更要理解商業邏輯。安全庫存公式、風險量化、What-If 分析 — 都是業界每天在用的東西。',
+    1: '建議先花 10 分鐘讀完 World 1 的講義，了解問題分類（Business / Product / System）和結構化拆解。這些是所有 Case Study 的基礎！',
+    2: 'World 2 的重點是 KPI 和商業指標。記住：永遠要能解釋「為什麼選這個指標」。Leading vs Lagging、Guardrail Metrics 是面試高頻考點。',
+    3: 'World 3 是數據分析思維。Funnel、Segmentation、Cohort 是分析的三大武器。練習時想像面試官問你「指標掉了怎麼查」。',
+    4: 'World 4 是 SQL 與資料素養。面試不一定要寫 SQL，但要能說出查詢邏輯 — 需要哪些 table、怎麼 JOIN、怎麼 aggregate。',
+    5: 'World 5 是 Product Thinking！User Journey、Feature 評估、Adoption 問題診斷 — 這些是 PM 和 Product Analyst 面試的核心。',
+    6: 'World 6 是 Business Process。學會畫流程圖、找 bottleneck、判斷哪些步驟該自動化。很多公司愛考流程改善的 case。',
+    7: 'World 7 是實驗與驗證！A/B Testing、假設設計、Correlation vs Causation — 這些概念在面試中非常高頻。',
+    8: 'World 8 是綜合模擬面試！把前面學的全部串起來，練習完整回答 Case Study。Boss 關是完整模擬面試，加油！',
   }
 
   return {
@@ -148,8 +150,8 @@ function NPCChat() {
     {
       id: 1,
       role: 'assistant',
-      content: '嗨！我是小迪 🤖，你的程式學習夥伴。\n\n我可以：\n• 解釋程式概念（變數、函式、SQL、async...）\n• 查看你的學習進度\n• 給你學習建議\n\n有什麼想問的？',
-      suggestions: ['我的進度如何？', '有什麼建議？', '什麼是純函式？'],
+      content: '嗨！我是小迪 🤖，你的面試練習教練。\n\n我可以：\n• 解釋 Case Study 概念（KPI、Funnel、Cohort、A/B Test...）\n• 查看你的練習進度\n• 給你面試準備建議\n\n有什麼想問的？',
+      suggestions: ['我的進度如何？', '有什麼建議？', '什麼是 funnel analysis？'],
     },
   ])
   const [input, setInput] = useState('')
@@ -197,8 +199,8 @@ function NPCChat() {
     // 5. 卡關幫助
     if (lower.includes('卡關') || lower.includes('不會') || lower.includes('好難') || lower.includes('提示') || lower.includes('hint')) {
       return {
-        content: '卡關很正常！這裡有幾個建議：\n\n1. **回去看講義** — 每個世界都有詳細教材\n2. **用提示系統** — 挑戰頁面右上角有「💡 提示」按鈕（最多 3 級提示）\n3. **看參考程式碼** — Boss 關卡會提供真實專案的程式碼供參考\n4. **問我概念** — 直接問我你不懂的概念\n\n別忘了：每個挑戰的程式碼都是從真實的 DI 專案來的，學會了就是實戰能力！',
-        suggestions: ['解釋什麼是純函式', '解釋什麼是 BOM', '我的進度如何？'],
+        content: '卡關很正常！這裡有幾個建議：\n\n1. **回去看講義** — 每個世界都有詳細教材\n2. **用提示系統** — 挑戰頁面右上角有「💡 提示」按鈕（最多 3 級提示）\n3. **想想框架** — 面試回答都有結構，先想大方向再補細節\n4. **問我概念** — 直接問我你不懂的分析概念\n\n別忘了：每個挑戰都是模擬真實面試情境，多練幾次就會越來越順！',
+        suggestions: ['什麼是 funnel analysis？', '什麼是 cohort？', '我的進度如何？'],
       }
     }
 
@@ -212,14 +214,14 @@ function NPCChat() {
     if (lower.match(/^(嗨|你好|hi|hello|hey|哈囉)/)) {
       return {
         content: `嗨！我是小迪，你目前是 Lv.${levelInfo.level} ${levelInfo.title}，共 ${totalXp} XP。有什麼我可以幫忙的嗎？`,
-        suggestions: ['我的進度如何？', '有什麼建議？', '解釋什麼是 async'],
+        suggestions: ['我的進度如何？', '有什麼建議？', '什麼是 KPI？'],
       }
     }
 
     // 8. 稱讚自己
     if (lower.includes('厲害') || lower.includes('太強') || lower.includes('awesome')) {
       return {
-        content: `你確實很厲害！已經拿到 ${totalXp} XP 了！繼續加油，距離下一級還有 ${levelInfo.xpForNext - levelInfo.currentXp} XP。\n\n每一關都是真實的企業級程式碼，能通過這些挑戰絕對不簡單。`,
+        content: `你確實很厲害！已經拿到 ${totalXp} XP 了！繼續加油，距離下一級還有 ${levelInfo.xpForNext - levelInfo.currentXp} XP。\n\n每一關都是模擬真實面試情境，能通過這些挑戰代表你的分析思維越來越強了。`,
         suggestions: ['下一步做什麼？', '回到地圖'],
       }
     }
@@ -261,9 +263,9 @@ function NPCChat() {
         const aiMessages = [
           {
             role: 'system',
-            content: `你是「小迪」，一個友善的程式學習夥伴（DI Quest 學習平台的 NPC）。
-你的任務是用繁體中文幫助使用者學習程式設計，特別是 JavaScript、SQL、React、async 模式、以及供應鏈相關的程式邏輯。
-回答要簡潔、有趣、鼓勵性質。如果問題涉及程式碼，用簡單的範例說明。
+            content: `你是「小迪」，一個友善的面試練習教練（DI Quest 學習平台的 NPC）。
+你的任務是用繁體中文幫助使用者準備商業 Case Study 面試，特別是問題拆解、KPI 分析、Funnel、Segmentation、Cohort、A/B Testing、流程優化、Product Thinking 等主題。
+回答要簡潔、有架構、鼓勵性質。盡量用真實的商業情境舉例，不要寫程式碼。
 使用者目前等級：Lv.${levelInfo.level} ${levelInfo.title}，共 ${totalXp} XP。
 請保持回答在 300 字以內。`,
           },
@@ -288,8 +290,8 @@ function NPCChat() {
       setMessages(prev => [...prev, {
         id: prev.length + 1,
         role: 'assistant',
-        content: '抱歉，我暫時無法連接 AI 服務 😅\n\n你可以試試問我特定的程式概念（如：什麼是純函式？什麼是 async？），或查看你的學習進度！',
-        suggestions: ['什麼是純函式？', '我的進度如何？', '有什麼建議？'],
+        content: '抱歉，我暫時無法連接 AI 服務 😅\n\n你可以試試問我特定的分析概念（如：什麼是 funnel？什麼是 cohort？），或查看你的練習進度！',
+        suggestions: ['什麼是 funnel？', '我的進度如何？', '有什麼建議？'],
       }])
     } finally {
       setIsTyping(false)
@@ -301,9 +303,9 @@ function NPCChat() {
   }
 
   const quickActions = [
-    { icon: BookOpen, label: '解釋概念', action: () => handleSend('解釋什麼是純函式') },
-    { icon: Code, label: '我卡關了', action: () => handleSend('我卡關了怎麼辦') },
-    { icon: HelpCircle, label: '學習建議', action: () => handleSend('有什麼建議？') },
+    { icon: BookOpen, label: '解釋概念', action: () => handleSend('什麼是 funnel analysis？') },
+    { icon: BarChart3, label: '我卡關了', action: () => handleSend('我卡關了怎麼辦') },
+    { icon: HelpCircle, label: '面試建議', action: () => handleSend('有什麼建議？') },
     { icon: Map, label: '查看進度', action: () => handleSend('我的進度如何？') },
   ]
 
@@ -436,7 +438,7 @@ function NPCChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="問小迪任何問題⋯（例如：什麼是純函式？）"
+              placeholder="問小迪任何問題⋯（例如：什麼是 funnel analysis？）"
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors"
             />
             <Sparkles className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-accent" />
@@ -451,7 +453,7 @@ function NPCChat() {
           </button>
         </div>
         <p className="text-xs text-slate-500 mt-2 text-center">
-          小迪可以解釋程式概念、查看進度、給學習建議
+          小迪可以解釋分析概念、查看進度、給面試準備建議
         </p>
       </div>
     </div>

@@ -1,5 +1,6 @@
-import { createContext, useContext, useReducer, useEffect } from 'react'
+import { createContext, useContext, useReducer, useEffect, useMemo } from 'react'
 import { getLevelInfo, calculateChallengeXp } from '../utils/xpCalculator'
+import { calculateNextReview, performanceToQuality } from '../utils/spacedRepetition'
 
 const QuestContext = createContext(null)
 
@@ -13,6 +14,13 @@ const initialState = {
   streakDays: 0,
   lastActiveDate: null,
   devMode: false,
+  // Learning Analytics
+  analytics: {
+    challengeTimings: {}, // { "1-1-1": { lastDurationMs, bestTimeMs, attemptDates[] } }
+    dailyStats: {},       // { "2026-03-26": { challengesCompleted, xpEarned, timeSpentMs } }
+  },
+  // Spaced Repetition
+  reviewSchedule: {},     // { "1-1-1": { nextReviewDate, interval, repetition, easeFactor, lastQuality } }
 }
 
 function loadState() {
@@ -32,20 +40,47 @@ function saveState(state) {
 function reducer(state, action) {
   switch (action.type) {
     case 'COMPLETE_CHALLENGE': {
-      const { questId, challengeId, score, code, usedHints, attempts } = action.payload
+      const { questId, challengeId, score, code, usedHints, attempts, isReview } = action.payload
       const key = `${questId}-${challengeId}`
       const prev = state.challengeStatus[key]
-      if (prev?.completed) return state // 已完成不重複加分
+      if (prev?.completed && !isReview) return state // 已完成不重複加分
 
       const baseXp = action.payload.baseXp || 50
-      const earnedXp = calculateChallengeXp(baseXp, { usedHints, attempts })
+      const earnedXp = isReview ? 0 : calculateChallengeXp(baseXp, { usedHints, attempts })
+
+      // 計算 spaced repetition schedule
+      const quality = performanceToQuality({ score, usedHints, attempts })
+      const prevReview = state.reviewSchedule[key] || { repetition: 0, easeFactor: 2.5, interval: 0 }
+      const { nextInterval, nextRepetition, nextEaseFactor } = calculateNextReview(
+        quality, prevReview.repetition, prevReview.easeFactor, prevReview.interval
+      )
+      const nextReviewDate = new Date(Date.now() + nextInterval * 86400000).toISOString().slice(0, 10)
+
+      // 更新 dailyStats
+      const today = new Date().toISOString().slice(0, 10)
+      const todayStats = state.analytics.dailyStats[today] || { challengesCompleted: 0, xpEarned: 0, timeSpentMs: 0 }
 
       return {
         ...state,
         totalXp: state.totalXp + earnedXp,
         challengeStatus: {
           ...state.challengeStatus,
-          [key]: { completed: true, score, usedHints, attempts, code, earnedXp },
+          [key]: isReview ? prev : { completed: true, score, usedHints, attempts, code, earnedXp },
+        },
+        reviewSchedule: {
+          ...state.reviewSchedule,
+          [key]: { nextReviewDate, interval: nextInterval, repetition: nextRepetition, easeFactor: nextEaseFactor, lastQuality: quality },
+        },
+        analytics: {
+          ...state.analytics,
+          dailyStats: {
+            ...state.analytics.dailyStats,
+            [today]: {
+              ...todayStats,
+              challengesCompleted: todayStats.challengesCompleted + (isReview ? 0 : 1),
+              xpEarned: todayStats.xpEarned + earnedXp,
+            },
+          },
         },
       }
     }
@@ -80,6 +115,36 @@ function reducer(state, action) {
 
     case 'TOGGLE_DEV_MODE':
       return { ...state, devMode: !state.devMode }
+
+    case 'RECORD_CHALLENGE_TIMING': {
+      const { questId, challengeId, durationMs } = action.payload
+      const key = `${questId}-${challengeId}`
+      const today = new Date().toISOString().slice(0, 10)
+      const prev = state.analytics.challengeTimings[key] || { bestTimeMs: Infinity, attemptDates: [] }
+      const todayStats = state.analytics.dailyStats[today] || { challengesCompleted: 0, xpEarned: 0, timeSpentMs: 0 }
+
+      return {
+        ...state,
+        analytics: {
+          ...state.analytics,
+          challengeTimings: {
+            ...state.analytics.challengeTimings,
+            [key]: {
+              lastDurationMs: durationMs,
+              bestTimeMs: Math.min(prev.bestTimeMs === Infinity ? durationMs : prev.bestTimeMs, durationMs),
+              attemptDates: [...prev.attemptDates.slice(-19), today],
+            },
+          },
+          dailyStats: {
+            ...state.analytics.dailyStats,
+            [today]: {
+              ...todayStats,
+              timeSpentMs: todayStats.timeSpentMs + durationMs,
+            },
+          },
+        },
+      }
+    }
 
     case 'RESET':
       return initialState
@@ -133,6 +198,35 @@ export function QuestProvider({ children }) {
     return completed
   }
 
+  // 學習分析摘要
+  const getAnalyticsSummary = useMemo(() => {
+    const { dailyStats, challengeTimings } = state.analytics
+    const days = Object.entries(dailyStats)
+    const last7 = days.filter(([d]) => {
+      const diff = (Date.now() - new Date(d).getTime()) / 86400000
+      return diff <= 7
+    })
+    const totalTimeMs = last7.reduce((sum, [, s]) => sum + (s.timeSpentMs || 0), 0)
+    const totalChallenges = last7.reduce((sum, [, s]) => sum + (s.challengesCompleted || 0), 0)
+    const timingEntries = Object.values(challengeTimings)
+    const avgTimeMs = timingEntries.length > 0
+      ? timingEntries.reduce((sum, t) => sum + (t.lastDurationMs || 0), 0) / timingEntries.length
+      : 0
+
+    return {
+      weeklyTimeMs: totalTimeMs,
+      weeklyChallenges: totalChallenges,
+      avgChallengeTimeMs: avgTimeMs,
+      velocityPerDay: last7.length > 0 ? (totalChallenges / Math.max(last7.length, 1)).toFixed(1) : '0',
+    }
+  }, [state.analytics])
+
+  // 到期複習數量
+  const getDueReviewCount = () => {
+    const today = new Date().toISOString().slice(0, 10)
+    return Object.values(state.reviewSchedule).filter(r => r.nextReviewDate <= today).length
+  }
+
   const value = {
     ...state,
     levelInfo,
@@ -140,6 +234,8 @@ export function QuestProvider({ children }) {
     isQuestUnlocked,
     isWorldUnlocked,
     getQuestProgress,
+    getAnalyticsSummary,
+    getDueReviewCount,
   }
 
   return (

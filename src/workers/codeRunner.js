@@ -1,109 +1,89 @@
-/**
- * Web Worker — 安全的程式碼執行沙盒
- * 在獨立執行緒中執行學生程式碼，避免阻塞 UI 或存取 DOM
- */
+// SQL Web Worker — 使用 sql.js 在瀏覽器端執行 SQLite
 
-/* eslint-disable no-restricted-globals */
-self.onmessage = function (e) {
-  const { code, tests, returnVars, timeout = 5000 } = e.data
+let db = null
 
-  const logs = []
-  const errors = []
+async function initSqlJs() {
+  const SQL = await globalThis.initSqlJs({
+    locateFile: file => `https://sql.js.org/dist/${file}`,
+  })
+  return SQL
+}
 
-  // 覆寫 console.log
-  const fakeConsole = {
-    log: (...args) => logs.push(args.map(String).join(' ')),
-    error: (...args) => errors.push(args.map(String).join(' ')),
-    warn: (...args) => logs.push('[warn] ' + args.map(String).join(' ')),
-  }
-
-  let timer = null
+self.onmessage = async function (e) {
+  const { type, payload } = e.data
 
   try {
-    // 建立安全環境：禁止存取 DOM、fetch 等
-    const sandbox = {
-      console: fakeConsole,
-      Math,
-      Date,
-      parseInt,
-      parseFloat,
-      isNaN,
-      isFinite,
-      Number,
-      String,
-      Boolean,
-      Array,
-      Object,
-      JSON,
-      Map,
-      Set,
-      RegExp,
-      Error,
-      TypeError,
-      RangeError,
-      DOMException,
-      Promise,
-      Infinity,
-      NaN,
-      undefined,
-    }
+    switch (type) {
+      case 'INIT_DB': {
+        // 載入 sql.js
+        if (!globalThis.initSqlJs) {
+          importScripts('https://sql.js.org/dist/sql-wasm.js')
+        }
+        const SQL = await initSqlJs()
+        db = new SQL.Database()
+        // 執行 schema + seed data
+        if (payload.schema) {
+          db.run(payload.schema)
+        }
+        self.postMessage({ type: 'READY' })
+        break
+      }
 
-    // 建立函式，把 returnVars 回傳
-    const returnStatement = returnVars && returnVars.length > 0
-      ? `\nreturn { ${returnVars.join(', ')} };`
-      : '\nreturn {};'
+      case 'RUN_SQL': {
+        if (!db) {
+          self.postMessage({ type: 'ERROR', message: '資料庫尚未初始化' })
+          return
+        }
+        const timeoutId = setTimeout(() => {
+          self.postMessage({ type: 'ERROR', message: '查詢超時（5 秒）' })
+        }, 5000)
 
-    const wrappedCode = `"use strict";\n${code}${returnStatement}`
+        const results = db.exec(payload.sql)
+        clearTimeout(timeoutId)
 
-    const keys = Object.keys(sandbox)
-    const values = Object.values(sandbox)
+        if (results.length === 0) {
+          self.postMessage({ type: 'RESULT', columns: [], rows: [] })
+        } else {
+          const { columns, values } = results[0]
+          self.postMessage({ type: 'RESULT', columns, rows: values })
+        }
+        break
+      }
 
-    // 用 Function constructor + 超時保護
-    const fn = new Function(...keys, wrappedCode)
+      case 'VALIDATE': {
+        if (!db) {
+          self.postMessage({ type: 'ERROR', message: '資料庫尚未初始化' })
+          return
+        }
+        // 執行使用者查詢
+        let userResult
+        try {
+          userResult = db.exec(payload.userSql)
+        } catch (err) {
+          self.postMessage({ type: 'VALIDATION', correct: false, error: err.message })
+          return
+        }
 
-    // 超時保護
-    let finished = false
-    timer = setTimeout(() => {
-      if (!finished) {
+        // 執行預期查詢
+        const expectedResult = db.exec(payload.expectedSql)
+
+        // 比對結果
+        const userRows = userResult.length > 0 ? JSON.stringify(userResult[0].values) : '[]'
+        const expectedRows = expectedResult.length > 0 ? JSON.stringify(expectedResult[0].values) : '[]'
+
         self.postMessage({
-          success: false,
-          error: `程式執行超過 ${timeout / 1000} 秒，可能有無窮迴圈`,
-          logs,
-          testResults: [],
+          type: 'VALIDATION',
+          correct: userRows === expectedRows,
+          expected: expectedResult.length > 0 ? { columns: expectedResult[0].columns, rows: expectedResult[0].values } : { columns: [], rows: [] },
+          actual: userResult.length > 0 ? { columns: userResult[0].columns, rows: userResult[0].values } : { columns: [], rows: [] },
         })
+        break
       }
-    }, timeout)
 
-    const ctx = fn(...values)
-    finished = true
-    clearTimeout(timer)
-
-    // 執行測試
-    const testResults = (tests || []).map((test) => {
-      try {
-        // 用 eval 建立測試函式（測試定義來自我們自己的 questData，不是用戶輸入）
-        const testFn = new Function('return ' + test.fn)()
-        const passed = !!testFn(ctx)
-        return { description: test.description, passed, error: null }
-      } catch (err) {
-        return { description: test.description, passed: false, error: err.message }
-      }
-    })
-
-    self.postMessage({
-      success: true,
-      logs,
-      errors,
-      testResults,
-    })
+      default:
+        self.postMessage({ type: 'ERROR', message: `未知的訊息類型: ${type}` })
+    }
   } catch (err) {
-    if (timer) clearTimeout(timer)
-    self.postMessage({
-      success: false,
-      error: err.message,
-      logs,
-      errors,
-      testResults: [],
-    })
+    self.postMessage({ type: 'ERROR', message: err.message })
   }
 }

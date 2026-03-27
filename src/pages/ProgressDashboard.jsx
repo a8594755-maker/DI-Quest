@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
-import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap } from 'lucide-react'
+import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap, BarChart3 } from 'lucide-react'
 import { WORLDS } from '../data/questData'
 import { useQuest } from '../contexts/QuestContext'
+import { DailyActivityChart, XpTrendChart, TimePerChallengeChart } from '../components/AnalyticsCharts'
 
 function ProgressDashboard() {
-  const { totalXp, levelInfo, questStatus, challengeStatus, streakDays } = useQuest()
+  const { totalXp, levelInfo, questStatus, challengeStatus, streakDays, analytics, getAnalyticsSummary } = useQuest()
 
   const totalQuestsCompleted = Object.values(questStatus).filter(q => q.completed).length
   const totalChallengesCompleted = Object.values(challengeStatus).filter(c => c.completed).length
@@ -30,12 +31,12 @@ function ProgressDashboard() {
     .slice(0, 8)
 
   const ACHIEVEMENT_DEFS = [
-    { id: 'first_code', name: '第一行程式碼', emoji: '🐣', desc: '完成第一個挑戰', check: () => totalChallengesCompleted >= 1 },
+    { id: 'first_case', name: '第一個 Case Study', emoji: '🐣', desc: '完成第一個挑戰', check: () => totalChallengesCompleted >= 1 },
     { id: 'streak_3', name: '連續三天', emoji: '🔥', desc: '連續 3 天登入學習', check: () => streakDays >= 3 },
     { id: 'streak_7', name: '連續七天', emoji: '🔥', desc: '連續 7 天登入學習', check: () => streakDays >= 7 },
-    { id: 'world1_done', name: 'JS 征服者', emoji: '🏝️', desc: '完成 World 1 所有關卡', check: () => questStatus['1-6']?.completed },
-    { id: 'ten_challenges', name: '刷題達人', emoji: '🧪', desc: '完成 10 個挑戰', check: () => totalChallengesCompleted >= 10 },
-    { id: 'boss_killer', name: 'Boss 殺手', emoji: '💎', desc: '通過任何 Boss 關', check: () => ['1-6','2-6','3-6','4-6','5-6','6-6'].some(id => questStatus[id]?.completed) },
+    { id: 'world1_done', name: '問題拆解大師', emoji: '🏝️', desc: '完成 World 1 所有關卡', check: () => questStatus['1-6']?.completed },
+    { id: 'ten_challenges', name: 'Case Study 達人', emoji: '🧪', desc: '完成 10 個挑戰', check: () => totalChallengesCompleted >= 10 },
+    { id: 'boss_killer', name: 'Boss 征服者', emoji: '💎', desc: '通過任何 Boss 關', check: () => ['1-6','2-6','3-6','4-6','5-6','6-6','7-6','8-6'].some(id => questStatus[id]?.completed) },
   ]
 
   return (
@@ -58,7 +59,7 @@ function ProgressDashboard() {
             </div>
             <div>
               <h3 className="text-xl font-bold text-white">{levelInfo.title}</h3>
-              <p className="text-slate-400">Lv.{levelInfo.level} 開發者</p>
+              <p className="text-slate-400">Lv.{levelInfo.level} Analyst</p>
             </div>
           </div>
           <div className="text-right">
@@ -205,6 +206,54 @@ function ProgressDashboard() {
               </div>
             )
           })}
+        </div>
+      </motion.div>
+
+      {/* 學習分析 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
+        className="mt-6"
+      >
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-brand-primary" />
+          學習分析
+        </h3>
+
+        {/* 分析統計卡片 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="card">
+            <p className="text-slate-400 text-sm mb-1">平均答題時間</p>
+            <p className="text-2xl font-bold text-white">
+              {getAnalyticsSummary.avgChallengeTimeMs > 0
+                ? `${Math.round(getAnalyticsSummary.avgChallengeTimeMs / 1000)}s`
+                : '—'}
+            </p>
+          </div>
+          <div className="card">
+            <p className="text-slate-400 text-sm mb-1">本週學習時間</p>
+            <p className="text-2xl font-bold text-white">
+              {getAnalyticsSummary.weeklyTimeMs > 0
+                ? `${Math.round(getAnalyticsSummary.weeklyTimeMs / 60000)} 分鐘`
+                : '—'}
+            </p>
+          </div>
+          <div className="card">
+            <p className="text-slate-400 text-sm mb-1">學習速度</p>
+            <p className="text-2xl font-bold text-white">
+              {getAnalyticsSummary.velocityPerDay} 題/天
+            </p>
+          </div>
+        </div>
+
+        {/* 圖表 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <DailyActivityChart dailyStats={analytics.dailyStats} />
+          <XpTrendChart dailyStats={analytics.dailyStats} />
+        </div>
+        <div className="mt-6">
+          <TimePerChallengeChart challengeTimings={analytics.challengeTimings} />
         </div>
       </motion.div>
     </div>

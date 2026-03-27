@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Play, BookOpen, HelpCircle, Trophy, CheckCircle } from 'lucide-react'
+import { ArrowLeft, FileQuestion, BookOpen, Trophy, CheckCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { getWorld, getQuest } from '../data/questData'
 import { useQuest } from '../contexts/QuestContext'
@@ -76,9 +76,9 @@ function QuestDetail() {
               <BookOpen className="w-6 h-6 text-brand-primary" />
             </div>
             <div>
-              <h2 className="text-white font-bold text-lg">先讀講義</h2>
+              <h2 className="text-white font-bold text-lg">先讀教材</h2>
               <p className="text-slate-400 text-sm">
-                在開始挑戰之前，先閱讀 {world.name} 的完整教材
+                在開始練習之前，先閱讀 {world.name} 的學習內容
               </p>
             </div>
           </div>
@@ -95,8 +95,8 @@ function QuestDetail() {
       {/* 挑戰列表 */}
       <div className="grid gap-4 mb-6">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Play className="w-5 h-5 text-brand-secondary" />
-          挑戰列表
+          <FileQuestion className="w-5 h-5 text-brand-secondary" />
+          Case Study 題目
         </h2>
 
         {quest.challenges && quest.challenges.length > 0 ? (
@@ -113,7 +113,7 @@ function QuestDetail() {
                 transition={{ delay: 0.2 + index * 0.08 }}
               >
                 <Link
-                  to={`/di-quest/arena/${worldId}/${questId}/${item.id}`}
+                  to={`/di-quest/case/${worldId}/${questId}/${item.id}`}
                   className="card flex items-center gap-4 hover:border-brand-primary/50 transition-colors group"
                 >
                   <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl font-bold transition-colors ${
@@ -141,39 +141,22 @@ function QuestDetail() {
                       )}
                     </div>
                   </div>
-                  <Play className="w-5 h-5 text-slate-500 group-hover:text-brand-primary transition-colors" />
+                  <FileQuestion className="w-5 h-5 text-slate-500 group-hover:text-brand-primary transition-colors" />
                 </Link>
               </motion.div>
             )
           })
         ) : (
           <div className="card text-center py-12">
-            <p className="text-slate-500">這個關卡的挑戰內容還在開發中</p>
-            <p className="text-slate-600 text-sm mt-2">你可以先閱讀講義學習相關概念</p>
+            <p className="text-slate-500">這個關卡的題目還在開發中</p>
+            <p className="text-slate-600 text-sm mt-2">你可以先閱讀教材學習相關概念</p>
             <Link to={`/di-quest/lesson/${worldId}`} className="btn-primary inline-block mt-4">
-              閱讀講義
+              閱讀教材
             </Link>
           </div>
         )}
       </div>
 
-      {/* Boss 關的參考程式碼 */}
-      {quest.isBoss && quest.challenges?.[0]?.referenceCode && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="card"
-        >
-          <h3 className="text-white font-medium flex items-center gap-2 mb-3">
-            <HelpCircle className="w-5 h-5 text-brand-accent" />
-            真實程式碼參考
-          </h3>
-          <pre className="bg-slate-900 rounded-lg p-4 text-sm text-slate-300 overflow-x-auto font-mono">
-            {quest.challenges[0].referenceCode}
-          </pre>
-        </motion.div>
-      )}
     </div>
   )
 }

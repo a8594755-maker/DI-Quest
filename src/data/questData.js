@@ -1,1078 +1,1438 @@
 /**
- * DI Quest — 關卡資料
- * 所有挑戰內容從 Decision-Intelligence 真實 codebase 抽出
+ * DI Quest — Case Study 關卡資料
+ * 商業 Case Study 面試練習：問題拆解、KPI、數據分析、Product Thinking 等
  */
 
-// ── 程式碼片段：來自真實 DI 專案 ────────────────────────────
-
-export const CODE_SNIPPETS = {
-  calculatorRiskThresholds: `// 來自 src/domains/inventory/calculator.js
-const CRITICAL_DAYS = 7;
-const WARNING_DAYS = 14;
-const HIGH_VOLATILITY = 0.2;`,
-
-  calculateDaysToStockout: `// 來自 src/domains/inventory/calculator.js
-export function calculateDaysToStockout(currentStock, dailyDemand, safetyStock = 0) {
-  if (typeof currentStock !== 'number' || typeof dailyDemand !== 'number') {
-    return { days: null, status: 'error', message: '輸入必須是數字' };
-  }
-  if (currentStock < 0) currentStock = 0;
-  if (dailyDemand <= 0) {
-    return { days: Infinity, status: 'safe', message: '無需求，不會缺貨' };
-  }
-  const availableStock = Math.max(0, currentStock - safetyStock);
-  const days = availableStock / dailyDemand;
-  let status;
-  if (days <= CRITICAL_DAYS) status = 'critical';
-  else if (days <= WARNING_DAYS) status = 'warning';
-  else status = 'safe';
-  return { days: Math.round(days * 10) / 10, status, message: null };
-}`,
-
-  bomExplodeSnippet: `// 來自 src/domains/forecast/bomCalculator.js
-const MAX_BOM_DEPTH = 50;
-
-export function explodeBOM(parentMaterial, quantity, bomIndex, opts = {}) {
-  const visited = opts._visited || new Set();
-  const depth = opts._depth || 0;
-
-  if (depth > MAX_BOM_DEPTH) {
-    return { error: 'MAX_DEPTH_EXCEEDED', materials: [] };
-  }
-  if (visited.has(parentMaterial)) {
-    return { error: 'CIRCULAR_REFERENCE', materials: [] };
-  }
-  visited.add(parentMaterial);
-
-  const children = bomIndex[parentMaterial] || [];
-  let results = [];
-  for (const child of children) {
-    const needed = quantity * child.qty_per * (1 + (child.scrap_rate || 0));
-    results.push({ material: child.child_material, quantity: needed, depth });
-    // 遞迴展開子組件
-    const sub = explodeBOM(child.child_material, needed, bomIndex, {
-      _visited: new Set(visited), _depth: depth + 1
-    });
-    if (sub.error) return sub;
-    results = results.concat(sub.materials);
-  }
-  return { error: null, materials: results };
-}`,
-
-  eventBusSnippet: `// 來自 src/services/governance/eventBus.js
-class EventBus {
-  constructor() {
-    this._listeners = new Map();
-  }
-  on(event, callback) {
-    if (!this._listeners.has(event)) {
-      this._listeners.set(event, new Set());
-    }
-    this._listeners.get(event).add(callback);
-    return () => this.off(event, callback); // 回傳 unsubscribe
-  }
-  emit(event, payload) {
-    const handlers = this._listeners.get(event);
-    if (handlers) handlers.forEach(fn => fn(payload));
-    // wildcard: 'agent:*' 匹配 'agent:start', 'agent:done' 等
-    for (const [pattern, fns] of this._listeners) {
-      if (pattern.endsWith('*') && event.startsWith(pattern.slice(0, -1))) {
-        fns.forEach(fn => fn(payload));
-      }
-    }
-  }
-  off(event, callback) {
-    this._listeners.get(event)?.delete(callback);
-  }
-}`,
-
-  semaphoreSnippet: `// 來自 src/services/ai-infra/aiProxyService.js
-class AsyncSemaphore {
-  constructor(max) {
-    this._max = max;
-    this._active = 0;
-    this._queue = [];
-  }
-  async acquire(signal) {
-    if (this._active < this._max) {
-      this._active++;
-      return;
-    }
-    return new Promise((resolve, reject) => {
-      const waiter = { resolve, reject };
-      this._queue.push(waiter);
-      signal?.addEventListener('abort', () => {
-        const idx = this._queue.indexOf(waiter);
-        if (idx !== -1) this._queue.splice(idx, 1);
-        reject(new DOMException('Aborted', 'AbortError'));
-      });
-    });
-  }
-  release() {
-    this._active--;
-    if (this._queue.length > 0) {
-      this._active++;
-      this._queue.shift().resolve();
-    }
-  }
-}`,
-
-  circuitBreakerSnippet: `// 來自 src/services/ai-infra/aiProxyService.js
-const STATE = { CLOSED: 'CLOSED', OPEN: 'OPEN', HALF_OPEN: 'HALF_OPEN' };
-
-class CircuitBreaker {
-  constructor({ failureThreshold = 3, cooldownMs = 60000, windowMs = 30000 } = {}) {
-    this.state = STATE.CLOSED;
-    this.failures = [];
-    this.failureThreshold = failureThreshold;
-    this.cooldownMs = cooldownMs;
-    this.windowMs = windowMs;
-    this.openedAt = null;
-  }
-  recordSuccess() {
-    if (this.state === STATE.HALF_OPEN) {
-      this.state = STATE.CLOSED;
-      this.failures = [];
-      this.cooldownMs = 60000; // reset
-    }
-  }
-  recordFailure() {
-    const now = Date.now();
-    this.failures = this.failures.filter(t => now - t < this.windowMs);
-    this.failures.push(now);
-    if (this.failures.length >= this.failureThreshold) {
-      this.state = STATE.OPEN;
-      this.openedAt = now;
-    }
-  }
-  canRequest() {
-    if (this.state === STATE.CLOSED) return true;
-    if (this.state === STATE.OPEN) {
-      if (Date.now() - this.openedAt >= this.cooldownMs) {
-        this.state = STATE.HALF_OPEN;
-        return true; // 允許一次試探
-      }
-      return false;
-    }
-    return false; // HALF_OPEN 已有一個在飛
-  }
-}`,
-}
-
-// ── World 1: JavaScript 基礎島 ────────────────────────────
-
-const WORLD_1_QUESTS = [
-  {
-    id: '1-1',
-    name: '變數與型別',
-    description: '學習 JavaScript 的 let / const / var 以及基本型別',
-    xp: 50,
-    challenges: [
-      {
-        id: 1,
-        name: '宣告變數',
-        type: 'fill-blank',
-        difficulty: 'easy',
-        instruction: '用 `let` 宣告一個變數 `productName`，值為 `"COMP-001"`；用 `const` 宣告 `safetyStock`，值為 `100`。',
-        defaultCode: `// 宣告一個可以改變的變數 productName，值為 "COMP-001"\n_____ productName = "COMP-001";\n\n// 宣告一個不可改變的常數 safetyStock，值為 100\n_____ safetyStock = 100;\n\nconsole.log(productName, safetyStock);`,
-        solution: `let productName = "COMP-001";\nconst safetyStock = 100;\nconsole.log(productName, safetyStock);`,
-        example: {
-          title: '範例：let 與 const 的用法',
-          code: 'let city = "Taipei";\nconst PI = 3.14;\nconsole.log(city, PI);',
-          output: 'Taipei 3.14',
-          explanation: 'let 宣告可以改變的變數，const 宣告不可改變的常數。',
-        },
-        tests: [
-          { description: 'productName 等於 "COMP-001"', fn: '(ctx) => ctx.productName === "COMP-001"' },
-          { description: 'safetyStock 等於 100', fn: '(ctx) => ctx.safetyStock === 100' },
-        ],
-        returnVars: ['productName', 'safetyStock'],
-      },
-      {
-        id: 2,
-        name: '型別判斷',
-        type: 'coding',
-        difficulty: 'easy',
-        instruction: '寫一個函式 `getType(value)`，回傳 value 的型別字串（用 `typeof`）。',
-        defaultCode: `function getType(value) {\n  // 回傳 value 的型別\n  \n}\n\nconsole.log(getType(42));\nconsole.log(getType("hello"));\nconsole.log(getType(true));`,
-        example: {
-          title: '範例：typeof 運算子',
-          code: 'let x = 100;\nconsole.log(typeof x);\nconsole.log(typeof "hello");',
-          output: 'number\nstring',
-          explanation: 'typeof 會回傳一個字串，告訴你該值的型別，例如 "number"、"string"、"boolean" 等。',
-        },
-        tests: [
-          { description: 'getType(42) === "number"', fn: '(ctx) => ctx.getType(42) === "number"' },
-          { description: 'getType("hi") === "string"', fn: '(ctx) => ctx.getType("hi") === "string"' },
-          { description: 'getType(true) === "boolean"', fn: '(ctx) => ctx.getType(true) === "boolean"' },
-          { description: 'getType(null) === "object"', fn: '(ctx) => ctx.getType(null) === "object"' },
-          { description: 'getType(undefined) === "undefined"', fn: '(ctx) => ctx.getType(undefined) === "undefined"' },
-        ],
-        returnVars: ['getType'],
-      },
-      {
-        id: 3,
-        name: '型別轉換',
-        type: 'coding',
-        difficulty: 'medium',
-        instruction: '寫一個函式 `parseStock(value)`，把字串或數字轉成整數。如果無法轉換回傳 `0`。',
-        defaultCode: `function parseStock(value) {\n  // 把 value 轉成整數，無法轉換回傳 0\n  \n}\n\nconsole.log(parseStock("150"));  // 150\nconsole.log(parseStock("abc"));  // 0\nconsole.log(parseStock(42.7));   // 42`,
-        example: {
-          title: '範例：parseInt 轉換字串為整數',
-          code: 'let result = parseInt("99");\nconsole.log(result);\nconsole.log(parseInt("xyz"));\nconsole.log(isNaN(parseInt("xyz")));',
-          output: '99\nNaN\ntrue',
-          explanation: 'parseInt 可以把字串轉成整數，如果無法轉換會回傳 NaN。可以用 isNaN() 來檢查是否轉換失敗。',
-        },
-        tests: [
-          { description: 'parseStock("150") === 150', fn: '(ctx) => ctx.parseStock("150") === 150' },
-          { description: 'parseStock("abc") === 0', fn: '(ctx) => ctx.parseStock("abc") === 0' },
-          { description: 'parseStock(42.7) === 42', fn: '(ctx) => ctx.parseStock(42.7) === 42' },
-          { description: 'parseStock("") === 0', fn: '(ctx) => ctx.parseStock("") === 0' },
-          { description: 'parseStock(null) === 0', fn: '(ctx) => ctx.parseStock(null) === 0' },
-        ],
-        returnVars: ['parseStock'],
-      },
-    ],
-  },
-  {
-    id: '1-2',
-    name: '函式與 return',
-    description: '學習如何定義函式、參數、以及 return 的重要性',
-    xp: 50,
-    challenges: [
-      {
-        id: 1,
-        name: '第一個函式',
-        type: 'coding',
-        difficulty: 'easy',
-        instruction: '寫一個函式 `add(a, b)` 回傳兩數相加的結果。',
-        defaultCode: `function add(a, b) {\n  // 回傳 a + b\n  \n}`,
-        example: {
-          title: '範例：函式與 return',
-          code: 'function multiply(a, b) {\n  return a * b;\n}\nconsole.log(multiply(3, 4));',
-          output: '12',
-          explanation: '函式用 return 把結果傳回去。如果沒寫 return，函式會回傳 undefined。',
-        },
-        tests: [
-          { description: 'add(1, 2) === 3', fn: '(ctx) => ctx.add(1, 2) === 3' },
-          { description: 'add(0, 0) === 0', fn: '(ctx) => ctx.add(0, 0) === 0' },
-          { description: 'add(-5, 5) === 0', fn: '(ctx) => ctx.add(-5, 5) === 0' },
-        ],
-        returnVars: ['add'],
-      },
-      {
-        id: 2,
-        name: '預設參數',
-        type: 'coding',
-        difficulty: 'easy',
-        instruction: '寫一個函式 `greet(name, greeting = "你好")`，回傳 `"你好, 小明"` 這樣的格式。',
-        defaultCode: `function greet(name, greeting = "你好") {\n  // 回傳 greeting + ", " + name\n  \n}`,
-        example: {
-          title: '範例：預設參數',
-          code: 'function introduce(name, role = "工程師") {\n  return name + " 是 " + role;\n}\nconsole.log(introduce("Amy"));\nconsole.log(introduce("Bob", "設計師"));',
-          output: 'Amy 是 工程師\nBob 是 設計師',
-          explanation: '參數可以給預設值，呼叫時沒傳就會用預設值，有傳就會覆蓋。',
-        },
-        tests: [
-          { description: 'greet("小明") === "你好, 小明"', fn: '(ctx) => ctx.greet("小明") === "你好, 小明"' },
-          { description: 'greet("DI", "嗨") === "嗨, DI"', fn: '(ctx) => ctx.greet("DI", "嗨") === "嗨, DI"' },
-        ],
-        returnVars: ['greet'],
-      },
-      {
-        id: 3,
-        name: '箭頭函式與解構',
-        type: 'coding',
-        difficulty: 'medium',
-        instruction: '用箭頭函式寫 `getStockInfo`，接收一個物件 `{ materialCode, quantity, unit }`，回傳字串 `"COMP-001: 500 PCS"`。',
-        defaultCode: `// 用箭頭函式 + 解構參數\nconst getStockInfo = () => {\n  // 你的程式碼\n};\n\nconsole.log(getStockInfo({ materialCode: "COMP-001", quantity: 500, unit: "PCS" }));`,
-        example: {
-          title: '範例：箭頭函式 + 解構參數',
-          code: 'const getUserInfo = ({ name, age }) => {\n  return `${name} (${age}歲)`;\n};\nconsole.log(getUserInfo({ name: "Alice", age: 25 }));',
-          output: 'Alice (25歲)',
-          explanation: '箭頭函式的參數可以直接用 { } 解構物件，取出需要的屬性。搭配模板字串 `${}` 組合輸出。',
-        },
-        tests: [
-          { description: '正常情況', fn: '(ctx) => ctx.getStockInfo({ materialCode: "COMP-001", quantity: 500, unit: "PCS" }) === "COMP-001: 500 PCS"' },
-          { description: '不同資料', fn: '(ctx) => ctx.getStockInfo({ materialCode: "RM-002", quantity: 1000, unit: "KG" }) === "RM-002: 1000 KG"' },
-        ],
-        returnVars: ['getStockInfo'],
-      },
-    ],
-  },
-  {
-    id: '1-3',
-    name: '條件判斷',
-    description: '學習 if/else 與條件運算子',
-    xp: 50,
-    challenges: [
-      {
-        id: 1,
-        name: '風險等級分類',
-        type: 'coding',
-        difficulty: 'easy',
-        instruction: '寫一個函式 `classifyRisk(days)`，依據庫存天數回傳風險等級：\n- days <= 7 → "critical"\n- days <= 14 → "warning"\n- 其他 → "safe"\n\n（這就是你真實專案 calculator.js 裡的邏輯！）',
-        defaultCode: `// DI 專案裡的常數\nconst CRITICAL_DAYS = 7;\nconst WARNING_DAYS = 14;\n\nfunction classifyRisk(days) {\n  // 你的程式碼\n  \n}`,
-        referenceCode: CODE_SNIPPETS.calculatorRiskThresholds,
-        example: {
-          title: '範例：if / else if / else',
-          code: 'function getSize(weight) {\n  if (weight <= 5) return "S";\n  else if (weight <= 20) return "M";\n  else return "L";\n}\nconsole.log(getSize(3));\nconsole.log(getSize(15));',
-          output: 'S\nM',
-          explanation: '用 if/else if/else 依條件分支回傳不同的值。注意順序很重要，先判斷最小的範圍。',
-        },
-        tests: [
-          { description: 'classifyRisk(3) === "critical"', fn: '(ctx) => ctx.classifyRisk(3) === "critical"' },
-          { description: 'classifyRisk(7) === "critical"', fn: '(ctx) => ctx.classifyRisk(7) === "critical"' },
-          { description: 'classifyRisk(10) === "warning"', fn: '(ctx) => ctx.classifyRisk(10) === "warning"' },
-          { description: 'classifyRisk(14) === "warning"', fn: '(ctx) => ctx.classifyRisk(14) === "warning"' },
-          { description: 'classifyRisk(30) === "safe"', fn: '(ctx) => ctx.classifyRisk(30) === "safe"' },
-        ],
-        returnVars: ['classifyRisk'],
-      },
-      {
-        id: 2,
-        name: '成績分級',
-        type: 'coding',
-        difficulty: 'medium',
-        instruction: '寫 `gradeScore(score)`：90+ → "A", 80+ → "B", 70+ → "C", 60+ → "D", 其他 → "F"。分數 < 0 或 > 100 回傳 "Invalid"。',
-        defaultCode: `function gradeScore(score) {\n  // 你的程式碼\n  \n}`,
-        example: {
-          title: '範例：多層條件判斷',
-          code: 'function tempLabel(temp) {\n  if (temp < 0) return "freezing";\n  else if (temp < 15) return "cold";\n  else if (temp < 30) return "warm";\n  else return "hot";\n}\nconsole.log(tempLabel(25));',
-          output: 'warm',
-          explanation: '多個 else if 可以處理多個區間，從上到下依序判斷，第一個符合的就回傳。',
-        },
-        tests: [
-          { description: 'gradeScore(95) === "A"', fn: '(ctx) => ctx.gradeScore(95) === "A"' },
-          { description: 'gradeScore(82) === "B"', fn: '(ctx) => ctx.gradeScore(82) === "B"' },
-          { description: 'gradeScore(71) === "C"', fn: '(ctx) => ctx.gradeScore(71) === "C"' },
-          { description: 'gradeScore(60) === "D"', fn: '(ctx) => ctx.gradeScore(60) === "D"' },
-          { description: 'gradeScore(45) === "F"', fn: '(ctx) => ctx.gradeScore(45) === "F"' },
-          { description: 'gradeScore(-5) === "Invalid"', fn: '(ctx) => ctx.gradeScore(-5) === "Invalid"' },
-          { description: 'gradeScore(105) === "Invalid"', fn: '(ctx) => ctx.gradeScore(105) === "Invalid"' },
-        ],
-        returnVars: ['gradeScore'],
-      },
-      {
-        id: 3,
-        name: '三元運算子',
-        type: 'coding',
-        difficulty: 'medium',
-        instruction: '寫 `getStockLabel(qty, safetyStock)` 用三元運算子，若 qty > safetyStock 回傳 "充足"，否則 "不足"。',
-        defaultCode: `function getStockLabel(qty, safetyStock) {\n  // 用三元運算子 (? :)\n  \n}`,
-        example: {
-          title: '範例：三元運算子 (? :)',
-          code: 'let age = 20;\nlet label = age >= 18 ? "成人" : "未成年";\nconsole.log(label);',
-          output: '成人',
-          explanation: '三元運算子的格式是 條件 ? 值A : 值B。條件為 true 回傳值A，false 回傳值B。比 if/else 更簡潔。',
-        },
-        tests: [
-          { description: '庫存充足', fn: '(ctx) => ctx.getStockLabel(500, 100) === "充足"' },
-          { description: '庫存不足', fn: '(ctx) => ctx.getStockLabel(50, 100) === "不足"' },
-          { description: '剛好等於', fn: '(ctx) => ctx.getStockLabel(100, 100) === "不足"' },
-        ],
-        returnVars: ['getStockLabel'],
-      },
-    ],
-  },
-  {
-    id: '1-4',
-    name: '物件與解構',
-    description: '理解 JavaScript 物件，以及專案裡的資料結構',
-    xp: 50,
-    challenges: [
-      {
-        id: 1,
-        name: '建立庫存物件',
-        type: 'coding',
-        difficulty: 'easy',
-        instruction: '建立一個函式 `createInventoryItem(code, stock, demand)`，回傳物件 `{ materialCode, currentStock, dailyDemand }`。',
-        defaultCode: `function createInventoryItem(code, stock, demand) {\n  // 回傳一個物件\n  \n}`,
-        example: {
-          title: '範例：建立並回傳物件',
-          code: 'function createUser(name, age) {\n  return { userName: name, userAge: age };\n}\nconsole.log(createUser("Amy", 25));',
-          output: '{ userName: "Amy", userAge: 25 }',
-          explanation: '用 { key: value } 建立物件，函式參數可以當作 value 放進去。',
-        },
-        tests: [
-          { description: '回傳正確物件', fn: '(ctx) => { const r = ctx.createInventoryItem("COMP-001", 500, 50); return r.materialCode === "COMP-001" && r.currentStock === 500 && r.dailyDemand === 50; }' },
-        ],
-        returnVars: ['createInventoryItem'],
-      },
-      {
-        id: 2,
-        name: '解構賦值',
-        type: 'coding',
-        difficulty: 'medium',
-        instruction: '寫 `summarizeItem(item)` 接收 `{ materialCode, currentStock, dailyDemand, safetyStock }` 物件，用解構取出屬性，回傳字串 `"COMP-001: 庫存 500, 日需求 50, 安全庫存 100"`。',
-        defaultCode: `function summarizeItem(item) {\n  // 用解構賦值取出屬性\n  \n}`,
-        example: {
-          title: '範例：解構賦值',
-          code: 'const book = { title: "JS入門", price: 350 };\nconst { title, price } = book;\nconsole.log(`${title} 售價 ${price}元`);',
-          output: 'JS入門 售價 350元',
-          explanation: '解構賦值用 const { key1, key2 } = obj 從物件中取出屬性，變數名稱必須跟屬性名稱一樣。',
-        },
-        tests: [
-          { description: '格式正確', fn: '(ctx) => ctx.summarizeItem({ materialCode: "COMP-001", currentStock: 500, dailyDemand: 50, safetyStock: 100 }) === "COMP-001: 庫存 500, 日需求 50, 安全庫存 100"' },
-        ],
-        returnVars: ['summarizeItem'],
-      },
-      {
-        id: 3,
-        name: '展開運算子',
-        type: 'coding',
-        difficulty: 'medium',
-        instruction: '寫 `updateStock(item, newStock)` 用展開運算子 `{...item}` 回傳一個新物件，只更新 `currentStock`，不修改原物件。',
-        defaultCode: `function updateStock(item, newStock) {\n  // 用 spread operator 建立新物件\n  \n}`,
-        example: {
-          title: '範例：展開運算子 {...}',
-          code: 'const original = { name: "Amy", score: 80 };\nconst updated = { ...original, score: 95 };\nconsole.log(updated);\nconsole.log(original.score);',
-          output: '{ name: "Amy", score: 95 }\n80',
-          explanation: '{ ...obj, key: newValue } 會複製一份物件，再覆蓋指定的屬性。原物件不會被改變。',
-        },
-        tests: [
-          { description: '更新庫存值', fn: '(ctx) => { const orig = { materialCode: "X", currentStock: 100 }; const updated = ctx.updateStock(orig, 200); return updated.currentStock === 200 && updated.materialCode === "X"; }' },
-          { description: '不修改原物件', fn: '(ctx) => { const orig = { materialCode: "X", currentStock: 100 }; ctx.updateStock(orig, 200); return orig.currentStock === 100; }' },
-        ],
-        returnVars: ['updateStock'],
-      },
-    ],
-  },
-  {
-    id: '1-5',
-    name: '陣列與迴圈',
-    description: '用 map, filter, reduce 處理庫存資料',
-    xp: 50,
-    challenges: [
-      {
-        id: 1,
-        name: '過濾低庫存',
-        type: 'coding',
-        difficulty: 'easy',
-        instruction: '寫 `filterLowStock(items, threshold)` 用 `.filter()` 回傳 `currentStock < threshold` 的物件陣列。',
-        defaultCode: `function filterLowStock(items, threshold) {\n  // 用 .filter()\n  \n}\n\n// 測試資料（來自你專案的 inventory_snapshots.csv）\nconst inventory = [\n  { materialCode: "COMP-001", currentStock: 50 },\n  { materialCode: "COMP-002", currentStock: 500 },\n  { materialCode: "COMP-003", currentStock: 80 },\n];`,
-        example: {
-          title: '範例：.filter() 過濾陣列',
-          code: 'const nums = [3, 8, 1, 12, 5];\nconst big = nums.filter(n => n > 5);\nconsole.log(big);',
-          output: '[8, 12]',
-          explanation: '.filter(fn) 會回傳一個新陣列，只留下讓 fn 回傳 true 的元素。原陣列不會改變。',
-        },
-        tests: [
-          { description: '過濾出低庫存', fn: '(ctx) => { const r = ctx.filterLowStock([{materialCode:"A",currentStock:50},{materialCode:"B",currentStock:500}], 100); return r.length === 1 && r[0].materialCode === "A"; }' },
-          { description: '全部都低', fn: '(ctx) => ctx.filterLowStock([{currentStock:1},{currentStock:2}], 10).length === 2' },
-          { description: '沒有低庫存', fn: '(ctx) => ctx.filterLowStock([{currentStock:100}], 10).length === 0' },
-        ],
-        returnVars: ['filterLowStock'],
-      },
-      {
-        id: 2,
-        name: '加總庫存',
-        type: 'coding',
-        difficulty: 'medium',
-        instruction: '寫 `totalStock(items)` 用 `.reduce()` 回傳所有 `currentStock` 的總和。',
-        defaultCode: `function totalStock(items) {\n  // 用 .reduce() 加總 currentStock\n  \n}`,
-        example: {
-          title: '範例：.reduce() 加總數字',
-          code: 'const prices = [30, 50, 20];\nconst total = prices.reduce((sum, p) => sum + p, 0);\nconsole.log(total);',
-          output: '100',
-          explanation: '.reduce(fn, 初始值) 把陣列「縮減」成一個值。fn 的第一個參數是累積值，第二個是當前元素。',
-        },
-        tests: [
-          { description: '正常加總', fn: '(ctx) => ctx.totalStock([{currentStock:100},{currentStock:200},{currentStock:300}]) === 600' },
-          { description: '空陣列', fn: '(ctx) => ctx.totalStock([]) === 0' },
-        ],
-        returnVars: ['totalStock'],
-      },
-      {
-        id: 3,
-        name: '轉換資料格式',
-        type: 'coding',
-        difficulty: 'medium',
-        instruction: '寫 `toStockMap(items)` 用 `.reduce()` 把陣列轉成物件 `{ "COMP-001": 500, "COMP-002": 80 }`，key 是 materialCode，value 是 currentStock。',
-        defaultCode: `function toStockMap(items) {\n  // 用 .reduce() 轉成 { code: stock } 格式\n  \n}`,
-        example: {
-          title: '範例：.reduce() 把陣列轉成物件',
-          code: 'const fruits = [\n  { name: "apple", qty: 3 },\n  { name: "banana", qty: 5 }\n];\nconst map = fruits.reduce((obj, f) => {\n  obj[f.name] = f.qty;\n  return obj;\n}, {});\nconsole.log(map);',
-          output: '{ apple: 3, banana: 5 }',
-          explanation: '.reduce() 不只能加總數字，也能把陣列轉成物件。初始值給 {}，每次把元素的資料放進去。',
-        },
-        tests: [
-          { description: '轉換正確', fn: '(ctx) => { const r = ctx.toStockMap([{materialCode:"A",currentStock:100},{materialCode:"B",currentStock:200}]); return r.A === 100 && r.B === 200; }' },
-          { description: '空陣列', fn: '(ctx) => Object.keys(ctx.toStockMap([])).length === 0' },
-        ],
-        returnVars: ['toStockMap'],
-      },
-    ],
-  },
-  {
-    id: '1-6',
-    name: 'Boss: 讀懂 calculator.js',
-    description: '閱讀你真實專案的 calculateDaysToStockout 函式，理解它的邏輯並自己重寫',
-    xp: 200,
-    isBoss: true,
-    challenges: [
-      {
-        id: 1,
-        name: '重寫 calculateDaysToStockout',
-        type: 'coding',
-        difficulty: 'hard',
-        instruction: '參考右側的真實程式碼，自己重寫 `calculateDaysToStockout(currentStock, dailyDemand, safetyStock)`。\n\n規則：\n- 如果輸入不是數字 → `{ days: null, status: "error" }`\n- 如果 currentStock < 0 → 當作 0\n- 如果 dailyDemand <= 0 → `{ days: Infinity, status: "safe" }`\n- 否則算 `(currentStock - safetyStock) / dailyDemand`（不能是負的）\n- days <= 7 是 "critical"，<= 14 是 "warning"，其他是 "safe"',
-        defaultCode: `const CRITICAL_DAYS = 7;\nconst WARNING_DAYS = 14;\n\nfunction calculateDaysToStockout(currentStock, dailyDemand, safetyStock = 0) {\n  // 你的程式碼\n  \n}`,
-        referenceCode: CODE_SNIPPETS.calculateDaysToStockout,
-        example: {
-          title: '範例：結合驗證、條件分支與物件回傳',
-          code: 'function checkBattery(level) {\n  if (typeof level !== "number") return { pct: null, status: "error" };\n  if (level <= 0) return { pct: 0, status: "dead" };\n  let status = level <= 20 ? "low" : "ok";\n  return { pct: level, status };\n}\nconsole.log(checkBattery(15));',
-          output: '{ pct: 15, status: "low" }',
-          explanation: '先做型別檢查，再處理邊界值，最後用條件決定 status。Boss 關的結構跟這個類似，但多了除法運算和預設參數。',
-        },
-        tests: [
-          { description: '正常情況', fn: '(ctx) => { const r = ctx.calculateDaysToStockout(500, 50, 0); return r.days === 10 && r.status === "warning"; }' },
-          { description: '扣除安全庫存', fn: '(ctx) => { const r = ctx.calculateDaysToStockout(500, 50, 100); return r.days === 8 && r.status === "warning"; }' },
-          { description: '危急狀態', fn: '(ctx) => { const r = ctx.calculateDaysToStockout(100, 50, 0); return r.days === 2 && r.status === "critical"; }' },
-          { description: '無需求', fn: '(ctx) => { const r = ctx.calculateDaysToStockout(100, 0); return r.days === Infinity && r.status === "safe"; }' },
-          { description: '負庫存當作 0', fn: '(ctx) => { const r = ctx.calculateDaysToStockout(-10, 5); return r.days === 0 && r.status === "critical"; }' },
-          { description: '輸入不是數字', fn: '(ctx) => { const r = ctx.calculateDaysToStockout("abc", 5); return r.days === null && r.status === "error"; }' },
-          { description: '安全庫存大於現有庫存', fn: '(ctx) => { const r = ctx.calculateDaysToStockout(50, 10, 100); return r.days === 0 && r.status === "critical"; }' },
-        ],
-        returnVars: ['calculateDaysToStockout'],
-      },
-    ],
-  },
-]
-
-// ── World 定義 ────────────────────────────────────────────
-
 export const WORLDS = [
+  // ═══════════════════════════════════════════════════════════
+  // World 1：問題拆解基礎
+  // ═══════════════════════════════════════════════════════════
   {
     id: 1,
-    name: 'JavaScript 基礎島',
-    emoji: '🏝️',
-    description: '在這座島上，你要學會用程式碼跟電腦溝通',
-    color: 'from-emerald-500 to-teal-600',
-    quests: WORLD_1_QUESTS,
-  },
-  {
-    id: 2,
-    name: '純函式神殿',
-    emoji: '⛩️',
-    description: '掌握寫出可測試、無副作用的程式碼的能力',
-    color: 'from-blue-500 to-indigo-600',
+    name: '問題拆解基礎',
+    emoji: '🧩',
+    description: '學會把模糊的商業問題拆成可分析的結構',
+    color: 'from-blue-500 to-cyan-500',
     quests: [
       {
-        id: '2-1', name: '什麼是純函式', description: '判斷並寫出純函式', xp: 50,
+        id: '1-1',
+        name: '問題分類：Business / Product / System',
+        description: '面對一個問題，第一步是判斷它屬於哪一類，才能用對分析框架。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '判斷純函式', type: 'coding', difficulty: 'easy',
-            instruction: '寫一個函式 `isPure(fn)`（概念題）。以下四個函式，寫一個 `answers` 陣列，標記哪些是純函式（true/false）。\n\n1. `(a, b) => a + b`\n2. `(arr) => { arr.push(1); return arr; }`（修改了傳入的陣列）\n3. `(x) => Math.random() * x`（用了 Math.random）\n4. `(items) => items.filter(i => i > 0)`（filter 不修改原陣列）',
-            defaultCode: `// 回傳一個陣列，標記四個函式是否為純函式\nconst answers = [\n  // 1. (a, b) => a + b\n  undefined, // 改成 true 或 false\n  // 2. (arr) => { arr.push(1); return arr; }\n  undefined,\n  // 3. (x) => Math.random() * x\n  undefined,\n  // 4. (items) => items.filter(i => i > 0)\n  undefined,\n];`,
-            example: {
-              title: '範例：判斷是否為純函式',
-              code: '// (x) => x * 2         → 純函式\n// (x) => Date.now() + x → 不是（依賴外部狀態）\nconst demo = [true, false];',
-              output: '[true, false]',
-              explanation: '純函式：不依賴外部狀態、不修改輸入、相同輸入永遠回傳相同輸出。',
+            id: 1,
+            name: '判斷問題類型',
+            type: 'multiple-choice',
+            difficulty: 'easy',
+            scenario: {
+              title: '客服團隊的煩惱',
+              narrative: '你是一家 SaaS 公司的 Business Analyst。客服主管跑來找你說：\n\n「最近客戶抱怨變多了，support ticket 處理時間從平均 2 小時變成 8 小時，客戶滿意度從 4.5 分掉到 3.2 分。」\n\n你需要先判斷這是什麼類型的問題，才能決定分析方向。',
             },
-            tests: [
-              { description: '函式1是純函式', fn: '(ctx) => ctx.answers[0] === true' },
-              { description: '函式2不是純函式（修改了輸入）', fn: '(ctx) => ctx.answers[1] === false' },
-              { description: '函式3不是純函式（用了隨機）', fn: '(ctx) => ctx.answers[2] === false' },
-              { description: '函式4是純函式', fn: '(ctx) => ctx.answers[3] === true' },
+            question: '這個問題最可能屬於哪一類？',
+            options: [
+              { id: 'A', text: 'Business Problem — 商業模式或策略問題', explanation: '這不是商業模式的問題。公司的產品和市場定位沒有改變，問題出在內部營運流程。' },
+              { id: 'B', text: 'Product Problem — 產品功能或使用者體驗問題', explanation: '雖然客戶滿意度下降，但根因不在產品本身的功能，而是客服回應速度。' },
+              { id: 'C', text: 'System / Process Problem — 流程或系統效率問題', explanation: '正確！處理時間從 2hr 變 8hr，這是典型的流程 bottleneck。需要去分析客服流程哪個環節卡住了。' },
+              { id: 'D', text: '以上皆是，無法區分', explanation: '雖然問題會互相影響，但第一步一定要聚焦。這題的關鍵線索是「處理時間暴增」，指向流程問題。' },
             ],
-            returnVars: ['answers'],
+            correctAnswer: 'C',
+            hints: [
+              '注意題目中的關鍵數字：處理時間從 2hr → 8hr。這代表什麼？',
+              '想想看：商業模式有變嗎？產品功能有壞掉嗎？還是做事的方式出了問題？',
+            ],
+            explanation: '問題分類是分析的第一步。Business Problem 影響營收和策略、Product Problem 影響使用者體驗和 adoption、System/Process Problem 影響效率和成本。處理時間暴增是典型的流程問題，要去看 workflow 的每個步驟。',
+            frameworkTip: '問題拆解第一步：先分類 → Business / Product / System，再決定分析方向',
           },
           {
-            id: 2, name: '改成純函式', type: 'coding', difficulty: 'medium',
-            instruction: '下面這個函式不是純函式（依賴外部變數 taxRate）。把它改成純函式，讓 taxRate 變成參數。',
-            defaultCode: `// 改成純函式：把 taxRate 變成參數\nfunction calculateTax(price, taxRate) {\n  // 回傳 price * taxRate\n  \n}`,
-            example: {
-              title: '範例：將不純函式改成純函式',
-              code: '// 不純：const rate = 0.1; function fee(x) { return x * rate; }\n// 純：function fee(x, rate) { return x * rate; }\nfee(50, 0.1); // 5',
-              output: '5',
-              explanation: '把外部依賴的變數改成函式參數，就變成純函式了。',
+            id: 2,
+            name: '影響範圍分析',
+            type: 'multiple-choice',
+            difficulty: 'easy',
+            scenario: {
+              title: '電商平台轉換率下降',
+              narrative: '你在一家電商平台擔任 Product Analyst。PM 找你說：\n\n「我們的購物車到結帳的 conversion rate 這個月掉了 20%。」\n\n在開始分析之前，你需要先搞清楚影響範圍。',
+              data: [
+                { metric: 'Cart-to-Checkout Rate', last_month: '68%', this_month: '54%', change: '-20%' },
+                { metric: 'Overall Conversion', last_month: '3.2%', this_month: '2.8%', change: '-12.5%' },
+                { metric: 'Average Order Value', last_month: '$85', this_month: '$82', change: '-3.5%' },
+                { metric: 'Daily Active Users', last_month: '125K', this_month: '128K', change: '+2.4%' },
+              ],
+              dataCaption: '關鍵指標比較',
             },
-            tests: [
-              { description: 'calculateTax(100, 0.05) === 5', fn: '(ctx) => ctx.calculateTax(100, 0.05) === 5' },
-              { description: 'calculateTax(200, 0.1) === 20', fn: '(ctx) => ctx.calculateTax(200, 0.1) === 20' },
-              { description: 'calculateTax(0, 0.05) === 0', fn: '(ctx) => ctx.calculateTax(0, 0.05) === 0' },
+            question: '從數據來看，以下哪個判斷最合理？',
+            options: [
+              { id: 'A', text: '流量下降導致 conversion 下降', explanation: 'DAU 其實微幅上升 (+2.4%)，所以不是流量問題。' },
+              { id: 'B', text: '問題集中在結帳流程，不是整體流量問題', explanation: '正確！DAU 上升但 cart-to-checkout 大幅下降，問題明確在結帳流程那一段。AOV 變化不大，代表購買意願沒太大改變。' },
+              { id: 'C', text: '客戶消費力下降，所以放棄購買', explanation: 'AOV 只掉 3.5%，不足以解釋 20% 的 conversion 下降。' },
+              { id: 'D', text: '所有指標都在下降，是全面性問題', explanation: 'DAU 其實是上升的。分析數據時要仔細看每個指標的方向。' },
             ],
-            returnVars: ['calculateTax'],
+            correctAnswer: 'B',
+            hints: [
+              '比較所有指標的變化方向和幅度，哪個變化最大？',
+              'DAU 是上升的，代表什麼？',
+            ],
+            explanation: '影響範圍分析幫你縮小調查範圍。這裡 DAU 上升排除了流量問題，AOV 變化小排除了消費力問題，所以問題集中在結帳流程本身。下一步應該去看結帳流程的每一步 funnel。',
+            frameworkTip: '先看整體 → 哪個指標變化最大 → 排除不相關因素 → 聚焦問題區域',
+          },
+          {
+            id: 3,
+            name: '定義成功標準',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '內部工具的困境',
+              narrative: '你加入了一家科技公司的 Business Systems 團隊。主管說：\n\n「我們去年花了半年開發了一套內部 CRM 工具，但現在業務團隊抱怨很多，說不好用。老闆問我們到底有沒有成功，我不知道怎麼回答。」\n\n你需要幫團隊定義「成功」。',
+            },
+            question: '定義這個內部工具是否成功，最適合的第一步是什麼？',
+            options: [
+              { id: 'A', text: '看有多少人在用（DAU）', explanation: '使用人數是一個指標，但不是第一步。如果公司只有 50 個業務，DAU 高不代表滿意，低可能是被強迫用。要先搞清楚「成功」對誰來說是什麼。' },
+              { id: 'B', text: '做一份滿意度調查', explanation: '調查很有用，但在做調查之前，你需要先知道要問什麼。先定義成功的維度，再設計調查。' },
+              { id: 'C', text: '回到當初開發這個工具要解決的問題，定義成功的維度', explanation: '正確！先問：這個工具要解決什麼問題？對誰？然後才能定義衡量指標。可能是「縮短業務更新客戶資料的時間」或「提升 pipeline 預測準確度」。' },
+              { id: 'D', text: '比較跟市面上 Salesforce 等工具的功能差異', explanation: '功能比較可以做，但不是定義成功的方式。自建工具和買現成工具的價值衡量方式不同。' },
+            ],
+            correctAnswer: 'C',
+            hints: [
+              '「成功」不是一個固定的東西，要看當初為什麼做。',
+              '想想看：如果你不知道這個工具要解決什麼問題，你怎麼知道它有沒有解決？',
+            ],
+            explanation: '定義成功永遠要回到「為什麼做這件事」。Success metric 必須跟原始目標對齊。如果目標是「讓業務每週省 3 小時更新客戶資料」，那就量這個。使用率和滿意度是 proxy metrics，不是 success metrics。',
+            frameworkTip: '定義成功：目標是什麼 → 成功的維度 → 可衡量的指標 → 現在 vs 目標差距',
           },
         ],
       },
       {
-        id: '2-2', name: '輸入驗證', description: '幫函式加上型別和範圍驗證', xp: 50,
+        id: '1-2',
+        name: '拆解問題的步驟',
+        description: '學會用結構化的方式把一個大問題拆成可分析的小問題。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '數字驗證', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `validateNumber(value)` — 如果 typeof value === "number" 且 !isNaN(value) 回傳 true，否則回傳 false。',
-            defaultCode: `function validateNumber(value) {\n  // 檢查是否為有效數字\n  \n}`,
-            example: {
-              title: '範例：檢查字串是否為非空',
-              code: 'function isNonEmpty(s) {\n  return typeof s === "string" && s.length > 0;\n}\nisNonEmpty("hi"); // true',
-              output: 'true',
-              explanation: '先用 typeof 確認型別，再檢查內容，兩個條件都滿足才回傳 true。',
+            id: 1,
+            name: '拆解 Activation 下降',
+            type: 'multiple-choice',
+            difficulty: 'easy',
+            scenario: {
+              title: 'SaaS 產品 Activation 下降',
+              narrative: '你是一家 B2B SaaS 公司的 Product Analyst。Growth PM 告訴你：\n\n「新用戶的 7-day activation rate 從上個月的 45% 掉到 32%。」\n\nActivation 的定義是：用戶在註冊後 7 天內完成至少一次核心動作（建立第一個 project）。',
+              data: [
+                { step: '註冊完成', last_month: '100%', this_month: '100%', drop: '—' },
+                { step: '完成 onboarding', last_month: '78%', this_month: '61%', drop: '-17pp' },
+                { step: '建立第一個 project', last_month: '45%', this_month: '32%', drop: '-13pp' },
+              ],
+              dataCaption: 'Activation Funnel（註冊後 7 天）',
             },
-            tests: [
-              { description: 'validateNumber(42) === true', fn: '(ctx) => ctx.validateNumber(42) === true' },
-              { description: 'validateNumber("42") === false', fn: '(ctx) => ctx.validateNumber("42") === false' },
-              { description: 'validateNumber(NaN) === false', fn: '(ctx) => ctx.validateNumber(NaN) === false' },
-              { description: 'validateNumber(0) === true', fn: '(ctx) => ctx.validateNumber(0) === true' },
-              { description: 'validateNumber(null) === false', fn: '(ctx) => ctx.validateNumber(null) === false' },
+            question: '根據 funnel 數據，最大的 drop-off 發生在哪一步？',
+            options: [
+              { id: 'A', text: '註冊 → 完成 onboarding（-17pp）', explanation: '正確！從 78% 掉到 61%，差了 17 個百分點，是最大的 drop-off。問題最可能在 onboarding 流程。' },
+              { id: 'B', text: '完成 onboarding → 建立 project（-13pp）', explanation: '這步確實也有下降，但 -13pp 小於 -17pp。要先解決最大的 drop-off。' },
+              { id: 'C', text: '兩步的下降差不多，都要一起處理', explanation: '雖然兩步都下降了，但 prioritization 的原則是先解決影響最大的。-17pp > -13pp。' },
+              { id: 'D', text: '數據不夠，無法判斷', explanation: '這個 funnel 已經清楚顯示了每一步的 drop-off，足以判斷最大的問題在哪。' },
             ],
-            returnVars: ['validateNumber'],
+            correctAnswer: 'A',
+            hints: [
+              '看每一步的下降幅度（pp = percentage points）',
+              '哪一步的下降最大，通常就是最值得先調查的',
+            ],
+            explanation: 'Funnel analysis 的核心：找到最大的 drop-off → 那就是最值得調查和改善的地方。這裡 onboarding 步驟的 drop-off 最大（-17pp），應該優先分析 onboarding 流程發生了什麼變化。',
+            frameworkTip: '拆解問題：整體指標 → funnel 各步驟 → 找最大 drop-off → 深入調查',
           },
           {
-            id: 2, name: '驗證折扣函式', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `calculateDiscount(price, rate)`：\n- price 必須是正數（> 0），否則 throw Error("price must be positive")\n- rate 必須在 0-1 之間，否則 throw Error("rate must be between 0 and 1")\n- 回傳 `price * (1 - rate)`',
-            defaultCode: `function calculateDiscount(price, rate) {\n  // 驗證 price 和 rate\n  // 回傳折扣後的價格\n  \n}`,
-            example: {
-              title: '範例：帶驗證的加法函式',
-              code: 'function safeAdd(a, b) {\n  if (typeof a !== "number") throw Error("a must be number");\n  return a + b;\n}\nsafeAdd(3, 4); // 7',
-              output: '7',
-              explanation: '先驗證輸入，不合法就 throw Error，合法才計算回傳。',
+            id: 2,
+            name: '提出假設',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '繼續分析 Onboarding Drop-off',
+              narrative: '你發現 onboarding 完成率從 78% 掉到 61%。\n\n你查了一下最近的產品變更紀錄：\n• 3 週前：onboarding 流程從 3 步改成 5 步（新增了「邀請團隊成員」和「連結第三方工具」兩步）\n• 2 週前：marketing 開始投放新的 Google Ads 廣告\n• 1 週前：伺服器有一次 2 小時的 outage\n\n你需要提出最合理的假設。',
             },
-            tests: [
-              { description: '正常折扣', fn: '(ctx) => ctx.calculateDiscount(100, 0.2) === 80' },
-              { description: '無折扣', fn: '(ctx) => ctx.calculateDiscount(100, 0) === 100' },
-              { description: '負價格報錯', fn: '(ctx) => { try { ctx.calculateDiscount(-10, 0.1); return false; } catch(e) { return e.message === "price must be positive"; } }' },
-              { description: 'rate 超過 1 報錯', fn: '(ctx) => { try { ctx.calculateDiscount(100, 1.5); return false; } catch(e) { return e.message === "rate must be between 0 and 1"; } }' },
-              { description: 'rate 負數報錯', fn: '(ctx) => { try { ctx.calculateDiscount(100, -0.1); return false; } catch(e) { return e.message === "rate must be between 0 and 1"; } }' },
+            question: '以下哪個假設最應該優先驗證？',
+            options: [
+              { id: 'A', text: '伺服器 outage 導致用戶流失', explanation: 'Outage 只有 2 小時，而且是 1 週前才發生，但問題已經持續了幾週。影響範圍有限。' },
+              { id: 'B', text: 'Onboarding 從 3 步變 5 步，新增步驟造成 friction', explanation: '正確！時間點吻合（3 週前改的，下降也是從那時開始），而且邏輯合理：步驟越多、摩擦越大、完成率越低。這是最應該優先驗證的假設。' },
+              { id: 'C', text: '新的 Google Ads 帶來了品質較低的流量', explanation: '這也是合理假設，但 onboarding 改版的時間點更吻合。而且這個假設需要切 traffic source 才能驗證，相對複雜。' },
+              { id: 'D', text: '競爭對手推出了更好的產品', explanation: '沒有任何資料支持這個假設。提假設要基於已知事實。' },
             ],
-            returnVars: ['calculateDiscount'],
-          },
-          {
-            id: 3, name: '安全的除法', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `safeDivide(a, b)` — 如果 a 或 b 不是數字回傳 `{ error: "invalid input", result: null }`，如果 b 是 0 回傳 `{ error: "division by zero", result: null }`，否則回傳 `{ error: null, result: a/b }`。',
-            defaultCode: `function safeDivide(a, b) {\n  // 你的程式碼\n  \n}`,
-            example: {
-              title: '範例：安全的平方根',
-              code: 'function safeSqrt(x) {\n  if (typeof x !== "number") return { error: "not a number", result: null };\n  if (x < 0) return { error: "negative", result: null };\n  return { error: null, result: Math.sqrt(x) };\n}',
-              output: '{ error: null, result: 3 }  // safeSqrt(9)',
-              explanation: '用物件回傳錯誤資訊而非 throw，讓呼叫者能優雅處理錯誤。',
-            },
-            tests: [
-              { description: '正常除法', fn: '(ctx) => { const r = ctx.safeDivide(10, 2); return r.error === null && r.result === 5; }' },
-              { description: '除以零', fn: '(ctx) => ctx.safeDivide(10, 0).error === "division by zero"' },
-              { description: '非數字輸入', fn: '(ctx) => ctx.safeDivide("a", 2).error === "invalid input"' },
+            correctAnswer: 'B',
+            hints: [
+              '看看各個變更的時間點，哪個跟問題出現的時間最吻合？',
+              '假設要基於已知事實，而且要可驗證。',
             ],
-            returnVars: ['safeDivide'],
+            explanation: '好的假設有三個特點：(1) 時間點吻合、(2) 邏輯合理（因果關係說得通）、(3) 可以驗證。Onboarding 改版完全符合這三點。驗證方法：比較改版前後的 step-by-step completion rate，看新增的兩步 drop-off 有多高。',
+            frameworkTip: '提假設：列出近期變更 → 比對時間點 → 看因果邏輯 → 選最可驗證的先查',
           },
         ],
       },
       {
-        id: '2-3', name: '邊界情況', description: '處理各種邊界情況', xp: 50,
+        id: '1-3',
+        name: '資訊不足時怎麼辦',
+        description: '面試中常遇到資訊不完整的情境，學會問對問題。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '數值夾限', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `clamp(value, min, max)` — 把 value 限制在 min 到 max 之間。如果 value < min 回傳 min，如果 value > max 回傳 max，否則回傳 value。',
-            defaultCode: `function clamp(value, min, max) {\n  // 把 value 限制在 min 到 max 之間\n  \n}`,
-            example: {
-              title: '範例：限制百分比在 0~100',
-              code: 'function limitPercent(v) {\n  if (v < 0) return 0;\n  if (v > 100) return 100;\n  return v;\n}\nlimitPercent(120); // 100',
-              output: '100',
-              explanation: '超出上限回傳上限，低於下限回傳下限，範圍內直接回傳。',
+            id: 1,
+            name: '問對問題',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '模糊的需求',
+              narrative: '面試官問你：\n\n「我們的 app 使用者活躍度不夠好，你會怎麼分析？」\n\n你的第一反應不應該是直接回答，而是先問清楚。',
             },
-            tests: [
-              { description: 'clamp(5, 0, 10) === 5', fn: '(ctx) => ctx.clamp(5, 0, 10) === 5' },
-              { description: 'clamp(-3, 0, 10) === 0', fn: '(ctx) => ctx.clamp(-3, 0, 10) === 0' },
-              { description: 'clamp(15, 0, 10) === 10', fn: '(ctx) => ctx.clamp(15, 0, 10) === 10' },
-              { description: 'clamp(0, 0, 10) === 0', fn: '(ctx) => ctx.clamp(0, 0, 10) === 0' },
-              { description: 'clamp(10, 0, 10) === 10', fn: '(ctx) => ctx.clamp(10, 0, 10) === 10' },
+            question: '以下哪組問題最能幫你釐清問題？',
+            options: [
+              { id: 'A', text: '「活躍度的定義是什麼？」「跟什麼時期比？」「是所有用戶都下降還是特定 segment？」', explanation: '正確！這三個問題分別釐清了：指標定義、比較基準、影響範圍。這是拆解模糊問題的標準套路。' },
+              { id: 'B', text: '「你們有做 A/B test 嗎？」「你們的 tech stack 是什麼？」', explanation: '這些問題太具體了，跳過了最基本的問題定義。你還不知道「活躍度」指的是什麼。' },
+              { id: 'C', text: '「你們 DAU 多少？」「MAU 多少？」', explanation: '直接問數字之前，你應該先確認「活躍度不夠好」是什麼意思。也許面試官說的不是 DAU。' },
+              { id: 'D', text: '「你們有哪些 feature？」「競爭對手是誰？」', explanation: '這些是有用的背景資訊，但不是第一步該問的。先搞清楚問題本身。' },
             ],
-            returnVars: ['clamp'],
+            correctAnswer: 'A',
+            hints: [
+              '面對模糊問題，先問三件事：定義、比較基準、範圍。',
+            ],
+            explanation: '在面試中，遇到模糊問題時主動釐清是加分的行為。面試官想看你會不會盲目作答。標準釐清框架：(1) 指標怎麼定義？(2) 跟什麼比？(3) 影響範圍多大？這三個問題能把 90% 的模糊問題變清楚。',
+            frameworkTip: '模糊問題處理：定義 → 比較基準 → 影響範圍 → 時間軸 → 再開始分析',
           },
           {
-            id: 2, name: '健壯的庫存計算', type: 'coding', difficulty: 'hard',
-            instruction: '寫 `robustStockDays(stock, demand, safety)`，處理所有邊界：\n- 任何參數不是 number 或是 NaN → `{ days: null, error: "invalid" }`\n- stock < 0 → 當作 0\n- demand <= 0 → `{ days: Infinity, error: null }`\n- safety 未傳 → 預設 0\n- 正常算 `Math.max(0, (stock - safety) / demand)` → `{ days: 結果, error: null }`',
-            defaultCode: `function robustStockDays(stock, demand, safety = 0) {\n  // 處理所有邊界情況\n  \n}`,
-            example: {
-              title: '範例：安全的速度計算',
-              code: 'function safeSpeed(dist, time) {\n  if (typeof dist !== "number" || isNaN(dist)) return { speed: null, error: "invalid" };\n  if (time <= 0) return { speed: Infinity, error: null };\n  return { speed: dist / time, error: null };\n}',
-              output: '{ speed: 50, error: null }  // safeSpeed(100, 2)',
-              explanation: '先檢查型別和 NaN，再處理除以零的邊界，最後正常計算。',
+            id: 2,
+            name: '缺少數據時的推理',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '沒有數據的情況',
+              narrative: '面試官接著問：\n\n「假設你沒有任何數據工具，也沒有 analytics dashboard，但老闆明天就要一個初步判斷——我們的用戶是因為 onboarding 問題流失，還是因為產品本身沒有價值。你會怎麼做？」',
             },
-            tests: [
-              { description: '正常', fn: '(ctx) => { const r = ctx.robustStockDays(100, 10); return r.days === 10 && r.error === null; }' },
-              { description: '負庫存', fn: '(ctx) => ctx.robustStockDays(-5, 10).days === 0' },
-              { description: '零需求', fn: '(ctx) => ctx.robustStockDays(100, 0).days === Infinity' },
-              { description: '非數字', fn: '(ctx) => ctx.robustStockDays("abc", 10).error === "invalid"' },
-              { description: 'NaN', fn: '(ctx) => ctx.robustStockDays(NaN, 10).error === "invalid"' },
-              { description: '安全庫存大於現有', fn: '(ctx) => ctx.robustStockDays(50, 10, 100).days === 0' },
+            question: '在沒有數據工具的情況下，以下哪個方法最務實？',
+            options: [
+              { id: 'A', text: '等拿到數據再分析，沒有數據不應該做判斷', explanation: '在現實中，老闆經常需要快速判斷。能用有限資源做出合理推理是重要能力。' },
+              { id: 'B', text: '看客服 ticket 和用戶回饋，找 qualitative signals', explanation: '正確！客服 ticket、app store reviews、sales team 回饋都是 qualitative data。如果大量抱怨集中在「不知道怎麼開始」，那是 onboarding；如果是「用了幾週覺得沒用」，那是 value。' },
+              { id: 'C', text: '自己用一次產品，親自體驗 onboarding', explanation: '這是有用的方法（dogfooding），但只代表一個人的體驗，不能代表用戶整體。應該搭配其他方法。' },
+              { id: 'D', text: '做一份問卷發給所有用戶', explanation: '問卷需要時間設計和收集，明天要答案的話來不及。而且問卷回覆率通常很低。' },
             ],
-            returnVars: ['robustStockDays'],
+            correctAnswer: 'B',
+            hints: [
+              '沒有量化數據的時候，還有什麼資訊來源？',
+              '想想看公司裡誰最常直接跟用戶互動？',
+            ],
+            explanation: '在沒有完美數據的情況下做判斷，是 BA/PA 的核心能力之一。Qualitative data（客服紀錄、使用者回饋、sales feedback）是重要的信號來源。面試中展示你知道 quantitative 和 qualitative 都重要，會讓面試官印象深刻。',
+            frameworkTip: '沒有數據時：qualitative signals（客服、回饋、reviews）→ 歸類問題模式 → 形成假設',
           },
         ],
       },
       {
-        id: '2-4', name: '函式組合', description: '串接多個純函式', xp: 50,
+        id: '1-4',
+        name: '問題的影響分析',
+        description: '學會評估一個問題的嚴重程度和優先級。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '兩函式組合', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `compose2(f, g)` — 回傳一個新函式，執行時先呼叫 g(x)，再把結果傳給 f，也就是 f(g(x))。',
-            defaultCode: `function compose2(f, g) {\n  // 回傳一個函式，做 f(g(x))\n  \n}`,
-            example: {
-              title: '範例：簡單的函式包裝',
-              code: 'function wrap(fn) {\n  return (x) => fn(x);\n}\nconst abs = wrap(Math.abs);\nabs(-7); // 7',
-              output: '7',
-              explanation: '回傳一個新函式，內部呼叫傳入的函式 — 這就是高階函式的基本概念。',
+            id: 1,
+            name: '判斷問題嚴重性',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '三個同時出現的問題',
+              narrative: '你是一家 fintech 公司的 BA。週一早上，三個團隊同時來找你：\n\n1. Marketing：「我們的 landing page conversion rate 從 5% 掉到 4.2%」\n2. Operations：「昨天有 12 筆交易被重複扣款，客戶在 Twitter 上抱怨」\n3. Product：「新功能上線一週，adoption rate 只有 8%，低於預期的 20%」',
+              data: [
+                { issue: 'Landing page conversion', impact: '潛在營收下降', urgency: '中', reversibility: '高' },
+                { issue: '重複扣款 bug', impact: '客戶信任 + 合規風險', urgency: '極高', reversibility: '低' },
+                { issue: '新功能 adoption 低', impact: '開發資源浪費', urgency: '低', reversibility: '高' },
+              ],
+              dataCaption: '問題比較',
             },
-            tests: [
-              { description: 'compose2(double, addOne)(3) === 8', fn: '(ctx) => { const double = x => x * 2; const addOne = x => x + 1; return ctx.compose2(double, addOne)(3) === 8; }' },
-              { description: 'compose2(String, Math.abs)(-5) === "5"', fn: '(ctx) => ctx.compose2(String, Math.abs)(-5) === "5"' },
-              { description: '回傳的是函式', fn: '(ctx) => typeof ctx.compose2(x=>x, x=>x) === "function"' },
+            question: '你應該優先處理哪個問題？',
+            options: [
+              { id: 'A', text: 'Landing page conversion — 直接影響營收', explanation: '營收很重要，但 0.8% 的下降不是緊急危機。可以排在第二。' },
+              { id: 'B', text: '重複扣款 bug — 涉及客戶金錢和信任', explanation: '正確！金融產品的重複扣款是最高優先級：(1) 直接損害客戶利益 (2) 合規風險 (3) 已經在社群媒體擴散 (4) 不可逆（已經扣了）。這種問題每多拖一小時，傷害就更大。' },
+              { id: 'C', text: '新功能 adoption — 投入最多資源但效果差', explanation: '這個問題重要但不緊急。功能已經上線了，多觀察幾天不會更糟。' },
+              { id: 'D', text: '三個同時處理，各分配 1/3 時間', explanation: '資源有限時不應該平均分配。應該按嚴重性和緊急性排優先級。' },
             ],
-            returnVars: ['compose2'],
+            correctAnswer: 'B',
+            hints: [
+              '想想哪個問題如果不馬上處理，後果最嚴重？',
+              '考慮：impact（影響大小）× urgency（緊急程度）× reversibility（可逆性）',
+            ],
+            explanation: '優先級評估框架：Impact × Urgency × Irreversibility。重複扣款在三個維度都是最高的。在面試中，展示你能在多個問題之間做 trade-off 和 prioritization 是關鍵能力。',
+            frameworkTip: '優先級 = Impact × Urgency × Irreversibility。先處理不可逆且影響大的。',
           },
           {
-            id: 2, name: '管線處理', type: 'coding', difficulty: 'medium',
-            instruction: '給定庫存陣列，完成 `processInventory(items)` 函式：\n1. 過濾掉 dailyDemand <= 0 的\n2. 計算每個的 daysRemaining = currentStock / dailyDemand\n3. 加上 risk 欄位：< 7 是 "critical"，< 14 是 "warning"，其他 "safe"\n4. 按 daysRemaining 由小到大排序\n5. 回傳結果陣列',
-            defaultCode: `function processInventory(items) {\n  // 用 .filter().map().sort() 管線處理\n  \n}`,
-            example: {
-              title: '範例：陣列管線 filter + map + sort',
-              code: 'const nums = [3, -1, 4, -5, 2];\nconst result = nums\n  .filter(n => n > 0)\n  .map(n => n * 10)\n  .sort((a, b) => a - b);\n// [20, 30, 40]',
-              output: '[20, 30, 40]',
-              explanation: '用 .filter().map().sort() 串接，每一步都回傳新陣列，不修改原始資料。',
+            id: 2,
+            name: '利害關係人分析',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '誰被影響了？',
+              narrative: '繼續重複扣款的案例。你已經確認這是最高優先級，現在需要搞清楚影響範圍和利害關係人。\n\n初步調查發現：\n• 12 筆重複扣款，金額從 $50 到 $2,000 不等\n• 其中 3 位客戶已經在 Twitter 上公開抱怨\n• Bug 來自昨天的一次 payment service 更新\n• 目前 bug 已被工程師修復，但重複扣款尚未退還',
             },
-            tests: [
-              { description: '過濾+計算+排序', fn: `(ctx) => {
-                const items = [
-                  { code: "A", currentStock: 100, dailyDemand: 50 },
-                  { code: "B", currentStock: 200, dailyDemand: 10 },
-                  { code: "C", currentStock: 30, dailyDemand: 0 },
-                ];
-                const r = ctx.processInventory(items);
-                return r.length === 2 && r[0].daysRemaining === 2 && r[0].risk === "critical" && r[1].risk === "safe";
-              }` },
-              { description: '空陣列', fn: '(ctx) => ctx.processInventory([]).length === 0' },
+            question: '在回報給管理層之前，你的分析應該包含哪些要素？',
+            options: [
+              { id: 'A', text: '只報告 bug 已修復，問題已解決', explanation: 'Bug 修復 ≠ 問題解決。還有退款、客戶溝通、防止再發等後續工作。只報告好消息會失去信任。' },
+              { id: 'B', text: '影響範圍（多少人、多少錢）、根因、已採取的行動、還需要什麼', explanation: '正確！完整的 incident report 應該包含：What happened → How many affected → Root cause → Actions taken → What\'s still needed → Prevention plan。這樣管理層才能做決策。' },
+              { id: 'C', text: '詳細的技術根因分析報告', explanation: '管理層不需要看技術細節。他們需要知道：影響多大、現在怎麼樣了、還需要做什麼。' },
+              { id: 'D', text: '客戶的 Twitter 抱怨截圖', explanation: '這只是問題的一小部分。報告應該是全面的影響分析，不只是社群媒體反應。' },
             ],
-            returnVars: ['processInventory'],
+            correctAnswer: 'B',
+            hints: [
+              '管理層做決策需要什麼資訊？',
+              '想想一個完整的問題報告應該回答哪些問題。',
+            ],
+            explanation: '向管理層報告問題時，用這個結構：(1) What — 發生了什麼 (2) Scale — 影響多大 (3) Why — 根因 (4) Done — 已做了什麼 (5) Need — 還需要什麼 (6) Prevent — 怎麼防止再發。這個框架在面試中也很好用。',
+            frameworkTip: 'Incident 報告結構：What → Scale → Why → Done → Need → Prevent',
           },
         ],
       },
       {
-        id: '2-5', name: '寫測試', description: '用 assert 寫測試案例', xp: 50,
+        id: '1-5',
+        name: '結構化思考練習',
+        description: '把前面學的結合起來，用結構化的方式回答一個完整的 case。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '基本相等比較', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `isEqual(a, b)` — 用 `===` 比較兩個值，回傳 true 或 false。',
-            defaultCode: `function isEqual(a, b) {\n  // 用 === 比較\n  \n}`,
-            example: {
-              title: '範例：大於比較函式',
-              code: 'function isGreater(a, b) {\n  return a > b;\n}\nisGreater(5, 3); // true\nisGreater(2, 7); // false',
-              output: 'true, false',
-              explanation: '用比較運算子直接回傳布林值，簡潔明瞭。',
+            id: 1,
+            name: 'Case: 內部工具 adoption 低',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '沒人用的新工具',
+              narrative: '你是 Business Systems Analyst。公司花了 3 個月開發了一套新的 expense report 系統，取代原本用 Excel + email 的流程。\n\n上線 1 個月後的數據：\n• 公司有 500 人需要報銷\n• 只有 120 人用過新系統（24%）\n• 其中 45 人用了一次就沒再用\n• 剩下的 380 人還在用舊的 Excel 流程\n• 財務部收到大量抱怨說「新系統太複雜」',
+              data: [
+                { segment: '用新系統且持續使用', count: 75, pct: '15%' },
+                { segment: '用過一次就放棄', count: 45, pct: '9%' },
+                { segment: '從未使用新系統', count: 380, pct: '76%' },
+              ],
+              dataCaption: '使用者分布',
             },
-            tests: [
-              { description: 'isEqual(1, 1) === true', fn: '(ctx) => ctx.isEqual(1, 1) === true' },
-              { description: 'isEqual(1, 2) === false', fn: '(ctx) => ctx.isEqual(1, 2) === false' },
-              { description: 'isEqual("a", "a") === true', fn: '(ctx) => ctx.isEqual("a", "a") === true' },
-              { description: 'isEqual(1, "1") === false（嚴格比較）', fn: '(ctx) => ctx.isEqual(1, "1") === false' },
-              { description: 'isEqual(null, undefined) === false', fn: '(ctx) => ctx.isEqual(null, undefined) === false' },
+            question: '用問題拆解的方式，這個案例最合理的拆法是？',
+            options: [
+              { id: 'A', text: '這是 Product Problem：系統太難用 → 直接重新設計 UI', explanation: '「太複雜」只是表面回饋。不知道是真的太複雜，還是沒有教育訓練，還是舊流程太好用。直接重做 UI 風險很大。' },
+              { id: 'B', text: '分三層拆：(1) 知不知道有新系統 (2) 試用體驗如何 (3) 長期使用有沒有價值', explanation: '正確！Adoption 問題經典拆法：Awareness → Trial Experience → Ongoing Value。76% 沒用過可能是不知道、不想用、或不會用。9% 用了就放棄是 trial experience 有問題。只有分開看才能對症下藥。' },
+              { id: 'C', text: '這是 Change Management 問題：強制全公司使用就好了', explanation: '強制使用可以提高使用率，但如果系統真的有問題，只會製造更多抱怨。先搞清楚問題再決定策略。' },
+              { id: 'D', text: '比較新舊系統的功能差異，找出新系統缺什麼', explanation: '功能比較是分析的一部分，但不是拆解問題的方式。你需要先理解不同使用者為什麼不用，再看功能。' },
             ],
-            returnVars: ['isEqual'],
+            correctAnswer: 'B',
+            hints: [
+              '76% 從未使用 vs 9% 用了放棄，這兩群人的問題一樣嗎？',
+              '想想 user adoption 的三個階段：知道 → 試用 → 持續使用',
+            ],
+            explanation: 'Adoption 問題的經典拆法：Awareness（知道嗎？）→ Trial（試了嗎？體驗如何？）→ Value（持續用有價值嗎？）。不同階段需要不同的解決方案：Awareness 低要做推廣、Trial 差要改 onboarding、Value 低要改功能。',
+            frameworkTip: 'Adoption 三層拆解：Awareness → Trial → Value。不同階段不同解法。',
           },
           {
-            id: 2, name: '測試框架', type: 'coding', difficulty: 'medium',
-            instruction: '實作一個簡易測試函式 `assertEqual(actual, expected)` — 如果相等回傳 true，不相等回傳 false。要能比較物件（用 JSON.stringify）。然後用它測試一個 `add(a,b)` 函式。',
-            defaultCode: `function assertEqual(actual, expected) {\n  // 比較兩個值是否相等（支援物件比較）\n  \n}\n\nfunction add(a, b) { return a + b; }\n\n// 測試結果\nconst results = [\n  assertEqual(add(1, 2), 3),\n  assertEqual(add(0, 0), 0),\n  assertEqual(add(-1, 1), 0),\n];`,
-            example: {
-              title: '範例：簡易 check 函式',
-              code: 'function check(actual, expected) {\n  return JSON.stringify(actual) === JSON.stringify(expected);\n}\ncheck([1,2], [1,2]); // true\ncheck({x:1}, {x:2}); // false',
-              output: 'true, false',
-              explanation: '用 JSON.stringify 把物件轉成字串再比較，就能比較物件內容是否相同。',
+            id: 2,
+            name: 'Case: 下一步行動',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: '針對 Expense Report 系統的改善建議',
+              narrative: '你進一步調查後發現：\n\n• Awareness：85% 的人知道有新系統（公告過），所以 awareness 不是主要問題\n• Trial：120 人試用後，45 人放棄的主因是「上傳收據的流程太多步」\n• Value：持續使用的 75 人普遍反映「報銷速度從 2 週縮到 3 天，很棒」\n\n你需要決定下一步。',
+              data: [
+                { finding: 'Awareness', status: '不是主因', detail: '85% 知道有新系統' },
+                { finding: 'Trial Experience', status: '主要問題', detail: '上傳收據流程太複雜' },
+                { finding: 'Value', status: '正面', detail: '持續使用者滿意度高' },
+              ],
+              dataCaption: '調查結果摘要',
             },
-            tests: [
-              { description: '數字比較正確', fn: '(ctx) => ctx.assertEqual(3, 3) === true' },
-              { description: '數字比較錯誤', fn: '(ctx) => ctx.assertEqual(3, 4) === false' },
-              { description: '物件比較', fn: '(ctx) => ctx.assertEqual({a:1}, {a:1}) === true' },
-              { description: '物件不同', fn: '(ctx) => ctx.assertEqual({a:1}, {a:2}) === false' },
-              { description: '所有測試通過', fn: '(ctx) => ctx.results.every(r => r === true)' },
+            question: '基於調查結果，最合理的建議是什麼？',
+            options: [
+              { id: 'A', text: '全面重新設計系統', explanation: '持續使用者已經很滿意了，全面重設計是 overkill。只需要改善收據上傳那一步。' },
+              { id: 'B', text: '簡化收據上傳流程，然後邀請放棄的 45 人重新試用', explanation: '正確！Root cause 是收據上傳太複雜。解法：(1) 簡化那個流程 (2) 邀請放棄的人再試一次 (3) 用持續使用者的正面回饋做 social proof。針對性修復，而不是全面重來。' },
+              { id: 'C', text: '強制所有人使用，取消 Excel 報銷流程', explanation: '在修好收據上傳問題之前就強制，會讓更多人有不好的體驗。先修再推。' },
+              { id: 'D', text: '做 A/B test 測試不同的 onboarding 流程', explanation: 'A/B test 適合不確定原因的時候。這裡原因已經很清楚了（收據上傳太複雜），直接改就好。' },
             ],
-            returnVars: ['assertEqual', 'results'],
+            correctAnswer: 'B',
+            hints: [
+              '已經找到根因了，建議要對症下藥。',
+              'Value 已經被驗證了（持續使用者滿意），所以問題不在產品價值，在 trial experience。',
+            ],
+            explanation: '好的建議要：(1) 直接對應 root cause (2) 最小化改動範圍 (3) 有明確的驗證方式。這裡只需要改收據上傳流程，然後追蹤放棄者回流率。面試中，展示你能從分析收斂到具體、可執行的建議，是最加分的能力。',
+            frameworkTip: '建議公式：針對 root cause → 最小可行改動 → 明確驗證方式 → 風險和限制',
           },
         ],
       },
       {
-        id: '2-6', name: 'Boss: BOM 遞迴展開', description: '自己實作遞迴 + 環形偵測', xp: 200, isBoss: true,
+        id: '1-6',
+        name: 'Boss: 完整 Case 拆解',
+        description: '用完整的 case answer framework 回答一個端到端的商業問題。',
+        xp: 200,
+        isBoss: true,
         challenges: [
           {
-            id: 1, name: 'BOM 遞迴展開', type: 'coding', difficulty: 'hard',
-            instruction: '實作 `explodeBOM(item, qty, bomTable)` 遞迴展開 BOM。\n\n- bomTable 是 `[{ parent, child, qtyPer }]` 陣列\n- 回傳 `Map<string, number>` — 零件名稱 → 總需求量\n- 如果偵測到循環引用，throw Error("circular")\n- 最大深度 10 層，超過 throw Error("max depth")',
-            defaultCode: `function explodeBOM(item, qty, bomTable, depth = 0, visited = new Set()) {\n  const result = new Map();\n\n  // 1. 檢查深度\n  // 2. 檢查循環\n  // 3. 找子件：bomTable.filter(row => row.parent === item)\n  // 4. 如果沒有子件，記錄 result.set(item, qty)\n  // 5. 對每個子件遞迴展開，合併結果\n\n  return result;\n}\n\nconst bomTable = [\n  { parent: "bike", child: "frame", qtyPer: 1 },\n  { parent: "bike", child: "wheel", qtyPer: 2 },\n  { parent: "frame", child: "tube", qtyPer: 3 },\n  { parent: "wheel", child: "rim", qtyPer: 1 },\n  { parent: "wheel", child: "tire", qtyPer: 1 },\n];`,
-            example: {
-              title: '範例：遞迴計算資料夾大小',
-              code: 'function totalSize(folder, tree) {\n  const children = tree[folder] || [];\n  if (children.length === 0) return 1;\n  return children.reduce((sum, c) => sum + totalSize(c, tree), 0);\n}\ntotalSize("root", { root: ["a","b"], a: [], b: ["c"], c: [] }); // 3',
-              output: '3',
-              explanation: '遞迴展開：沒有子節點回傳 1，有子節點就遞迴加總。BOM 展開邏輯類似。',
+            id: 1,
+            name: 'Boss Case: 訂閱制產品續約率下降',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: '續約率危機',
+              narrative: '你是一家 B2B SaaS 公司的 Product Analyst，產品是專案管理工具（類似 Asana/Monday.com）。\n\nCEO 在 All Hands 上說：「我們的年度續約率從 85% 掉到 72%，如果不改善，明年營收會少 $2M。」\n\n你被指派負責分析這個問題。\n\n公司有三種 plan：\n• Starter（$99/yr，1-5 人）\n• Professional（$499/yr，6-50 人）\n• Enterprise（$2,999/yr，50+ 人）',
+              data: [
+                { plan: 'Starter', customers: 2000, renewal_rate_before: '78%', renewal_rate_now: '61%', change: '-17pp' },
+                { plan: 'Professional', customers: 800, renewal_rate_before: '88%', renewal_rate_now: '82%', change: '-6pp' },
+                { plan: 'Enterprise', customers: 150, renewal_rate_before: '95%', renewal_rate_now: '93%', change: '-2pp' },
+              ],
+              dataCaption: '各 Plan 續約率變化',
             },
-            referenceCode: CODE_SNIPPETS.bomExplodeSnippet,
-            tests: [
-              { description: '展開 1 台 bike', fn: '(ctx) => { const r = ctx.explodeBOM("bike", 1, ctx.bomTable); return r.get("tube") === 3 && r.get("rim") === 2 && r.get("tire") === 2; }' },
-              { description: '展開 2 台', fn: '(ctx) => { const r = ctx.explodeBOM("bike", 2, ctx.bomTable); return r.get("tube") === 6 && r.get("rim") === 4; }' },
-              { description: '循環偵測', fn: '(ctx) => { try { ctx.explodeBOM("A", 1, [{parent:"A",child:"B",qtyPer:1},{parent:"B",child:"A",qtyPer:1}]); return false; } catch(e) { return e.message === "circular"; } }' },
-              { description: '深度限制', fn: '(ctx) => { const deep = []; for(let i=0;i<15;i++) deep.push({parent:"L"+i,child:"L"+(i+1),qtyPer:1}); try { ctx.explodeBOM("L0", 1, deep); return false; } catch(e) { return e.message === "max depth"; } }' },
+            question: '第一步：從數據來看，你會如何定義問題的範圍？',
+            options: [
+              { id: 'A', text: '所有 Plan 都在下降，這是全面性問題', explanation: '雖然所有 plan 都下降了，但幅度差異很大。Starter -17pp vs Enterprise -2pp。聚焦在 Starter 能解決大部分問題。' },
+              { id: 'B', text: '問題主要集中在 Starter plan（-17pp），應該優先分析這個 segment', explanation: '正確！Starter 的下降幅度最大（-17pp），而且客戶數最多（2000 家）。這意味著光是改善 Starter 的續約率就能解決大部分營收缺口。' },
+              { id: 'C', text: 'Enterprise 續約率最重要，因為單價最高', explanation: 'Enterprise 單價高，但下降只有 -2pp（3 家客戶），影響約 $9K。Starter 下降 -17pp（340 家客戶），影響約 $34K。要看絕對影響。' },
+              { id: 'D', text: '需要更多數據才能判斷', explanation: '目前的數據已經足夠做初步 segmentation。先聚焦最大的問題，再深入分析。' },
             ],
-            returnVars: ['explodeBOM', 'bomTable'],
+            correctAnswer: 'B',
+            hints: [
+              '看 drop 幅度和客戶數量的乘積，哪個 segment 的影響最大？',
+            ],
+            explanation: '面試中的 case 拆解第一步：segmentation。切出最受影響的 segment，聚焦分析。這裡 Starter plan 的 drop 最大且客戶最多，是分析的首要目標。',
+            frameworkTip: 'Case 第一步：Goal → Metrics → Segmentation → 聚焦最大問題',
+          },
+          {
+            id: 2,
+            name: 'Boss Case: 找出根因',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: '深入 Starter Plan 分析',
+              narrative: '你聚焦到 Starter plan 後，進一步調查，找到以下資訊：\n\n• Starter 用戶平均只使用產品的 3 個功能（共有 15 個功能）\n• 續約的 Starter 用戶平均在到期前 30 天仍有活躍使用\n• 未續約的 Starter 用戶，平均在到期前 60 天就停止使用了\n• 6 個月前，公司把 Starter plan 的「Gantt Chart」功能移到了 Professional plan\n• 客服紀錄顯示，Starter 用戶最常問的問題是：「Gantt Chart 去哪了？」',
+              data: [
+                { metric: '平均使用功能數', renewed: '5 個', not_renewed: '2 個' },
+                { metric: '最後活躍到到期的天數', renewed: '持續使用到到期', not_renewed: '到期前 60 天就停用' },
+                { metric: '客服詢問 Top 1', renewed: '帳務問題', not_renewed: 'Gantt Chart 功能消失' },
+              ],
+              dataCaption: '續約 vs 未續約用戶比較',
+            },
+            question: '根據以上資訊，最可能的 root cause 是什麼？',
+            options: [
+              { id: 'A', text: 'Starter 用戶本來就不夠 engaged，遲早會流失', explanation: '續約的 Starter 用戶使用 5 個功能且持續活躍，代表 Starter 用戶是可以被 retain 的。問題不是天生的。' },
+              { id: 'B', text: '把 Gantt Chart 從 Starter 移走，讓依賴這個功能的用戶失去了關鍵價值', explanation: '正確！所有線索都指向同一個方向：(1) 時間點吻合（6 個月前移走，現在到期不續約）(2) 客服數據支持（最常問的問題）(3) 行為數據支持（未續約者更早停用）。這是典型的「移除功能導致價值流失」。' },
+              { id: 'C', text: '競爭對手的免費工具搶走了小型團隊', explanation: '沒有數據支持競爭對手的假設。而且客服 Top 1 問題是 Gantt Chart，不是「我找到更好的工具」。' },
+              { id: 'D', text: '價格太高，小型團隊負擔不起', explanation: '$99/yr 不算高。而且之前續約率是 78%，價格沒變但續約率掉了，代表問題不在價格。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '注意時間軸：Gantt Chart 何時被移走？續約率何時開始掉？',
+              '客服 Top 1 問題是什麼？',
+            ],
+            explanation: 'Root cause analysis 要找到多條線索的交叉點。這裡時間軸、客服數據、使用行為都指向 Gantt Chart 被移走。在面試中，能把多個資料來源串在一起得出結論，是最高分的回答方式。',
+            frameworkTip: 'Root cause 驗證：多條線索交叉確認（時間點 + 行為數據 + qualitative feedback）',
+          },
+          {
+            id: 3,
+            name: 'Boss Case: 提出建議',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: '怎麼解決續約率問題',
+              narrative: '你已經確認 root cause：Gantt Chart 被移到 Professional plan，導致 Starter 用戶價值流失。\n\n但這不是你一個人能決定的。商業考量如下：\n\n• 營收團隊把 Gantt Chart 移走是為了推動 Starter → Professional 的 upsell\n• 但實際 upsell conversion 只有 3%（預期是 15%）\n• 97% 的 Starter 用戶沒有升級，其中很多直接不續約了\n• Starter plan 佔總客戶數的 68%',
+              data: [
+                { scenario: '維持現狀', starter_renewal: '61%', upsell_rate: '3%', revenue_impact: '-$340K/yr' },
+                { scenario: 'Gantt Chart 放回 Starter', starter_renewal: '~75%', upsell_rate: '~1%', revenue_impact: '+$140K/yr' },
+                { scenario: 'Gantt Chart 放回 + 新 upsell 策略', starter_renewal: '~75%', upsell_rate: '~5%', revenue_impact: '+$200K/yr' },
+              ],
+              dataCaption: '三種方案的預估影響',
+            },
+            question: '你會向管理層提出什麼建議？',
+            options: [
+              { id: 'A', text: '維持現狀，加強 upsell 推廣力度', explanation: 'Upsell 只有 3%（預期 15%），代表 Starter 用戶對升級沒有意願。繼續推只會讓更多人不續約。' },
+              { id: 'B', text: '把 Gantt Chart 放回 Starter，放棄 upsell', explanation: '這解決了續約問題，但 upsell 降到 1%，等於完全放棄了升級收入。有更好的方案。' },
+              { id: 'C', text: '把 Gantt Chart 放回 Starter，同時設計新的 upsell 價值點', explanation: '正確！最佳方案兼顧兩個目標：(1) 放回 Gantt Chart 止血，恢復 Starter 續約率 (2) 用其他功能（如進階報表、API 整合）作為新的 upsell 動機。數據顯示這個方案的 revenue impact 最好。' },
+              { id: 'D', text: '取消 Starter plan，全部併入 Professional', explanation: '這會直接趕走 68% 的客戶。Starter 是 acquisition funnel 的入口，取消它會傷害長期成長。' },
+            ],
+            correctAnswer: 'C',
+            hints: [
+              '看三種方案的 revenue impact，哪個最好？',
+              '好的建議要兼顧短期止血和長期成長。',
+            ],
+            explanation: '面試中提建議的黃金法則：不是非黑即白，要找到兼顧多方利益的方案。這裡「放回 + 新 upsell」既解決了續約問題，又保留了升級的成長空間。最後記得說你會怎麼驗證：追蹤放回後的續約率和新 upsell 的 conversion。',
+            frameworkTip: 'Case 最後一步：Recommend → Why this one → Trade-offs → How to validate',
           },
         ],
       },
     ],
   },
+
+  // ═══════════════════════════════════════════════════════════
+  // World 2：KPI / Metrics
+  // ═══════════════════════════════════════════════════════════
   {
-    id: 3,
-    name: 'SQL 地下城',
-    emoji: '🏰',
-    description: '107 個 migration 構成了這個系統的記憶',
-    color: 'from-purple-500 to-violet-600',
+    id: 2,
+    name: 'KPI 與商業指標',
+    emoji: '📊',
+    description: '學會選對指標、讀懂數據、做出判斷',
+    color: 'from-emerald-500 to-teal-500',
     quests: [
       {
-        id: '3-1', name: 'SELECT 基礎', description: '學習用 JS 模擬 SQL 查詢', xp: 50,
+        id: '2-1',
+        name: 'KPI 基礎概念',
+        description: '理解 KPI 是什麼、為什麼不同角色看重不同指標。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '模擬 SELECT', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `selectColumns(rows, columns)` — 從物件陣列中只取出指定欄位。\n例如 `selectColumns([{a:1,b:2,c:3}], ["a","c"])` → `[{a:1,c:3}]`',
-            defaultCode: `function selectColumns(rows, columns) {\n  // 用 .map() 只取指定欄位\n  \n}`,
-            example: {
-              title: '範例：從物件中挑選欄位',
-              code: 'const row = {name: "Bob", age: 30, city: "TPE"};\nconst picked = {name: row.name};\n// picked → {name: "Bob"}',
-              output: '{name: "Bob"}',
-              explanation: '用指定的 key 從物件中取值，組成新物件。',
+            id: 1,
+            name: 'Leading vs Lagging Metrics',
+            type: 'multiple-choice',
+            difficulty: 'easy',
+            scenario: {
+              title: '季度業績回顧',
+              narrative: '你在一家 SaaS 公司參加季度業績回顧會議。以下是報告中的指標：\n\n• Q3 營收：$1.2M（目標 $1.5M，差 20%）\n• 客戶流失率：8%（上季 5%）\n• Sales pipeline 合格線索數：下降 30%\n• 產品 NPS：從 45 降到 38\n\nCEO 想知道為什麼營收沒達標。',
             },
-            tests: [
-              { description: '取出指定欄位', fn: '(ctx) => { const r = ctx.selectColumns([{a:1,b:2,c:3}],["a","c"]); return r[0].a === 1 && r[0].c === 3 && r[0].b === undefined; }' },
-              { description: '多筆資料', fn: '(ctx) => ctx.selectColumns([{x:1,y:2},{x:3,y:4}],["x"]).length === 2' },
+            question: '以下哪個是 leading metric（領先指標），能提前預警營收問題？',
+            options: [
+              { id: 'A', text: 'Q3 營收 $1.2M', explanation: '營收是 lagging metric（滯後指標），是結果，不是預警信號。看到營收不達標的時候，問題已經發生了。' },
+              { id: 'B', text: 'Sales pipeline 合格線索數', explanation: '正確！Pipeline 是典型的 leading metric。線索數下降 → 3-6 個月後成交量下降 → 營收下降。如果在 Q2 就發現 pipeline 下降，Q3 營收問題是可以提前預防的。' },
+              { id: 'C', text: '客戶流失率 8%', explanation: '流失率是 lagging metric，客戶已經離開了才計算出來。但流失的「前兆」（如使用頻率下降）才是 leading metric。' },
+              { id: 'D', text: 'NPS 分數 38', explanation: 'NPS 比較接近 leading（低 NPS 預示未來可能流失），但它本身不是直接導致營收的因子，而且 NPS 的可操作性較低。Pipeline 更直接。' },
             ],
-            returnVars: ['selectColumns'],
+            correctAnswer: 'B',
+            hints: [
+              'Leading metric 是能在結果發生之前就發現問題的指標。',
+              '想想哪個指標如果提前發現異常，可以讓你採取行動避免問題？',
+            ],
+            explanation: 'Leading metrics 預測未來（pipeline、activation rate、feature adoption），Lagging metrics 反映過去（revenue、churn、NPS）。好的 dashboard 兩者都要有：lagging 確認結果，leading 提前預警。面試中如果能主動區分這兩種指標，面試官會加分。',
+            frameworkTip: 'Leading = 可預測、可行動 / Lagging = 反映結果、確認趨勢',
           },
           {
-            id: 2, name: '模擬 ORDER BY', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `orderBy(rows, column, direction)` — direction 是 "ASC" 或 "DESC"。',
-            defaultCode: `function orderBy(rows, column, direction = "ASC") {\n  // 排序（不修改原陣列）\n  \n}`,
-            example: {
-              title: '範例：陣列排序',
-              code: 'const nums = [3, 1, 2];\nconst sorted = [...nums].sort((a, b) => a - b);\n// sorted → [1, 2, 3]',
-              output: '[1, 2, 3]',
-              explanation: '用 spread 複製陣列後再 sort，不會改到原本的。',
+            id: 2,
+            name: 'Guardrail Metrics',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: 'Growth Hack 的副作用',
+              narrative: '你在一家電商公司。Growth 團隊推了一個策略：「首次購物免運費」，目標是提升新客轉換率。\n\n結果：\n• 新客轉換率：從 2.5% 提升到 4.8%（成功 ✓）\n• 平均訂單金額：從 $85 降到 $32\n• 退貨率：從 5% 上升到 22%\n• 客戶 30 天回購率：3%（之前新客是 15%）',
+              data: [
+                { metric: '新客轉換率', before: '2.5%', after: '4.8%', verdict: '上升' },
+                { metric: '平均訂單金額', before: '$85', after: '$32', verdict: '大幅下降' },
+                { metric: '退貨率', before: '5%', after: '22%', verdict: '大幅上升' },
+                { metric: '30天回購率', before: '15%', after: '3%', verdict: '大幅下降' },
+              ],
+              dataCaption: '免運費策略前後比較',
             },
-            tests: [
-              { description: '升冪排序', fn: '(ctx) => { const r = ctx.orderBy([{v:3},{v:1},{v:2}],"v","ASC"); return r[0].v === 1 && r[2].v === 3; }' },
-              { description: '降冪排序', fn: '(ctx) => { const r = ctx.orderBy([{v:3},{v:1},{v:2}],"v","DESC"); return r[0].v === 3; }' },
-              { description: '不修改原陣列', fn: '(ctx) => { const orig = [{v:3},{v:1}]; ctx.orderBy(orig,"v"); return orig[0].v === 3; }' },
+            question: '這個策略達到了 primary metric 目標，但 guardrail metrics 告訴你什麼？',
+            options: [
+              { id: 'A', text: '策略很成功，轉換率幾乎翻倍', explanation: '只看 primary metric 會誤判。AOV 和退貨率的惡化代表吸引的是低品質客戶，長期會虧錢。' },
+              { id: 'B', text: 'Guardrail metrics 全部惡化，策略雖然達標但帶來了不健康的成長', explanation: '正確！Guardrail metrics 的作用就是防止你「達標但傷害整體」。AOV 暴跌、退貨率暴增、回購率跳水，代表免運費吸引的是薅羊毛的客戶，不是真正的目標客群。這是不健康的成長。' },
+              { id: 'C', text: '退貨率上升是正常的，電商都有這個問題', explanation: '從 5% 到 22% 是 4 倍以上的增長，這不正常。特別是跟免運費策略的時間點完全吻合。' },
+              { id: 'D', text: '需要更多時間觀察，一個月數據不夠', explanation: 'Guardrail metrics 的變化已經非常明顯了。在數據這麼清楚的情況下，等待反而是在浪費錢。' },
             ],
-            returnVars: ['orderBy'],
+            correctAnswer: 'B',
+            hints: [
+              'Guardrail metrics 是「不能惡化」的底線指標。如果 guardrail 被突破了，策略再成功也要喊停。',
+            ],
+            explanation: 'Guardrail metrics 的核心概念：你的 primary metric 可以改善，但不能以犧牲這些指標為代價。常見的 guardrail：AOV、退貨率、客戶品質、unit economics。面試中如果你能主動提到「我會設什麼 guardrail」，代表你有成熟的分析思維。',
+            frameworkTip: '每個改善計畫都要有：Primary Metric（要改善的）+ Guardrail Metrics（不能惡化的）',
           },
         ],
       },
       {
-        id: '3-2', name: 'WHERE + JOIN', description: '過濾與合併資料', xp: 50,
+        id: '2-2',
+        name: 'Product & User Metrics',
+        description: '熟悉 Product Analyst 最常用的使用者指標。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '模擬 WHERE', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `where(rows, conditionFn)` — 回傳符合條件的列。跟 filter 一樣但命名成 SQL 風格。',
-            defaultCode: `function where(rows, conditionFn) {\n  // 過濾\n  \n}`,
-            example: {
-              title: '範例：用 filter 過濾陣列',
-              code: 'const items = [1, 2, 3, 4, 5];\nconst big = items.filter(x => x > 3);\n// big → [4, 5]',
-              output: '[4, 5]',
-              explanation: 'filter 會回傳所有讓條件函式回傳 true 的元素。',
+            id: 1,
+            name: 'DAU/MAU 比率解讀',
+            type: 'data-interpretation',
+            difficulty: 'easy',
+            scenario: {
+              title: '三款產品的活躍度比較',
+              narrative: '你在一家科技集團擔任 PA，需要比較集團旗下三款產品的用戶黏性。\n\nDAU/MAU 比率（也叫 stickiness ratio）反映的是：每月的活躍用戶中，平均每天有多少比例在使用。',
+              data: [
+                { product: 'Chat App', DAU: '5.2M', MAU: '8M', 'DAU/MAU': '65%', category: '社交通訊' },
+                { product: 'Project Tool', DAU: '800K', MAU: '3.2M', 'DAU/MAU': '25%', category: '工作管理' },
+                { product: 'Finance App', DAU: '200K', MAU: '2.5M', 'DAU/MAU': '8%', category: '個人理財' },
+              ],
+              dataCaption: '三款產品活躍度',
             },
-            tests: [
-              { description: '過濾', fn: '(ctx) => ctx.where([{stock:50},{stock:200}], r => r.stock < 100).length === 1' },
+            question: 'Finance App 的 DAU/MAU 只有 8%，這代表什麼？',
+            options: [
+              { id: 'A', text: '產品有嚴重問題，使用者不喜歡用', explanation: '不一定。個人理財 app 的使用頻率天生就低——你不會每天查帳戶餘額。低 DAU/MAU 不代表產品差，要看 category benchmark。' },
+              { id: 'B', text: '使用者不需要每天使用，低 stickiness 對這類產品是正常的', explanation: '正確！不同品類的產品有不同的使用頻率。社交 app DAU/MAU > 50% 是正常的，但理財 app 可能 10% 就算不錯。關鍵是跟同品類比較，而不是跨品類。' },
+              { id: 'C', text: '應該加入更多每日通知來提高 DAU', explanation: '強行推通知會導致使用者關閉通知或刪除 app。使用頻率應該由產品價值驅動，不是打擾驅動。' },
+              { id: 'D', text: 'MAU 高但 DAU 低，代表使用者只用一次就不再用', explanation: '不是只用一次——MAU 代表一個月內有使用。只是不是每天用。可能是每月用 2-3 次。' },
             ],
-            returnVars: ['where'],
+            correctAnswer: 'B',
+            hints: [
+              '你每天都會開銀行 app 嗎？還是發薪水的時候才看？',
+              '不同類型的產品，有不同的「正常」使用頻率。',
+            ],
+            explanation: '指標解讀的關鍵：context matters。同一個數字在不同 context 下意義完全不同。面試中面試官常常會給你一個指標，看你會不會盲目下結論。正確做法：先問 benchmark 是什麼，再做判斷。',
+            frameworkTip: '解讀指標：先看 category benchmark → 跟同類比較 → 不要跨類比較',
           },
           {
-            id: 2, name: '模擬 INNER JOIN', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `innerJoin(left, right, leftKey, rightKey)` — 回傳兩邊都有配對的合併結果（用 spread 合併物件）。',
-            defaultCode: `function innerJoin(left, right, leftKey, rightKey) {\n  // 對 left 每一筆，找 right 中 rightKey 相同的，合併\n  \n}`,
-            example: {
-              title: '範例：合併兩個物件',
-              code: 'const a = {id: 1, name: "Alice"};\nconst b = {id: 1, score: 95};\nconst merged = {...a, ...b};\n// merged → {id: 1, name: "Alice", score: 95}',
-              output: '{id: 1, name: "Alice", score: 95}',
-              explanation: '用 spread 把兩個物件的欄位合在一起。',
+            id: 2,
+            name: 'Retention 與 Cohort',
+            type: 'data-interpretation',
+            difficulty: 'medium',
+            scenario: {
+              title: '新功能的 Retention 分析',
+              narrative: '你在一家 productivity app 公司。PM 上線了一個「AI 摘要」功能，想知道它對 retention 的影響。\n\n你做了一個 cohort 分析，比較「用過 AI 摘要」vs「沒用過」的 30 天 retention。',
+              data: [
+                { day: 'Day 1', with_AI: '82%', without_AI: '75%' },
+                { day: 'Day 7', with_AI: '64%', without_AI: '48%' },
+                { day: 'Day 14', with_AI: '55%', without_AI: '35%' },
+                { day: 'Day 30', with_AI: '48%', without_AI: '22%' },
+              ],
+              dataCaption: '30 天 Retention 比較',
             },
-            tests: [
-              { description: '正常 JOIN', fn: '(ctx) => { const r = ctx.innerJoin([{id:1,name:"A"}],[{id:1,price:10}],"id","id"); return r.length === 1 && r[0].name === "A" && r[0].price === 10; }' },
-              { description: '沒配到的不出現', fn: '(ctx) => ctx.innerJoin([{id:1},{id:2}],[{id:1}],"id","id").length === 1' },
+            question: '從數據看，你能直接得出「AI 摘要功能提升了 retention」的結論嗎？',
+            options: [
+              { id: 'A', text: '可以，用 AI 摘要的用戶 retention 明顯更高', explanation: '相關性 ≠ 因果關係。也許本來就比較 engaged 的用戶才會去用 AI 摘要，所以 retention 高不是 AI 摘要「造成」的，而是這群人本來就不容易流失。' },
+              { id: 'B', text: '不能直接得出因果結論，可能有 selection bias', explanation: '正確！這是 correlation vs causation 的經典陷阱。用 AI 摘要的人可能本來就是 power users，他們的 retention 本來就高。要驗證因果關係，需要做 A/B test（隨機分配）或控制其他變數。' },
+              { id: 'C', text: '不能，因為樣本數不夠', explanation: '題目沒有給樣本數資訊，但問題不在樣本數，而在研究設計（observational vs experimental）。' },
+              { id: 'D', text: '需要看更長期的數據才能判斷', explanation: '更長的數據有幫助，但根本問題是 selection bias，不是觀察時間。' },
             ],
-            returnVars: ['innerJoin'],
+            correctAnswer: 'B',
+            hints: [
+              '想想看：是 AI 摘要讓他們留下來，還是本來就會留下來的人才會去用 AI 摘要？',
+              'Correlation ≠ Causation。怎麼才能驗證因果關係？',
+            ],
+            explanation: '這是 PA 面試的經典考題：correlation vs causation。每次看到「使用 X 功能的用戶表現更好」的數據，第一反應要問：是不是 selection bias？解法：A/B test 隨機分配、PSM（propensity score matching）、或找 natural experiment。',
+            frameworkTip: '看到相關性先問：是 X 導致 Y，還是某個 Z 同時導致了 X 和 Y？',
+          },
+          {
+            id: 3,
+            name: 'Feature Adoption 評估',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '新功能上線兩週',
+              narrative: '你的公司推出了一個「smart scheduling」功能。以下是上線兩週的數據：\n\n• 總 MAU：50,000\n• 看到功能入口的用戶：38,000（76%）\n• 點擊進入功能的用戶：8,000（21% of exposed）\n• 完成第一次使用的用戶：3,200（40% of clicked）\n• 第二週回來再用的用戶：1,800（56% of first-time users）',
+              data: [
+                { stage: 'Exposed（看到入口）', users: '38,000', rate: '76% of MAU' },
+                { stage: 'Clicked（點擊進入）', users: '8,000', rate: '21% of exposed' },
+                { stage: 'Completed（完成首次使用）', users: '3,200', rate: '40% of clicked' },
+                { stage: 'Retained（第二週回用）', users: '1,800', rate: '56% of completed' },
+              ],
+              dataCaption: 'Smart Scheduling Adoption Funnel',
+            },
+            question: '如果你只能改善一個環節來最大化 adoption，你會選哪一步？',
+            options: [
+              { id: 'A', text: 'Exposed → Clicked（21%），提升功能的可發現性', explanation: '21% 的點擊率其實不低。而且提升可發現性通常是 UI 調整，改善空間有限。' },
+              { id: 'B', text: 'Clicked → Completed（40%），改善首次使用體驗', explanation: '正確！60% 的人點進來但沒完成第一次使用，代表首次使用體驗有嚴重的 friction。改善這一步能把 3,200 人提升到可能 5,000-6,000 人，而且後續的 retention（56%）已經不錯了，代表用過的人覺得有價值。' },
+              { id: 'C', text: 'Completed → Retained（56%），提升回用率', explanation: '56% 的回用率其實相當好。而且最大的流失在前一步（60% 的人沒完成首次使用），應該先解決大的問題。' },
+              { id: 'D', text: '增加 Exposed 比例，讓更多人看到', explanation: '76% 已經很高了，剩下 24% 可能是不常用的用戶。提升空間有限。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '看每一步的 drop-off rate，哪一步流失最嚴重？',
+              '改善最大的 drop-off 通常能產生最大的影響。',
+            ],
+            explanation: 'Feature adoption funnel 分析的邏輯跟所有 funnel 一樣：找最大 drop-off → 優先改善。這裡 Clicked → Completed 的 60% drop-off 是最大的瓶頸。改善首次使用體驗（如簡化流程、加入引導）能產生最大效果。',
+            frameworkTip: 'Feature Adoption Funnel: Exposed → Clicked → Completed → Retained → 找最大 drop-off',
           },
         ],
       },
       {
-        id: '3-3', name: 'GROUP BY + 聚合', description: '分組統計', xp: 50,
+        id: '2-3',
+        name: 'Business & Operations Metrics',
+        description: '了解營運和商業指標：cycle time、SLA、throughput 等。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '計數分組', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `countBy(rows, key)` — 回傳一個物件，key 是分組值，value 是該組的數量。\n例如 `countBy([{type:"A"},{type:"B"},{type:"A"}], "type")` → `{A: 2, B: 1}`',
-            defaultCode: `function countBy(rows, key) {\n  // 用 reduce 計算每個分組的數量\n  \n}`,
-            example: {
-              title: '範例：用 reduce 累加計數',
-              code: 'const letters = ["a", "b", "a"];\nconst counts = letters.reduce((acc, l) => {\n  acc[l] = (acc[l] || 0) + 1; return acc;\n}, {});\n// counts → {a: 2, b: 1}',
-              output: '{a: 2, b: 1}',
-              explanation: 'reduce 逐一遍歷，用物件累計每個值出現的次數。',
+            id: 1,
+            name: 'Cycle Time 分析',
+            type: 'data-interpretation',
+            difficulty: 'easy',
+            scenario: {
+              title: '訂單處理效率',
+              narrative: '你在一家 B2B 電商平台負責 operations analytics。老闆要你分析訂單處理效率。\n\n一筆訂單從下單到出貨的流程：\n下單 → 付款確認 → 倉庫撿貨 → 品質檢查 → 包裝 → 出貨',
+              data: [
+                { step: '下單→付款確認', avg_time: '0.5 hr', target: '1 hr', status: '達標' },
+                { step: '付款確認→撿貨', avg_time: '4 hr', target: '2 hr', status: '超標' },
+                { step: '撿貨→品質檢查', avg_time: '1 hr', target: '1 hr', status: '達標' },
+                { step: '品質檢查→包裝', avg_time: '6 hr', target: '1 hr', status: '嚴重超標' },
+                { step: '包裝→出貨', avg_time: '1.5 hr', target: '2 hr', status: '達標' },
+              ],
+              dataCaption: '各步驟 Cycle Time（平均）',
             },
-            tests: [
-              { description: '計數正確', fn: '(ctx) => { const r = ctx.countBy([{t:"A"},{t:"B"},{t:"A"}],"t"); return r.A === 2 && r.B === 1; }' },
-              { description: '空陣列', fn: '(ctx) => Object.keys(ctx.countBy([],"t")).length === 0' },
-              { description: '單一分組', fn: '(ctx) => ctx.countBy([{x:"a"},{x:"a"},{x:"a"}],"x").a === 3' },
+            question: '整體 cycle time 是 13 小時（目標 7 小時），最應該先改善哪個步驟？',
+            options: [
+              { id: 'A', text: '付款確認→撿貨（超標 2 小時）', explanation: '超標了 2 小時，是第二大的瓶頸，但不是最嚴重的。' },
+              { id: 'B', text: '品質檢查→包裝（超標 5 小時）', explanation: '正確！這個步驟超標最嚴重（6hr vs 目標 1hr），是整個流程的 bottleneck。改善這一步能把總 cycle time 從 13hr 降到 8hr，接近目標。' },
+              { id: 'C', text: '所有步驟一起改善', explanation: '資源有限，應該先攻最大的瓶頸。品質檢查→包裝這一步佔了超標時間的 83%（5/6 小時）。' },
+              { id: 'D', text: '包裝→出貨，因為是最後一步最影響客戶感受', explanation: '這一步其實是達標的（1.5hr vs 目標 2hr），不需要改善。' },
             ],
-            returnVars: ['countBy'],
+            correctAnswer: 'B',
+            hints: [
+              '哪個步驟的實際時間和目標差距最大？',
+            ],
+            explanation: 'Cycle time 分析的核心：找到 bottleneck（瓶頸）。品質檢查→包裝超標 5 小時，代表可能是排隊等包裝（產能不足）、品質不良率高需要重工、或流程設計有問題。找到 bottleneck 後，下一步是分析根因。',
+            frameworkTip: '流程優化：畫出每一步 → 量時間 → 找 bottleneck → 分析根因 → 改善',
           },
           {
-            id: 2, name: '模擬 GROUP BY', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `groupBy(rows, key)` — 回傳一個物件，key 是分組值，value 是該組的列陣列。\n例如 `groupBy([{type:"A",v:1},{type:"B",v:2},{type:"A",v:3}], "type")` → `{ A: [{...},{...}], B: [{...}] }`',
-            defaultCode: `function groupBy(rows, key) {\n  // 用 reduce 分組\n  \n}`,
-            example: {
-              title: '範例：把陣列元素分組',
-              code: 'const words = ["hi", "ok", "hey"];\nconst byLen = {};\nwords.forEach(w => {\n  const k = w.length;\n  byLen[k] = byLen[k] || [];\n  byLen[k].push(w);\n});\n// byLen → {2: ["hi", "ok"], 3: ["hey"]}',
-              output: '{2: ["hi", "ok"], 3: ["hey"]}',
-              explanation: '用 key 值當物件的屬性名，把相同 key 的元素放進同一個陣列。',
+            id: 2,
+            name: 'SLA 達成率',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: 'IT Support SLA 分析',
+              narrative: '你是 IT 部門的 BA，負責分析 support ticket 的 SLA 達成率。\n\n公司 SLA 承諾：\n• P1（系統故障）：1 小時內回應，4 小時內解決\n• P2（功能異常）：4 小時內回應，24 小時內解決\n• P3（一般問題）：24 小時內回應，72 小時內解決',
+              data: [
+                { priority: 'P1', tickets: 15, response_sla: '93%', resolve_sla: '73%' },
+                { priority: 'P2', tickets: 120, response_sla: '88%', resolve_sla: '82%' },
+                { priority: 'P3', tickets: 450, response_sla: '95%', resolve_sla: '91%' },
+              ],
+              dataCaption: '上月 SLA 達成率',
             },
-            tests: [
-              { description: '分組正確', fn: '(ctx) => { const r = ctx.groupBy([{t:"A",v:1},{t:"B",v:2},{t:"A",v:3}],"t"); return r.A.length === 2 && r.B.length === 1; }' },
-              { description: '空陣列', fn: '(ctx) => Object.keys(ctx.groupBy([],"t")).length === 0' },
+            question: '從 SLA 數據來看，最令人擔心的是什麼？',
+            options: [
+              { id: 'A', text: 'P3 的 ticket 數量最多（450 張）', explanation: '數量多不代表有問題。P3 的 SLA 達成率很好（95% / 91%），代表在控制範圍內。' },
+              { id: 'B', text: 'P1 的解決 SLA 只有 73%，代表 27% 的系統故障沒在 4 小時內解決', explanation: '正確！P1 是最高優先級的系統故障，解決率只有 73% 代表每 4 個系統故障就有 1 個超過 4 小時才解決。這對業務影響最大，而且數量雖然只有 15 張，但每一張的影響範圍可能是全公司。' },
+              { id: 'C', text: 'P2 的回應 SLA 低於 90%', explanation: 'P2 回應率 88% 確實需要關注，但 P1 解決率 73% 更嚴重。系統故障不解決的影響遠大於功能異常慢回覆。' },
+              { id: 'D', text: '整體表現不錯，不用太擔心', explanation: 'P1 解決 SLA 73% 是嚴重問題。系統故障每多停一小時，全公司都在等。' },
             ],
-            returnVars: ['groupBy'],
-          },
-          {
-            id: 3, name: '聚合函式', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `aggregate(rows, column, fn)` — fn 可以是 "SUM"、"AVG"、"COUNT"、"MAX"、"MIN"。',
-            defaultCode: `function aggregate(rows, column, fn) {\n  const values = rows.map(r => r[column]);\n  // 根據 fn 計算\n  \n}`,
-            example: {
-              title: '範例：陣列求和與最大值',
-              code: 'const vals = [5, 10, 15];\nconst sum = vals.reduce((a, b) => a + b, 0);\nconst max = Math.max(...vals);\n// sum → 30, max → 15',
-              output: 'sum = 30, max = 15',
-              explanation: '用 reduce 做加總，用 Math.max 找最大值。',
-            },
-            tests: [
-              { description: 'SUM', fn: '(ctx) => ctx.aggregate([{v:10},{v:20},{v:30}],"v","SUM") === 60' },
-              { description: 'AVG', fn: '(ctx) => ctx.aggregate([{v:10},{v:20},{v:30}],"v","AVG") === 20' },
-              { description: 'COUNT', fn: '(ctx) => ctx.aggregate([{v:10},{v:20}],"v","COUNT") === 2' },
-              { description: 'MAX', fn: '(ctx) => ctx.aggregate([{v:10},{v:30},{v:20}],"v","MAX") === 30' },
-              { description: 'MIN', fn: '(ctx) => ctx.aggregate([{v:10},{v:30},{v:20}],"v","MIN") === 10' },
+            correctAnswer: 'B',
+            hints: [
+              '哪個 priority 的後果最嚴重？那個 priority 的達成率是多少？',
             ],
-            returnVars: ['aggregate'],
+            explanation: 'SLA 分析要考慮 priority × 達成率。P1 雖然只有 15 張，但每一張都是系統故障，影響可能是上百人無法工作。73% 的解決率代表平均每月有 4 張 P1 超時未解決——這可能代表缺少 on-call 工程師、escalation 流程有問題、或技術債太多。',
+            frameworkTip: 'SLA 分析：Priority × Volume × 達成率 → 高 Priority 低達成率是最大風險',
           },
         ],
       },
       {
-        id: '3-4', name: 'INSERT + UPDATE', description: '寫入與修改資料', xp: 50,
+        id: '2-4',
+        name: 'Success Metrics 怎麼定',
+        description: '學會為一個專案或功能定義 success metrics。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '插入資料', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `insertRow(table, row)` — table 是陣列（模擬資料表），row 是物件。回傳新的陣列（不修改原陣列），把 row 加到最後面，並自動加上 `id` 欄位（取目前最大 id + 1，若空表則 id=1）。',
-            defaultCode: `function insertRow(table, row) {\n  // 不修改原陣列\n  // 自動加 id\n  \n}`,
-            example: {
-              title: '範例：不修改原陣列地新增元素',
-              code: 'const arr = [1, 2];\nconst newArr = [...arr, 3];\n// arr → [1, 2]  newArr → [1, 2, 3]',
-              output: '[1, 2, 3]',
-              explanation: '用 spread 建立新陣列，原陣列不會被改動。',
+            id: 1,
+            name: '為新功能定 Success Metric',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '設計 Dashboard 的成功指標',
+              narrative: '你公司要開發一個內部 sales dashboard，讓業務團隊追蹤他們的 pipeline 和成交進度。\n\n目標：讓業務團隊每天自己看 dashboard，不再需要每週問 data team 拉報表。\n\nPM 問你：「這個 dashboard 的 success metric 應該是什麼？」',
             },
-            tests: [
-              { description: '插入後長度+1', fn: '(ctx) => ctx.insertRow([{id:1,name:"A"}],{name:"B"}).length === 2' },
-              { description: '自動 id', fn: '(ctx) => ctx.insertRow([{id:1,name:"A"}],{name:"B"})[1].id === 2' },
-              { description: '空表 id=1', fn: '(ctx) => ctx.insertRow([],{name:"C"})[0].id === 1' },
-              { description: '不修改原陣列', fn: '(ctx) => { const t=[{id:1}]; ctx.insertRow(t,{name:"X"}); return t.length === 1; }' },
+            question: '以下哪個最適合作為 primary success metric？',
+            options: [
+              { id: 'A', text: 'Dashboard 的 DAU（每日活躍用戶數）', explanation: 'DAU 是一個不錯的指標，但它衡量的是「有人在用」，不是「解決了問題」。有人可能每天打開但沒有得到有用資訊。' },
+              { id: 'B', text: 'Data team 收到的 ad-hoc 報表請求數量下降', explanation: '正確！回到原始目標：「不再需要每週問 data team 拉報表」。最直接的 success metric 就是 ad-hoc request 數量是否下降。如果 dashboard 真的有用，業務自己能找到答案，就不會再問 data team。' },
+              { id: 'C', text: '業務團隊的成交率提升', explanation: '成交率受太多因素影響（市場、產品、定價、個人能力），很難歸因到 dashboard。而且這是 lagging metric，要很久才能看到效果。' },
+              { id: 'D', text: '使用者滿意度問卷分數', explanation: '滿意度是 proxy metric，不是 success metric。他們可能覺得 dashboard 很漂亮但不實用。' },
             ],
-            returnVars: ['insertRow'],
+            correctAnswer: 'B',
+            hints: [
+              '回到原始目標：這個 dashboard 要解決什麼問題？',
+              '最好的 success metric 直接衡量「問題有沒有被解決」。',
+            ],
+            explanation: 'Success metric 的定義原則：直接衡量目標是否達成。目標是「減少 ad-hoc 報表請求」，success metric 就是「ad-hoc 報表請求數量」。不是 DAU（proxy），不是成交率（太間接），不是滿意度（主觀）。',
+            frameworkTip: 'Success Metric = 直接衡量目標達成 / Proxy Metric = 間接相關的指標',
           },
           {
-            id: 2, name: '更新資料', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `updateRows(table, condition, updates)` — condition 是 `{field, value}` 表示哪些列要更新。updates 是物件表示要更新的欄位。回傳新的陣列（不修改原陣列）。',
-            defaultCode: `function updateRows(table, condition, updates) {\n  // 找到符合 condition 的列，套用 updates\n  // 回傳新陣列\n  \n}`,
-            example: {
-              title: '範例：用 map 有條件地更新物件',
-              code: 'const rows = [{id: 1, ok: false}, {id: 2, ok: true}];\nconst updated = rows.map(r =>\n  r.id === 1 ? {...r, ok: true} : r\n);\n// updated[0].ok → true',
-              output: '[{id: 1, ok: true}, {id: 2, ok: true}]',
-              explanation: '用 map 遍歷，符合條件的用 spread 產生新物件並覆蓋欄位。',
+            id: 2,
+            name: '指標之間的衝突',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: '速度 vs 品質',
+              narrative: '你在一家外送平台擔任 BA。公司有兩個核心指標：\n\n1. 訂單完成時間：目標 30 分鐘內送達\n2. 訂單正確率：目標 98% 訂單沒有錯誤\n\n上個月為了衝「完成時間」指標，很多外送員搶快送餐，導致：\n• 平均送達時間從 35 分鐘降到 28 分鐘（達標 ✓）\n• 訂單錯誤率從 2% 升到 7%（不達標 ✗）\n• 客戶投訴增加 3 倍',
             },
-            tests: [
-              { description: '更新匹配的列', fn: '(ctx) => { const r = ctx.updateRows([{id:1,status:"pending"},{id:2,status:"done"}],{field:"status",value:"pending"},{status:"shipped"}); return r[0].status === "shipped" && r[1].status === "done"; }' },
-              { description: '不修改原陣列', fn: '(ctx) => { const t=[{id:1,status:"A"}]; ctx.updateRows(t,{field:"status",value:"A"},{status:"B"}); return t[0].status === "A"; }' },
-              { description: '無匹配不變', fn: '(ctx) => { const r = ctx.updateRows([{id:1,x:1}],{field:"x",value:99},{x:0}); return r[0].x === 1; }' },
+            question: '面對兩個衝突的指標，最好的做法是什麼？',
+            options: [
+              { id: 'A', text: '速度比品質重要，繼續保持 28 分鐘', explanation: '7% 錯誤率和 3 倍投訴會傷害客戶忠誠度和品牌。短期速度的提升不值得長期的品質損失。' },
+              { id: 'B', text: '品質比速度重要，回到原來的流程', explanation: '完全回退也不是最優解。如果能找到既不犧牲速度又能維持品質的方法，才是最好的。' },
+              { id: 'C', text: '把訂單正確率設為 guardrail（不能低於 98%），在這個前提下優化速度', explanation: '正確！這就是 guardrail 的正確用法。Primary metric（速度）可以優化，但 guardrail（正確率 ≥ 98%）不能被犧牲。這樣可以避免「為了一個指標傷害另一個」的情況。' },
+              { id: 'D', text: '兩個指標合併成一個綜合分數', explanation: '合併成一個分數會失去可操作性。你需要知道是速度問題還是品質問題，才能改善。' },
             ],
-            returnVars: ['updateRows'],
+            correctAnswer: 'C',
+            hints: [
+              '有沒有一種方式可以同時關注兩個指標，但有優先級？',
+            ],
+            explanation: '當兩個指標衝突時，正確的做法是區分哪個是 primary（可以優化的方向）、哪個是 guardrail（不能惡化的底線）。這是非常重要的面試概念。面試官會問你「如果這兩個指標衝突怎麼辦」，答案就是 guardrail 框架。',
+            frameworkTip: '指標衝突時：選一個做 primary（優化方向），另一個做 guardrail（底線不能破）',
           },
         ],
       },
       {
-        id: '3-5', name: 'RPC 函式', description: '理解 Supabase RPC', xp: 50,
+        id: '2-5',
+        name: '不同角色看不同指標',
+        description: '理解 PM、Engineering、Finance、Ops 各看重什麼 KPI。',
+        xp: 50,
+        isBoss: false,
         challenges: [
           {
-            id: 1, name: '簡單函式呼叫', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `callFunction(name, fns)` — fns 是 `{fnName: fn}` 的物件。如果 name 存在於 fns 中，呼叫 fns[name]() 並回傳結果；否則回傳 null。',
-            defaultCode: `function callFunction(name, fns) {\n  // 如果 fns 中有 name，呼叫並回傳結果，否則回傳 null\n  \n}`,
-            example: {
-              title: '範例：動態呼叫物件中的函式',
-              code: 'const actions = { sayHi: () => "Hi!" };\nconst key = "sayHi";\nconst result = actions[key]();\n// result → "Hi!"',
-              output: '"Hi!"',
-              explanation: '用方括號語法從物件中取出函式並呼叫。',
+            id: 1,
+            name: 'Dashboard 該給誰看什麼',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '設計不同角色的 Dashboard',
+              narrative: '你需要為一家 SaaS 公司設計三個 dashboard，分別給不同角色使用：\n\n• CEO / CFO（管營收和策略）\n• Product Manager（管產品和使用者）\n• Customer Success Manager（管客戶續約和滿意度）\n\n以下是所有可用的指標。',
+              data: [
+                { metric: 'MRR / ARR', category: '營收' },
+                { metric: 'Feature Adoption Rate', category: '產品' },
+                { metric: 'NPS / CSAT', category: '滿意度' },
+                { metric: 'Customer Health Score', category: '客戶' },
+                { metric: 'DAU / WAU / MAU', category: '活躍度' },
+                { metric: 'Churn Rate', category: '流失' },
+                { metric: 'CAC / LTV', category: '單位經濟' },
+                { metric: 'Onboarding Completion Rate', category: '啟用' },
+              ],
+              dataCaption: '可用指標清單',
             },
-            tests: [
-              { description: '呼叫存在的函式', fn: '(ctx) => ctx.callFunction("greet", {greet: () => "hello"}) === "hello"' },
-              { description: '呼叫不存在的函式', fn: '(ctx) => ctx.callFunction("missing", {greet: () => "hello"}) === null' },
-              { description: '回傳數字', fn: '(ctx) => ctx.callFunction("getNum", {getNum: () => 42}) === 42' },
+            question: 'Customer Success Manager 最需要看哪三個指標？',
+            options: [
+              { id: 'A', text: 'MRR、CAC、Churn Rate', explanation: 'MRR 和 CAC 是 finance/exec 指標，CSM 不直接控制這些。CSM 需要的是能幫他判斷「哪個客戶可能要流失」的指標。' },
+              { id: 'B', text: 'Customer Health Score、NPS/CSAT、Churn Rate', explanation: '正確！CSM 的工作是「確保客戶成功、續約」。Health Score 告訴他哪個客戶有風險、NPS 告訴他客戶感受、Churn Rate 告訴他整體趨勢。這三個指標直接對應他的 KPI。' },
+              { id: 'C', text: 'DAU、Feature Adoption、Onboarding Completion', explanation: '這些更適合 PM。CSM 關心的不是「功能有沒有被用」，而是「客戶有沒有得到價值」。' },
+              { id: 'D', text: 'NPS、MRR、Feature Adoption', explanation: 'NPS 對，但 MRR 是 exec 指標，Feature Adoption 是 PM 指標。CSM 需要更 actionable 的客戶健康指標。' },
             ],
-            returnVars: ['callFunction'],
-          },
-          {
-            id: 2, name: '模擬 RPC 呼叫', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `createRPC(functions)` — functions 是 `{fnName: fn}` 的物件。回傳一個 `rpc(name, params)` 函式：\n- 如果 name 不在 functions 裡，回傳 `{error: "FUNCTION_NOT_FOUND"}`\n- 否則呼叫對應函式並回傳 `{data: result}`',
-            defaultCode: `function createRPC(functions) {\n  return function rpc(name, params) {\n    // 查找並呼叫\n    \n  };\n}`,
-            example: {
-              title: '範例：回傳函式的函式（閉包）',
-              code: 'function makeGreeter(greeting) {\n  return (name) => greeting + " " + name;\n}\nconst hi = makeGreeter("Hello");\n// hi("World") → "Hello World"',
-              output: '"Hello World"',
-              explanation: '外層函式回傳內層函式，內層能存取外層的變數。',
-            },
-            tests: [
-              { description: '呼叫存在的函式', fn: '(ctx) => { const rpc = ctx.createRPC({add: (p) => p.a + p.b}); return rpc("add",{a:3,b:4}).data === 7; }' },
-              { description: '找不到函式', fn: '(ctx) => { const rpc = ctx.createRPC({}); return rpc("unknown",{}).error === "FUNCTION_NOT_FOUND"; }' },
-              { description: '多個函式', fn: '(ctx) => { const rpc = ctx.createRPC({sum:(p)=>p.x+p.y, mul:(p)=>p.x*p.y}); return rpc("sum",{x:2,y:3}).data === 5 && rpc("mul",{x:2,y:3}).data === 6; }' },
+            correctAnswer: 'B',
+            hints: [
+              '想想 CSM 每天的工作是什麼？他做決策需要什麼資訊？',
+              'Dashboard 不是越多指標越好，而是要給對的人看對的指標。',
             ],
-            returnVars: ['createRPC'],
-          },
-          {
-            id: 3, name: '帶驗證的 RPC', type: 'coding', difficulty: 'hard',
-            instruction: '寫 `createSecureRPC(functions, allowList)` — allowList 是允許呼叫的函式名稱陣列。回傳 `rpc(name, params)`：\n- 如果 name 不在 allowList 中，回傳 `{error: "PERMISSION_DENIED"}`\n- 如果 name 不在 functions 中，回傳 `{error: "FUNCTION_NOT_FOUND"}`\n- 否則回傳 `{data: result}`',
-            defaultCode: `function createSecureRPC(functions, allowList) {\n  return function rpc(name, params) {\n    \n  };\n}`,
-            example: {
-              title: '範例：用 includes 檢查權限',
-              code: 'const allowed = ["read", "write"];\nconst action = "delete";\nconst ok = allowed.includes(action);\n// ok → false',
-              output: 'false',
-              explanation: '先用 includes 檢查是否在白名單中，再決定要不要執行。',
-            },
-            tests: [
-              { description: '允許的函式', fn: '(ctx) => { const rpc = ctx.createSecureRPC({add:(p)=>p.a+p.b},["add"]); return rpc("add",{a:1,b:2}).data === 3; }' },
-              { description: '未授權', fn: '(ctx) => { const rpc = ctx.createSecureRPC({secret:()=>42},[]); return rpc("secret",{}).error === "PERMISSION_DENIED"; }' },
-              { description: '授權但不存在', fn: '(ctx) => { const rpc = ctx.createSecureRPC({},["ghost"]); return rpc("ghost",{}).error === "FUNCTION_NOT_FOUND"; }' },
-            ],
-            returnVars: ['createSecureRPC'],
+            explanation: '設計 dashboard 的核心原則：「這個人需要做什麼決策？他需要什麼資訊來做這個決策？」CEO 要看營收和單位經濟、PM 要看使用者行為和 feature adoption、CSM 要看客戶健康和滿意度。面試中如果被問到「你會設計什麼 dashboard」，先問「給誰看的」。',
+            frameworkTip: 'Dashboard 設計：Audience（誰看）→ Decision（做什麼決策）→ Metrics（需要什麼數據）',
           },
         ],
       },
       {
-        id: '3-6', name: 'Boss: 即時查詢挑戰', description: '在 DuckDB 上跑真實查詢', xp: 200, isBoss: true,
+        id: '2-6',
+        name: 'Boss: 綜合指標分析',
+        description: '面對一個完整的商業情境，選對指標、做出判斷、提出建議。',
+        xp: 200,
+        isBoss: true,
         challenges: [
           {
-            id: 1, name: '完整查詢引擎', type: 'coding', difficulty: 'hard',
-            instruction: '寫一個 `query(table, options)` 函式，options 可以包含：\n- `select`: 欄位名稱陣列（預設全部）\n- `where`: `{field, op, value}` — op 可以是 "=", ">", "<", ">=", "<="\n- `orderBy`: `{field, direction}` — direction 是 "ASC" 或 "DESC"\n- `limit`: 數字\n\n全部組合起來使用！',
-            defaultCode: `function query(table, options = {}) {\n  let result = [...table];\n  \n  // 1. WHERE 過濾\n  \n  // 2. ORDER BY 排序\n  \n  // 3. SELECT 投影\n  \n  // 4. LIMIT 限制\n  \n  return result;\n}`,
-            referenceCode: `// 在真實專案中，這些邏輯由 DuckDB / Supabase 處理\n// 但理解底層原理能幫助你寫出更好的查詢`,
-            example: {
-              title: '範例：鏈式處理陣列',
-              code: 'const data = [{n: 3}, {n: 1}, {n: 4}, {n: 1}];\nconst result = data\n  .filter(r => r.n > 1)\n  .sort((a, b) => a.n - b.n)\n  .slice(0, 2);\n// result → [{n: 3}, {n: 4}]',
-              output: '[{n: 3}, {n: 4}]',
-              explanation: '先 filter 過濾、再 sort 排序、最後 slice 限制筆數，就像 SQL 的 WHERE + ORDER BY + LIMIT。',
+            id: 1,
+            name: 'Boss Case: Marketplace 健康度',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: 'Marketplace 平台健康度診斷',
+              narrative: '你是一家 B2B marketplace 平台的 Product Analyst。平台連接供應商和採購商。\n\nCEO 說：「我們的 GMV（Gross Merchandise Value）上季成長了 15%，但我感覺平台不太健康。幫我做一個完整的診斷。」\n\n你拉了以下數據：',
+              data: [
+                { metric: 'GMV', Q2: '$8.5M', Q3: '$9.8M', change: '+15%' },
+                { metric: '活躍供應商數', Q2: '320', Q3: '280', change: '-12.5%' },
+                { metric: '活躍採購商數', Q2: '1,200', Q3: '1,350', change: '+12.5%' },
+                { metric: '平均訂單金額', Q2: '$2,800', Q3: '$4,200', change: '+50%' },
+                { metric: '新供應商加入數', Q2: '45', Q3: '18', change: '-60%' },
+                { metric: '供應商 NPS', Q2: '42', Q3: '28', change: '-14 pts' },
+                { metric: '訂單完成率', Q2: '94%', Q3: '88%', change: '-6pp' },
+                { metric: 'Take Rate', Q2: '8%', Q3: '12%', change: '+4pp' },
+              ],
+              dataCaption: 'Q2 vs Q3 核心指標',
             },
-            tests: [
-              { description: 'WHERE 過濾', fn: '(ctx) => { const t=[{id:1,v:10},{id:2,v:20},{id:3,v:30}]; return ctx.query(t,{where:{field:"v",op:">",value:15}}).length === 2; }' },
-              { description: 'ORDER BY DESC', fn: '(ctx) => { const t=[{id:1,v:10},{id:2,v:30},{id:3,v:20}]; const r=ctx.query(t,{orderBy:{field:"v",direction:"DESC"}}); return r[0].v===30 && r[1].v===20; }' },
-              { description: 'SELECT 投影', fn: '(ctx) => { const t=[{id:1,name:"A",v:10}]; const r=ctx.query(t,{select:["name"]}); return r[0].name==="A" && r[0].id===undefined; }' },
-              { description: 'LIMIT', fn: '(ctx) => ctx.query([{id:1},{id:2},{id:3}],{limit:2}).length === 2' },
-              { description: '組合查詢', fn: '(ctx) => { const t=[{id:1,v:10},{id:2,v:30},{id:3,v:20},{id:4,v:40}]; const r=ctx.query(t,{where:{field:"v",op:">=",value:20},orderBy:{field:"v",direction:"ASC"},select:["v"],limit:2}); return r.length===2 && r[0].v===20 && r[1].v===30; }' },
+            question: 'CEO 的直覺是對的嗎？GMV 成長但平台「不健康」——數據中的什麼信號支持這個判斷？',
+            options: [
+              { id: 'A', text: 'GMV 成長了 15%，平台很健康，CEO 多慮了', explanation: 'GMV 是 lagging metric。深入看其他指標會發現問題。' },
+              { id: 'B', text: '供應商數量下降、NPS 暴跌、新供應商加入減少——supply side 在惡化', explanation: '正確！GMV 成長是因為 AOV 暴漲（集中在少數大單），但供應側在惡化：供應商流失（-12.5%）、NPS 暴跌（-14pts）、新供應商加入銳減（-60%）。Take rate 從 8% 漲到 12% 可能是供應商不滿的原因。這是典型的「短期營收好但長期不可持續」。' },
+              { id: 'C', text: '採購商數量在成長（+12.5%），代表需求端很健康', explanation: '需求端成長不代表平台健康。如果供應端持續流失，最終沒有供應商能服務這些採購商。Marketplace 兩邊都要健康。' },
+              { id: 'D', text: '訂單完成率下降是最大問題', explanation: '完成率下降確實是問題，但它是結果（可能因為供應商不夠導致無法履約），不是根因。根因在供應側的惡化。' },
             ],
-            returnVars: ['query'],
+            correctAnswer: 'B',
+            hints: [
+              'Marketplace 的健康要看供需兩側。GMV 好不代表兩邊都好。',
+              '看看供應商相關的指標（數量、NPS、新加入），發現了什麼？',
+            ],
+            explanation: 'Marketplace 分析要看兩側健康度。這裡 GMV 成長是「假象」——靠少數大單撐起來的成長不可持續。Supply side 的三個指標（數量 -12.5%、NPS -14pts、新加入 -60%）都在惡化，加上 take rate 暴漲，幾乎可以確定：平台對供應商收費太高 → 供應商不滿 → 流失 + 不推薦新供應商加入。',
+            frameworkTip: 'Marketplace 健康度：Supply Side + Demand Side + 平台自身指標（take rate, 完成率）都要看',
+          },
+          {
+            id: 2,
+            name: 'Boss Case: 提出改善建議',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: '怎麼讓 Marketplace 恢復健康',
+              narrative: '你確認了問題：take rate 從 8% 漲到 12%，導致供應商不滿和流失。\n\n但營收團隊的立場是：「提高 take rate 帶來了 $400K 的額外收入，我們不能輕易降回去。」\n\n你需要提出一個平衡營收和平台健康的建議。',
+              data: [
+                { option: '降回 8% take rate', revenue_impact: '-$400K/Q', supplier_impact: '供應商回流預估 +20%', risk: '營收短期下降' },
+                { option: '維持 12%', revenue_impact: '+$0', supplier_impact: '繼續流失，預估再 -15%', risk: '供應端崩潰' },
+                { option: '分層 take rate：小單 8%，大單 12%', revenue_impact: '-$150K/Q', supplier_impact: '穩住中小供應商', risk: '大供應商可能不滿' },
+              ],
+              dataCaption: '三種方案比較',
+            },
+            question: '你會推薦哪個方案？',
+            options: [
+              { id: 'A', text: '降回 8%：先保住供應商，營收之後再想辦法', explanation: '直接放棄 $400K 太激進。而且已經享受到的收入，管理層不容易接受全部放棄。' },
+              { id: 'B', text: '維持 12%：營收不能掉', explanation: '供應商繼續流失 -15% 會導致供應端崩潰，到時候 GMV 會大幅下降，損失遠超 $400K。' },
+              { id: 'C', text: '分層 take rate：平衡營收和供應商留存', explanation: '正確！分層定價是經典的 marketplace 策略：(1) 保護中小供應商（他們最敏感，用低 take rate 留住）(2) 大供應商的議價能力強但也更依賴平台，12% 可接受 (3) 營收只損失 $150K，遠好過供應端崩潰。這是一個「不完美但最務實」的方案。' },
+              { id: 'D', text: '先做 A/B test 再決定', explanation: '供應商在持續流失中，A/B test 需要時間。而且 take rate 改變會影響供應商信任，不適合做 A/B test。' },
+            ],
+            correctAnswer: 'C',
+            hints: [
+              '有沒有「兩個都要」的方案？不是非黑即白。',
+              '分層定價是 marketplace 的常見策略。',
+            ],
+            explanation: '好的建議不是非黑即白的選擇，而是找到平衡點。分層 take rate 兼顧了：(1) 營收（只損失 $150K vs $400K）(2) 供應商留存（保護最敏感的中小供應商）(3) 可驗證（可以觀察分層後的供應商行為）。面試中能提出這種「pragmatic compromise」的建議，比極端方案更受青睞。',
+            frameworkTip: 'Recommendation: 不要非黑即白 → 找 pragmatic middle ground → 說明 trade-offs',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // World 3-8（Phase 2-3，先放結構）
+  // ═══════════════════════════════════════════════════════════
+  {
+    id: 3,
+    name: '數據分析思維',
+    emoji: '🔍',
+    description: 'Funnel、Segmentation、Cohort、Root Cause 分析',
+    color: 'from-purple-500 to-pink-500',
+    quests: [
+      // ── Quest 3-1: Trend Analysis ──
+      {
+        id: '3-1',
+        name: 'Trend Analysis',
+        description: '如何判斷一個趨勢是真的問題還是噪音',
+        xp: 50,
+        isBoss: false,
+        challenges: [
+          {
+            id: 1,
+            name: '辨別真假趨勢',
+            type: 'data-interpretation',
+            difficulty: 'easy',
+            scenario: {
+              title: '串流平台的收視警報',
+              narrative: '你是一家串流平台的 Product Analyst。VP of Content 發了一封緊急 email：\n\n「我們的 daily watch time 連續下降三天了，從週三的 45 分鐘掉到週五的 38 分鐘！需要立刻調查！」\n\n你拉出了過去四週的 daily watch time 數據。',
+              data: [
+                { day: '週一', week1: '36', week2: '37', week3: '38', week4: '37' },
+                { day: '週二', week1: '39', week2: '40', week3: '41', week4: '40' },
+                { day: '週三', week1: '44', week2: '43', week3: '45', week4: '44' },
+                { day: '週四', week1: '42', week2: '41', week3: '43', week4: '41' },
+                { day: '週五', week1: '37', week2: '38', week3: '38', week4: '37' },
+                { day: '週六', week1: '52', week2: '53', week3: '54', week4: '53' },
+                { day: '週日', week1: '55', week2: '54', week3: '56', week4: '55' },
+              ],
+              dataCaption: '每日平均觀看時長（分鐘），過去四週',
+            },
+            question: '根據數據，VP 的擔憂是否合理？',
+            options: [
+              { id: 'A', text: '合理，連續三天下降是明確的警訊，需要立即調查', explanation: '三天的下降不一定是問題。你需要看更長期的 pattern 才能判斷。' },
+              { id: 'B', text: '不合理，這是正常的週間 seasonality pattern，週三到週五本來就會下降', explanation: '正確！從四週的數據可以看到，每一週都是週三最高、週五最低的 pattern。週末則會反彈到 52-56 分鐘。VP 看到的是正常的 weekly seasonality，不是真正的下降趨勢。' },
+              { id: 'C', text: '不確定，需要再觀察一個月才能判斷', explanation: '其實四週的數據已經足夠看出 weekly pattern。不需要再等一個月。' },
+              { id: 'D', text: '不合理，因為總體數字都在 35-55 之間，變動不大', explanation: '數字的絕對範圍不是重點。重點是這個變動是否是可預期的 seasonal pattern。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '比較每一週的同一天，看看有沒有固定的 pattern。',
+              '週三到週五的走勢在每一週是否一致？',
+            ],
+            explanation: '判斷趨勢的第一步是排除 seasonality（季節性/週期性）。很多指標有天然的週期波動：每週、每月、每季都有固定 pattern。看到短期下降時，先比對歷史同期，確認是正常波動還是真正的異常。',
+            frameworkTip: '趨勢判斷三步：(1) 是否有 seasonality？(2) 跟歷史同期比如何？(3) 排除週期後，趨勢方向是什麼？',
+          },
+          {
+            id: 2,
+            name: '基準線與異常偵測',
+            type: 'data-interpretation',
+            difficulty: 'medium',
+            scenario: {
+              title: 'FinTech 的交易量分析',
+              narrative: '你是一家 FinTech 公司的 Data Analyst。Product Manager 問你：\n\n「上週二的交易量突然比前一天多了 40%，是不是我們上線的新功能帶來的效果？」\n\n新功能是「一鍵分帳」，在上週一下午上線。你拉出了更完整的數據。',
+              data: [
+                { date: '3/3 (一)', transactions: '12,400', note: '新功能上線 (下午)' },
+                { date: '3/4 (二)', transactions: '17,200', note: '+39% vs 前日' },
+                { date: '3/5 (三)', transactions: '16,800', note: '' },
+                { date: '3/6 (四)', transactions: '17,100', note: '' },
+                { date: '3/7 (五)', transactions: '18,500', note: '發薪日' },
+                { date: '歷史週一平均', transactions: '12,200', note: '' },
+                { date: '歷史週二平均', transactions: '16,900', note: '' },
+                { date: '歷史週三平均', transactions: '16,500', note: '' },
+                { date: '歷史週四平均', transactions: '16,800', note: '' },
+                { date: '歷史週五平均', transactions: '17,800', note: '' },
+              ],
+              dataCaption: '每日交易筆數 vs 歷史平均',
+            },
+            question: '根據數據，「一鍵分帳」新功能是否帶來了顯著的交易量提升？',
+            options: [
+              { id: 'A', text: '是的，週二比週一多了 40%，效果很明顯', explanation: '週二本來就比週一交易量高。你需要跟歷史同期比，不是跟前一天比。' },
+              { id: 'B', text: '可能有微小效果，但主要的增長來自正常的 weekday pattern', explanation: '正確！週二的 17,200 只比歷史週二平均 16,900 多了 1.8%，在正常波動範圍內。PM 看到的 +40% 其實是週一到週二的天然差異（週一本來就是最低的一天）。要判斷新功能效果，需要用更嚴謹的方法，例如比對歷史基準線。' },
+              { id: 'C', text: '無法判斷，因為沒有 A/B test 數據', explanation: 'A/B test 確實是更好的方法，但從現有數據你已經可以初步判斷——跟歷史基準線比較即可得出結論。' },
+              { id: 'D', text: '週五交易量最高，所以應該等到週五再判斷', explanation: '週五交易量高是因為發薪日效應。判斷新功能效果的正確方法是跟同一天的歷史基準比，不是等到交易量最高的那天。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '不要只看「跟前一天比」，要看「跟歷史同一天比」。',
+              '計算一下：上週二 vs 歷史週二平均，差多少百分比？',
+            ],
+            explanation: '分析趨勢時，選對 baseline（基準線）至關重要。跟前一天比和跟歷史同日比，結論可能完全不同。正確的做法：(1) 建立 baseline（歷史同期平均）、(2) 計算實際值 vs baseline 的差異、(3) 判斷差異是否顯著（超出正常波動範圍）。',
+            frameworkTip: '判斷效果的基準：(1) 歷史同期平均 (2) 正常波動範圍 (3) 排除混淆因子（如發薪日、假日）',
+          },
+          {
+            id: 3,
+            name: '長期趨勢 vs 短期波動',
+            type: 'data-interpretation',
+            difficulty: 'medium',
+            scenario: {
+              title: '訂閱制產品的成長焦慮',
+              narrative: '你在一家 B2B SaaS 公司擔任 Business Analyst。CEO 在 all-hands 說：\n\n「我們的 MRR（Monthly Recurring Revenue）這個月只成長了 2%，上個月是 5%，大上個月是 8%。成長在減速，我很擔心。」\n\n你查了更完整的數據。',
+              data: [
+                { month: '6月', mrr: '$820K', growth: '9%', new_customers: 45, churned: 8 },
+                { month: '7月', mrr: '$885K', growth: '8%', new_customers: 48, churned: 10 },
+                { month: '8月', mrr: '$938K', growth: '6%', new_customers: 42, churned: 12 },
+                { month: '9月', mrr: '$985K', growth: '5%', new_customers: 40, churned: 14 },
+                { month: '10月', mrr: '$1.01M', growth: '3%', new_customers: 38, churned: 16 },
+                { month: '11月', mrr: '$1.03M', growth: '2%', new_customers: 36, churned: 18 },
+              ],
+              dataCaption: 'MRR 趨勢（過去 6 個月）',
+            },
+            question: '如果你是 BA，你會怎麼向 CEO 解釋這個情況？',
+            options: [
+              { id: 'A', text: '成長率下降是正常的，因為基數變大了，不用擔心', explanation: '基數變大確實會讓成長率自然下降，但這不是唯一因素。你忽略了 churn 持續上升的問題。' },
+              { id: 'B', text: '問題不在 new customer acquisition，而在 churn rate 持續上升。需要同時看新增和流失', explanation: '正確！新客戶數從 45 降到 36（-20%），但 churn 從 8 升到 18（+125%）。成長率下降的主因是 churn 加速，而不只是基數效應。Net growth = new - churn，兩邊都在惡化但 churn 惡化更快。' },
+              { id: 'C', text: 'MRR 還是在成長的（正數），所以沒有問題', explanation: '雖然 MRR 還在成長，但成長率如果繼續下降，很快就會變成負成長。更重要的是 churn 趨勢在惡化。' },
+              { id: 'D', text: '需要看競爭對手的數據才能判斷，可能是整個市場都在放緩', explanation: '市場因素當然要看，但從內部數據已經可以看到 churn 惡化的明確趨勢，這是你可以先行動的。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '除了看成長率，還要看成長的「組成」：新增了多少、流失了多少？',
+              'Net growth = New - Churn。兩邊的趨勢分別是什麼？',
+            ],
+            explanation: '看成長指標時，永遠要拆解成「新增」和「流失」兩個方向。Overall growth rate 是個 lagging indicator，它掩蓋了底層的問題。這個 case 中，churn 從 8 升到 18 是最大的警訊——代表產品可能有 retention 問題，需要立即調查。',
+            frameworkTip: '成長拆解：Growth = New + Expansion - Contraction - Churn。看整體之前先拆成組成部分。',
+          },
+        ],
+      },
+      // ── Quest 3-2: Funnel Analysis ──
+      {
+        id: '3-2',
+        name: 'Funnel Analysis',
+        description: '把使用者旅程拆成 funnel，找到最大 drop-off',
+        xp: 50,
+        isBoss: false,
+        challenges: [
+          {
+            id: 1,
+            name: '找到最大 Drop-off',
+            type: 'data-interpretation',
+            difficulty: 'easy',
+            scenario: {
+              title: '電商結帳流程優化',
+              narrative: '你是一家電商平台的 Product Analyst。PM 想要提升結帳轉換率，請你分析結帳 funnel。\n\n她給了你上個月的數據。',
+              data: [
+                { step: '1. 加入購物車', users: '285,000', rate: '100%', step_conversion: '—' },
+                { step: '2. 查看購物車', users: '198,000', rate: '69.5%', step_conversion: '69.5%' },
+                { step: '3. 點擊結帳', users: '142,000', rate: '49.8%', step_conversion: '71.7%' },
+                { step: '4. 填寫地址', users: '128,000', rate: '44.9%', step_conversion: '90.1%' },
+                { step: '5. 選擇付款方式', users: '118,000', rate: '41.4%', step_conversion: '92.2%' },
+                { step: '6. 確認訂單', users: '72,000', rate: '25.3%', step_conversion: '61.0%' },
+                { step: '7. 付款成功', users: '68,000', rate: '23.9%', step_conversion: '94.4%' },
+              ],
+              dataCaption: '結帳 Funnel（上月）',
+            },
+            question: '如果你只能改善一個步驟來提升整體轉換率，應該優先改善哪個步驟？',
+            options: [
+              { id: 'A', text: '步驟 1→2：加入購物車到查看購物車（69.5%）', explanation: '雖然絕對 drop-off 人數多，但這一步的轉換率不是最低的。而且「加了購物車但沒看」可能是正常的瀏覽行為。' },
+              { id: 'B', text: '步驟 5→6：選擇付款方式到確認訂單（61.0%）', explanation: '正確！這一步的 step conversion 只有 61%，是 funnel 後段最大的 drop-off。到了選付款方式的用戶已經有很強的購買意圖，卻在最後一步流失了 39%，投報率最高。可能原因：意外的運費、稅金，或結帳頁資訊太複雜。' },
+              { id: 'C', text: '步驟 2→3：查看購物車到點擊結帳（71.7%）', explanation: '這步有不少 drop-off，但很多人「查看購物車」只是在比價或收藏，不一定代表要買。相比之下，已經到付款階段的用戶才是高意圖用戶。' },
+              { id: 'D', text: '步驟 6→7：確認訂單到付款成功（94.4%）', explanation: '這一步轉換率已經很高（94.4%），改善空間有限。那 5.6% 失敗的可能是付款失敗等技術問題。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '看每一步的 step conversion rate，哪一步最低？',
+              '考慮 funnel 位置：越後面的步驟，用戶意圖越強，改善的投報率越高。',
+            ],
+            explanation: 'Funnel 分析的 prioritization 要同時考慮：(1) 哪步 drop-off 最大、(2) 用戶意圖強度（越後面越強）、(3) 改善的可行性。步驟 5→6 的 61% conversion 是最明顯的 bottleneck，而且這些用戶已經填了地址、選了付款方式，流失的成本最高。',
+            frameworkTip: 'Funnel 優先級：找最大 drop-off → 考慮用戶意圖 → 估算改善空間 → 先改 ROI 最高的',
+          },
+          {
+            id: 2,
+            name: 'Funnel 拆解與比較',
+            type: 'data-interpretation',
+            difficulty: 'medium',
+            scenario: {
+              title: 'App vs Web 的結帳差異',
+              narrative: '你進一步分析後，把結帳 funnel 按平台拆開比較。',
+              data: [
+                { step: '加入購物車→查看', app: '75.2%', web: '62.1%' },
+                { step: '查看→點擊結帳', app: '74.8%', web: '67.3%' },
+                { step: '點擊結帳→填地址', app: '92.5%', web: '86.3%' },
+                { step: '填地址→選付款', app: '94.1%', web: '89.7%' },
+                { step: '選付款→確認訂單', app: '78.3%', web: '45.2%' },
+                { step: '確認→付款成功', app: '96.1%', web: '92.0%' },
+              ],
+              dataCaption: 'Step Conversion Rate by Platform',
+            },
+            question: '從數據中你能得出什麼最重要的 insight？',
+            options: [
+              { id: 'A', text: 'App 每一步都比 Web 好，所以應該把資源全部投在 App', explanation: '雖然 App 確實每步都較高，但「全部投 App」太極端了。Web 用戶可能是不同的 segment（例如企業採購），不能放棄。' },
+              { id: 'B', text: 'Web 的「選付款→確認訂單」只有 45.2%，是最大的問題點。需要深入了解 Web 確認頁有什麼問題', explanation: '正確！Web 的這一步只有 45.2%，比 App 的 78.3% 低了 33 個百分點。這個巨大差距代表 Web 的確認訂單頁面有嚴重問題（可能是版面設計、額外費用顯示方式、或載入速度）。這是改善空間最大的一步。' },
+              { id: 'C', text: '兩個平台的差異在正常範圍內，不需要特別處理', explanation: '45.2% vs 78.3% 相差 33 個百分點，這不是正常範圍。' },
+              { id: 'D', text: '應該在 Web 版加入 App 下載的彈窗，把用戶導去 App 購買', explanation: '用彈窗打斷結帳流程只會讓 conversion 更差。應該先修好 Web 本身的問題。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '比較 App 和 Web 在同一步的差距，哪一步差距最大？',
+              '差距大的步驟代表有平台特定的問題可以修。',
+            ],
+            explanation: '把 funnel 按維度（平台、地區、用戶類型）拆解比較，能讓你找到平台特定的問題。這裡 Web 的確認訂單步驟只有 45.2%，比 App 低了 33pp，代表 Web 的確認頁面有結構性問題。下一步應該去看 Web 確認頁的 UX、載入時間、和費用呈現方式。',
+            frameworkTip: '拆解 Funnel：整體 → 按維度切分（平台/地區/用戶類型）→ 找差距最大的地方 → 深入調查',
+          },
+        ],
+      },
+      // ── Quest 3-3: Segmentation ──
+      {
+        id: '3-3',
+        name: 'Segmentation',
+        description: '切 user segment 找到問題的真正來源',
+        xp: 50,
+        isBoss: false,
+        challenges: [
+          {
+            id: 1,
+            name: '找出問題 Segment',
+            type: 'data-interpretation',
+            difficulty: 'easy',
+            scenario: {
+              title: 'SaaS 產品的 NPS 下降',
+              narrative: '你是一家 B2B SaaS 公司的 Analyst。Customer Success 主管說：\n\n「我們的整體 NPS 從上季的 42 掉到這季的 35，老闆很不開心。」\n\n你把 NPS 按用戶 segment 拆開來看。',
+              data: [
+                { segment: 'Enterprise（>500人）', last_q: '52', this_q: '50', change: '-2', pct_users: '15%' },
+                { segment: 'Mid-Market（50-500人）', last_q: '45', this_q: '44', change: '-1', pct_users: '25%' },
+                { segment: 'SMB（<50人）', last_q: '38', this_q: '22', change: '-16', pct_users: '40%' },
+                { segment: 'Free Tier', last_q: '35', this_q: '33', change: '-2', pct_users: '20%' },
+              ],
+              dataCaption: 'NPS by Customer Segment',
+            },
+            question: '根據數據，你會給 Customer Success 主管什麼建議？',
+            options: [
+              { id: 'A', text: '所有 segment 的 NPS 都在下降，需要全面改善', explanation: '雖然每個 segment 都有下降，但下降幅度差異巨大。SMB 下降了 16 分，其他都只掉 1-2 分。資源應該集中在 SMB。' },
+              { id: 'B', text: '整體 NPS 下降主要是被 SMB segment 拉下來的（-16 分），而且 SMB 佔 40% 用戶。應該優先調查 SMB 用戶最近遇到了什麼問題', explanation: '正確！SMB 的 NPS 從 38 暴跌到 22（-16），而且佔了最大的用戶比例 (40%)。其他 segment 變化很小。所以整體 NPS 下降幾乎完全是 SMB 造成的。需要深入了解 SMB 用戶最近的體驗變化。' },
+              { id: 'C', text: 'Enterprise NPS 最高，應該把重心放在 Enterprise 客戶', explanation: 'Enterprise NPS 穩定在 50-52，不需要緊急處理。目前最緊急的是 SMB 的大幅下降。' },
+              { id: 'D', text: 'Free Tier 的 NPS 最低，應該改善免費用戶體驗', explanation: 'Free Tier 的 NPS 下降幅度很小（-2），而且這些用戶不付費。SMB 是付費用戶且下降幅度大得多。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '看每個 segment 的 NPS 變化幅度，哪個差異最大？',
+              '同時考慮 segment 的用戶佔比——佔比大的 segment 對整體影響更大。',
+            ],
+            explanation: 'Segmentation 的價值在於揭露被整體平均數掩蓋的問題。整體 NPS -7 看起來像是普遍的問題，但拆解後發現 90% 的下降都來自 SMB。這就是 Simpson\'s Paradox 的概念——整體趨勢可能跟 segment 趨勢相反。永遠要切 segment 看。',
+            frameworkTip: '看到整體指標變化時，永遠先切 segment：用戶類型 / 方案 / 地區 / 平台 / 新舊用戶',
+          },
+          {
+            id: 2,
+            name: '多維度切分',
+            type: 'data-interpretation',
+            difficulty: 'medium',
+            scenario: {
+              title: '繼續分析 SMB 的 NPS 下降',
+              narrative: '你確認問題出在 SMB segment 後，繼續往下切。你把 SMB 用戶按加入時間和使用的方案拆開來看。',
+              data: [
+                { segment: 'SMB - Basic Plan - 舊用戶（>6個月）', last_q: '40', this_q: '38', change: '-2' },
+                { segment: 'SMB - Basic Plan - 新用戶（<6個月）', last_q: '36', this_q: '34', change: '-2' },
+                { segment: 'SMB - Pro Plan - 舊用戶（>6個月）', last_q: '42', this_q: '18', change: '-24' },
+                { segment: 'SMB - Pro Plan - 新用戶（<6個月）', last_q: '35', this_q: '14', change: '-21' },
+              ],
+              dataCaption: 'SMB NPS by Plan & Tenure',
+            },
+            question: '問題最可能出在哪裡？',
+            options: [
+              { id: 'A', text: 'SMB 新用戶的 onboarding 體驗不好', explanation: '新用戶和舊用戶在 Pro Plan 上都大幅下降，所以不是新用戶特有的問題。' },
+              { id: 'B', text: 'SMB Pro Plan 用戶體驗嚴重惡化，不論新舊用戶都受影響。最可能是 Pro Plan 最近有改版或漲價', explanation: '正確！Pro Plan 的新舊用戶 NPS 都暴跌（-24 和 -21），而 Basic Plan 幾乎沒變。這代表問題出在 Pro Plan 本身，而不是用戶的新舊。常見原因：方案功能調整、漲價、或新功能有 bug。' },
+              { id: 'C', text: '所有 SMB 用戶都不滿意，是公司品牌形象的問題', explanation: 'Basic Plan 的 NPS 幾乎沒變（-2），所以不是全面性的品牌問題。' },
+              { id: 'D', text: '舊用戶下降更多（-24 vs -21），是忠誠度的問題', explanation: '-24 和 -21 的差異很小，不足以做出這樣的結論。兩者都大幅下降才是重點。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '比較 Basic Plan 和 Pro Plan 的變化，差異在哪？',
+              '如果新舊用戶都受影響，問題最可能出在什麼地方？',
+            ],
+            explanation: '多維度切分讓你能持續 drill down 找到問題根源。從整體 → SMB → Pro Plan，每一層切分都在縮小範圍。最終定位到「SMB Pro Plan」這個特定 segment，下一步就是去查 Pro Plan 最近有什麼變更。',
+            frameworkTip: '多維度切分：一次切一個維度 → 找到差異最大的 → 再切第二個維度 → 直到找到根因',
+          },
+          {
+            id: 3,
+            name: '避免 Segmentation 陷阱',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: '行銷活動的成效分析',
+              narrative: '你在一家電商公司做 Marketing Analytics。行銷主管很得意地跟你說：\n\n「我們上週的 email campaign 太成功了！收到 email 的用戶平均消費 $85，沒收到的只有 $52。」\n\n你看了一下 campaign 的發送邏輯，發現 email 是發給「過去 30 天有消費記錄」的用戶。',
+              data: [
+                { group: '收到 Email', avg_spend: '$85', pct_repeat_buyers: '78%', avg_order_count: '3.2' },
+                { group: '沒收到 Email', avg_spend: '$52', pct_repeat_buyers: '23%', avg_order_count: '1.1' },
+              ],
+              dataCaption: '上週消費數據',
+            },
+            question: '行銷主管的結論有什麼問題？',
+            options: [
+              { id: 'A', text: '沒有問題，數據清楚顯示 email campaign 有效', explanation: 'email 是發給已經活躍的用戶！這些人本來就會消費更多。' },
+              { id: 'B', text: '樣本量可能不夠大', explanation: '這不是樣本量的問題，而是更根本的邏輯問題。' },
+              { id: 'C', text: 'Selection bias：email 只發給活躍用戶，這些人本來就消費更多，不能把差異歸因於 email campaign', explanation: '正確！email 只發給「過去 30 天有消費記錄」的用戶，這群人本來就是活躍買家（repeat buyer 比例 78% vs 23%）。即使不發 email，他們的消費也會比較高。這是典型的 selection bias——你的「實驗組」和「對照組」在接受處理之前就已經不一樣了。' },
+              { id: 'D', text: '應該看 conversion rate 而不是平均消費金額', explanation: '不管看什麼指標，只要兩組人本質不同，比較就不公平。' },
+            ],
+            correctAnswer: 'C',
+            hints: [
+              '想想看：email 發給誰？這些人在收到 email 之前就跟其他人不同嗎？',
+              '如果不發 email，這兩組人的消費會一樣嗎？',
+            ],
+            explanation: 'Selection bias 是分析中最常見的陷阱之一。當你的「分群條件」本身就跟「你想量的結果」相關時，任何比較都不公平。正確做法：(1) 隨機分組（A/B test），或 (2) 用 matched cohort 控制變因，或 (3) 比較 campaign 前後同一群人的行為變化。',
+            frameworkTip: '分群分析檢查表：(1) 兩組人在分組前是否已有差異？(2) 分群條件本身是否跟結果相關？(3) 能否用隨機分組？',
+          },
+        ],
+      },
+      // ── Quest 3-4: Cohort Analysis ──
+      {
+        id: '3-4',
+        name: 'Cohort Analysis',
+        description: '用 cohort 追蹤不同時期用戶的行為差異',
+        xp: 50,
+        isBoss: false,
+        challenges: [
+          {
+            id: 1,
+            name: '讀懂 Retention Curve',
+            type: 'data-interpretation',
+            difficulty: 'easy',
+            scenario: {
+              title: '手遊的留存率分析',
+              narrative: '你是一家手遊公司的 Product Analyst。Growth PM 問你：\n\n「我們最近幾個月的新用戶品質怎麼樣？留存率有變好還是變差？」\n\n你拉出了三個月份的 cohort retention 數據。',
+              data: [
+                { cohort: '1月 cohort', d1: '45%', d7: '22%', d14: '15%', d30: '10%' },
+                { cohort: '2月 cohort', d1: '42%', d7: '18%', d14: '10%', d30: '6%' },
+                { cohort: '3月 cohort', d1: '38%', d7: '14%', d14: '7%', d30: '—' },
+              ],
+              dataCaption: 'Retention Rate by Cohort',
+            },
+            question: '從 cohort 數據中，你能得出什麼結論？',
+            options: [
+              { id: 'A', text: '所有 cohort 的留存率都差不多，屬於正常衰減', explanation: '仔細看：D7 從 22% → 18% → 14%，D14 從 15% → 10% → 7%。每個月都在惡化，這不是「差不多」。' },
+              { id: 'B', text: '每個後續 cohort 的留存率都在惡化——越晚加入的用戶留存越差。可能是用戶品質下降或產品體驗有退步', explanation: '正確！每個指標在三個 cohort 中都呈現下降趨勢。D1: 45→42→38，D7: 22→18→14，D14: 15→10→7。這代表新用戶的品質在惡化，或是產品對新用戶的價值在降低。需要調查：是獲客管道變了？還是產品有什麼改變？' },
+              { id: 'C', text: '3月 cohort 的 D30 還沒到，所以無法比較', explanation: 'D30 確實還沒到，但 D1、D7、D14 已經可以明確看出趨勢了。不需要等到所有數據都出來才能下結論。' },
+              { id: 'D', text: '1月 cohort 的 D30 只有 10%，留存率太低了，產品有根本問題', explanation: '手遊的 D30 10% 其實不算差。而且這題的重點是 cohort 間的比較，不是絕對數值。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '在同一個時間點（例如 D7），比較不同 cohort 的表現。',
+              '趨勢是往上還是往下？',
+            ],
+            explanation: 'Cohort analysis 的核心價值是讓你比較不同時期用戶的行為。看整體 retention 可能被混合效果掩蓋（mixing effect），但 cohort 讓你看到每一批新用戶的真實表現。當 retention curve 逐月惡化時，通常意味著用戶品質下降（獲客管道變了）或產品首次體驗變差了。',
+            frameworkTip: 'Cohort 分析三步：(1) 同一指標跨 cohort 比較 (2) 看趨勢方向 (3) 找到惡化的起點',
+          },
+          {
+            id: 2,
+            name: 'Cohort 比較與假設',
+            type: 'data-interpretation',
+            difficulty: 'medium',
+            scenario: {
+              title: '找出留存惡化的原因',
+              narrative: '你進一步分析，把 cohort 按獲客管道拆開。',
+              data: [
+                { cohort: '1月 - Organic', d1: '48%', d7: '25%', d14: '18%', users: '30K' },
+                { cohort: '1月 - Paid Ads', d1: '40%', d7: '17%', d14: '10%', users: '20K' },
+                { cohort: '2月 - Organic', d1: '47%', d7: '24%', d14: '17%', users: '25K' },
+                { cohort: '2月 - Paid Ads', d1: '35%', d7: '11%', d14: '5%', users: '35K' },
+                { cohort: '3月 - Organic', d1: '46%', d7: '23%', d14: '16%', users: '22K' },
+                { cohort: '3月 - Paid Ads', d1: '30%', d7: '8%', d14: '3%', users: '40K' },
+              ],
+              dataCaption: 'Retention by Cohort & Channel',
+            },
+            question: '數據告訴你什麼故事？',
+            options: [
+              { id: 'A', text: 'Organic 和 Paid 都在惡化，問題出在產品本身', explanation: 'Organic 用戶的留存其實非常穩定（D7: 25→24→23）。惡化主要在 Paid Ads。' },
+              { id: 'B', text: 'Organic 用戶留存穩定，但 Paid Ads 用戶留存大幅惡化。同時 Paid Ads 的用戶量在增加（20K→35K→40K），稀釋了整體留存率', explanation: '正確！Organic 留存幾乎不變，但 Paid Ads 的 D7 從 17% 跌到 8%，D14 從 10% 跌到 3%。而且 Paid Ads 的用戶比例從 40% 增加到 65%。這代表行銷團隊可能為了衝量而放寬了廣告受眾定位，帶來了更多低品質用戶。' },
+              { id: 'C', text: 'Paid Ads 用戶本來就比較差，這是正常的', explanation: 'Paid 比 Organic 差是正常的，但 Paid Ads 的留存在三個月內急速惡化（D14: 10%→5%→3%），這不正常。' },
+              { id: 'D', text: '應該完全停止 Paid Ads，只做 Organic', explanation: '不需要完全停止。正確的做法是優化 Paid Ads 的定位和素材，提升用戶品質。完全停止會損失成長。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '分開看 Organic 和 Paid 的留存趨勢。是兩個都在惡化，還是只有一個？',
+              '注意 users 欄位——Paid Ads 的用戶量在增加。這跟整體留存的關係是什麼？',
+            ],
+            explanation: '這是 Simpson\'s Paradox 的經典案例。整體留存在下降，但不是因為產品變差，而是用戶組成改變了——低留存的 Paid 用戶比例增加，拉低了整體平均值。解決方案不是停止投廣告，而是改善廣告受眾定位（targeting），或加強 Paid 用戶的 onboarding。',
+            frameworkTip: 'Cohort + Segmentation：整體惡化時，先按管道/segment 拆 → 找到是「每個 segment 都在惡化」還是「組成比例改變了」',
+          },
+        ],
+      },
+      // ── Quest 3-5: Root Cause Thinking ──
+      {
+        id: '3-5',
+        name: 'Root Cause Thinking',
+        description: '從表象挖到根因的結構化方法',
+        xp: 50,
+        isBoss: false,
+        challenges: [
+          {
+            id: 1,
+            name: '結構化根因分析',
+            type: 'multiple-choice',
+            difficulty: 'medium',
+            scenario: {
+              title: 'Marketplace 的 GMV 下降',
+              narrative: '你是一家雙邊 marketplace 的 Business Analyst。CFO 在季度會議上指出：\n\n「我們的 GMV（Gross Merchandise Value）這個月掉了 15%，怎麼回事？」\n\n你需要建立一個結構化的分析框架來調查根因。',
+            },
+            question: '以下哪個分析架構最適合用來拆解 GMV 下降的根因？',
+            options: [
+              { id: 'A', text: '直接看 top 10 賣家的銷售額有沒有變化', explanation: '這可能會找到部分答案，但不夠結構化。你可能會 miss 很多其他原因。' },
+              { id: 'B', text: '用公式拆解：GMV = Buyers × Orders per Buyer × AOV，看哪個因子下降最多', explanation: '正確！把一個指標拆解成乘法公式，可以幫你快速定位問題出在哪個因子。如果 Buyers 沒變但 AOV 下降，方向完全不同。找到主要因子後，可以繼續對那個因子做 5 Whys 分析。' },
+              { id: 'C', text: '做一份用戶調查，問用戶為什麼買得少了', explanation: '用戶調查需要時間，而且用戶自己說的原因不一定是真正的原因。你應該先用數據縮小範圍。' },
+              { id: 'D', text: '看競爭對手最近有沒有促銷活動', explanation: '外部因素當然要看，但這不是「分析框架」，只是一個假設。先用結構化方法確認問題在哪，再去驗證假設。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '把一個指標拆成它的「公式」，每個因子就是一個可以調查的方向。',
+              'GMV = ？ × ？ × ？',
+            ],
+            explanation: '結構化根因分析的第一步是「公式拆解」。任何 business metric 都可以拆成乘法或加法公式。GMV = Buyers × Orders/Buyer × AOV。接著看哪個因子變化最大，再對那個因子繼續往下拆，直到找到根因。',
+            frameworkTip: '根因分析第一步：指標公式拆解。Revenue = Users × Conversion × ARPU。找到主要因子後再做 5 Whys。',
+          },
+          {
+            id: 2,
+            name: '5 Whys 實戰',
+            type: 'data-interpretation',
+            difficulty: 'medium',
+            scenario: {
+              title: '繼續追 GMV 下降',
+              narrative: '你用公式拆解後發現：\n\n• Buyers 數量沒太大變化（-2%）\n• Orders per Buyer 也差不多（-1%）\n• AOV（平均訂單金額）從 $78 掉到 $65（-17%）\n\n所以 GMV 下降主要是 AOV 造成的。你繼續用 5 Whys 追下去。\n\nWhy 1: 為什麼 AOV 下降？\n→ 因為高價商品（$100+）的銷售佔比從 35% 降到 20%。\n\nWhy 2: 為什麼高價商品銷售佔比下降？\n→ 因為高價商品的曝光量下降了 40%。\n\nWhy 3: 為什麼高價商品曝光量下降？',
+              data: [
+                { category: '高價商品（$100+）', before: '35% GMV佔比', after: '20% GMV佔比', exposure_change: '-40%' },
+                { category: '中價商品（$30-99）', before: '45% GMV佔比', after: '50% GMV佔比', exposure_change: '+10%' },
+                { category: '低價商品（<$30）', before: '20% GMV佔比', after: '30% GMV佔比', exposure_change: '+25%' },
+              ],
+              dataCaption: '商品價格帶分析',
+            },
+            question: '根據你目前掌握的資訊，Why 3 最可能的答案是什麼？你會優先調查哪個方向？',
+            options: [
+              { id: 'A', text: '消費者口味改變了，偏好便宜的東西', explanation: '這個假設太模糊，而且「消費者口味改變」很難直接驗證。你應該先看可控的內部因素。' },
+              { id: 'B', text: '高價商品的賣家可能流失了，導致供給減少', explanation: '這是一個合理假設，但曝光量下降不一定代表供給減少。商品數量沒變，但曝光下降，更可能是推薦系統或排序的問題。' },
+              { id: 'C', text: '推薦演算法或搜尋排序最近有調整，降低了高價商品的權重', explanation: '正確！曝光量下降 40% 但商品本身沒有減少，最可能的原因是平台的推薦/排序演算法改變了。這是一個可以立即驗證的假設：去問 Search/Recommendation 團隊最近有沒有調整演算法。如果有，這就可能是根因。' },
+              { id: 'D', text: '季節性因素，某些季節本來就賣比較便宜的東西', explanation: '可能性存在，但你應該先排除內部可控因素（如演算法調整），再去看外部因素。' },
+            ],
+            correctAnswer: 'C',
+            hints: [
+              '「曝光量」是平台控制的——什麼因素會影響一個商品被展示的次數？',
+              '如果商品數量沒減少，但曝光量減少了，問題出在「展示機制」而非「供給」。',
+            ],
+            explanation: '5 Whys 的精髓是：每一層的「Why」都要基於數據和邏輯，而不是直覺猜測。這裡的線索是「曝光量下降」——曝光是平台控制的，最可能的原因是推薦/排序機制的改變。Root cause 分析要優先看可控的內部因素，再看外部因素。',
+            frameworkTip: '5 Whys 實戰技巧：(1) 每個 Why 都要有數據支撐 (2) 優先看內部可控因素 (3) 追到可以行動的層級為止',
+          },
+          {
+            id: 3,
+            name: '假設樹練習',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: '外送平台的客訴暴增',
+              narrative: '你在一家食物外送平台工作。客服主管告訴你：\n\n「本週的客訴量比上週多了 60%。」\n\n你需要建立一棵假設樹（hypothesis tree）來結構化地調查原因。以下是你初步整理的假設樹：\n\n客訴增加 60%\n├── 供給端（餐廳/外送員）\n│   ├── 餐廳出餐變慢\n│   ├── 外送員不足，配送延遲\n│   └── 餐點品質問題增加\n├── 需求端（訂單/用戶）\n│   ├── 訂單量暴增，超過產能\n│   ├── 新用戶比例增加（不熟悉平台）\n│   └── 促銷活動引來價格敏感客群\n└── 平台端（系統/流程）\n    ├── App 有 bug（訂單錯誤、支付問題）\n    ├── 配送路線演算法異常\n    └── 客服分類方式改變（把以前不算客訴的也算了）',
+            },
+            question: '你會用什麼方式來快速驗證或排除最多假設？',
+            options: [
+              { id: 'A', text: '一個一個假設去驗證，從上到下', explanation: '這太慢了。好的分析師會找到能同時排除多個假設的數據。' },
+              { id: 'B', text: '先看客訴的類別分佈（配送延遲 / 餐點問題 / 系統錯誤等），快速判斷問題集中在哪個大類', explanation: '正確！客訴類別分佈是最高效的第一步。如果 80% 新增客訴都是「配送延遲」，你可以立刻排除餐點品質和系統問題，聚焦在供給端和配送效率。一個數據就能大幅縮小調查範圍。' },
+              { id: 'C', text: '先確認客訴量的增加是不是因為定義改變（最後一個假設）', explanation: '定義改變確實要排除，但不應該是第一步。你應該先看客訴類別分佈，這能同時給你更多資訊。' },
+              { id: 'D', text: '先看訂單量有沒有增加，因為訂單多客訴自然就多', explanation: '這是一個合理的方向，但只能驗證一個假設。看客訴類別分佈能同時告訴你更多東西。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '想想：什麼數據能一次告訴你最多資訊？',
+              '如果你知道新增客訴都是什麼類型的，你能排除多少假設？',
+            ],
+            explanation: '高效的根因分析要用「最少的步驟排除最多的假設」。客訴類別分佈就像一個 filter——它一次就能告訴你問題出在供給端、需求端還是平台端。這叫做 issue tree prioritization：先做能 narrow down 最多方向的分析。',
+            frameworkTip: '假設樹使用法：(1) 列出所有可能原因 (2) 找能排除最多分支的數據 (3) 逐步收斂到根因',
+          },
+        ],
+      },
+      // ── Quest 3-6: Boss ──
+      {
+        id: '3-6',
+        name: 'Boss: 完整數據調查',
+        description: '端到端的數據分析 case study',
+        xp: 200,
+        isBoss: true,
+        challenges: [
+          {
+            id: 1,
+            name: 'Boss Challenge: 指標下降調查（上）',
+            type: 'data-interpretation',
+            difficulty: 'hard',
+            scenario: {
+              title: '音樂串流平台：MAU 下降之謎',
+              narrative: '你是一家音樂串流平台的 Senior Analyst。CEO 在月會上宣佈：\n\n「我們的 MAU（Monthly Active Users）從上個月的 8.5M 降到 7.8M（-8.2%）。這是我們上市以來第一次 MAU 下降。我需要知道發生了什麼事。」\n\n你拉出了以下數據來開始調查。',
+              data: [
+                { metric: 'MAU', last_month: '8.5M', this_month: '7.8M', change: '-8.2%' },
+                { metric: 'DAU', last_month: '3.2M', this_month: '3.0M', change: '-6.3%' },
+                { metric: 'New Signups', last_month: '620K', this_month: '580K', change: '-6.5%' },
+                { metric: 'Reactivated Users', last_month: '180K', this_month: '170K', change: '-5.6%' },
+                { metric: 'Churned Users', last_month: '350K', this_month: '890K', change: '+154%' },
+                { metric: 'Avg Sessions/User', last_month: '12.5', this_month: '12.8', change: '+2.4%' },
+                { metric: 'Avg Listen Time/Session', last_month: '28min', this_month: '29min', change: '+3.6%' },
+              ],
+              dataCaption: '核心指標月度比較',
+            },
+            question: '從這些數據中，你的第一個發現是什麼？',
+            options: [
+              { id: 'A', text: '所有指標都在下降，是全面性的問題', explanation: 'Sessions/User 和 Listen Time 都在上升，所以不是全面性的問題。仔細區分哪些上升哪些下降。' },
+              { id: 'B', text: 'MAU 下降主要是 churn 暴增（+154%）造成的，而不是獲取面的問題。留下來的用戶反而更活躍了（sessions 和 listen time 都上升）', explanation: '正確！New signups 和 reactivation 只輕微下降（-5~7%），但 churn 暴增了 154%（350K→890K）。同時活躍用戶的使用指標還在上升。這代表問題不在產品體驗或獲客，而是有一批特定的用戶在集中流失。' },
+              { id: 'C', text: 'New Signups 下降 6.5% 是關鍵問題，需要加大行銷投入', explanation: '-6.5% 的下降在正常波動範圍內。Churn +154% 才是真正的異常。' },
+              { id: 'D', text: '使用時間增加代表演算法推薦做得好，MAU 下降不是大問題', explanation: 'MAU 下降 8.2% 是很嚴重的問題，不能因為使用時間增加就忽略。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              'MAU 的變化 = New + Reactivated - Churned。哪個因子的變化最劇烈？',
+              '活躍用戶的行為指標（sessions, listen time）是上升還是下降？這告訴你什麼？',
+            ],
+            explanation: '分析指標下降時，先拆解公式：MAU = 上月 MAU + New + Reactivated - Churned。New 和 Reactivated 的變化很小，但 Churn 從 350K 暴增到 890K。同時，留下來的用戶使用指標反而變好，代表產品核心體驗沒有惡化。下一步應該深入調查：是什麼用戶在 churn？為什麼？',
+            frameworkTip: 'MAU 拆解：MAU = Previous MAU + New + Reactivated - Churned。先找最大的 delta。',
+          },
+          {
+            id: 2,
+            name: 'Boss Challenge: 指標下降調查（中）',
+            type: 'data-interpretation',
+            difficulty: 'hard',
+            scenario: {
+              title: '繼續追查：誰在流失？',
+              narrative: '你確認問題出在 churn 暴增後，把 churned users 按 segment 拆開來看。',
+              data: [
+                { segment: 'Premium（付費）', last_churn: '45K', this_churn: '52K', change: '+16%', pct_of_total: '5.8%' },
+                { segment: 'Free - Active >6個月', last_churn: '85K', this_churn: '95K', change: '+12%', pct_of_total: '10.7%' },
+                { segment: 'Free - Active 1-6個月', last_churn: '120K', this_churn: '143K', change: '+19%', pct_of_total: '16.1%' },
+                { segment: 'Free - Active <1個月', last_churn: '100K', this_churn: '600K', change: '+500%', pct_of_total: '67.4%' },
+              ],
+              dataCaption: 'Churned Users by Segment',
+            },
+            question: '根據 segment 拆解，你會怎麼繼續調查？',
+            options: [
+              { id: 'A', text: '所有 segment 的 churn 都增加了，需要全面檢討產品體驗', explanation: '雖然都有增加，但幅度差異巨大。Free <1個月的用戶 churn 暴增 500%，佔了新增 churn 的絕大多數。' },
+              { id: 'B', text: 'Premium 用戶的 churn 增加最少（+16%），代表付費用戶是安全的，不用擔心', explanation: 'Premium churn +16% 也不少，但確實不是最緊急的問題。重點在 Free <1個月。' },
+              { id: 'C', text: 'Churn 暴增集中在「Free - Active <1個月」（+500%，佔 67%）。需要調查這群新用戶是從哪來的，以及他們為什麼這麼快就離開', explanation: '正確！這批新加入不到一個月就流失的用戶佔了 churn 總量的 67%，而且暴增了 500%。這是非常異常的 pattern。最可能的原因：(1) 某個獲客管道帶來了大量低品質用戶 (2) 有 bot/fake signups (3) 某個 referral program 被濫用。下一步：查這些用戶的 acquisition source。' },
+              { id: 'D', text: '應該把重心放在 Free Active 1-6個月的用戶，因為他們是最有可能轉付費的群體', explanation: '這個 segment 的 churn 增加只有 19%，不是目前最緊急的問題。' },
+            ],
+            correctAnswer: 'C',
+            hints: [
+              '哪個 segment 的 churn 增加最劇烈？佔總 churn 的比例是多少？',
+              '新加入不到一個月就離開的用戶大量增加，可能代表什麼？',
+            ],
+            explanation: '這是 drill-down 分析的典型流程：整體 churn ↑ → 按 segment 拆 → 發現問題集中在「Free <1個月」→ 下一步按 acquisition source 拆。每一層都在縮小範圍。這種 pattern（大量新用戶快速流失）通常指向獲客管道品質問題或 fraud。',
+            frameworkTip: 'Drill-down 流程：整體異常 → 按維度拆解 → 找到異常 segment → 對該 segment 再拆一層 → 直到可行動',
+          },
+          {
+            id: 3,
+            name: 'Boss Challenge: 指標下降調查（下）',
+            type: 'multiple-choice',
+            difficulty: 'hard',
+            scenario: {
+              title: '真相大白',
+              narrative: '你繼續追查「Free - Active <1個月」的流失用戶，發現了以下線索：\n\n1. 這 60 萬流失用戶中，有 45 萬來自同一個 referral campaign（「邀請好友送 3 個月免費 Premium」）\n2. 這個 campaign 在上個月推出，referral 用戶的平均使用時間只有 2 分鐘\n3. 有些推薦人帳號邀請了 200+ 個好友\n4. 這些被推薦的帳號有很多使用相同 IP 或設備\n\n你需要跟 CEO 報告你的完整調查結論。',
+            },
+            question: '以下哪個報告最完整且最有行動力？',
+            options: [
+              { id: 'A', text: 'MAU 下降是因為 referral campaign 帶來了太多用戶，建議暫停 campaign', explanation: '這個結論太淺了。你沒有解釋為什麼 referral 帶來的用戶會流失，也沒有建議如何改善。' },
+              { id: 'B', text: 'MAU 下降的根因是 referral campaign 被 abuse：有人用假帳號大量註冊來獲取免費 Premium。建議：(1) 暫停 campaign 止血 (2) 清理 fraud 帳號 (3) 重新設計 referral 機制（加驗證、設上限）(4) 排除 fraud 後重新計算真實 MAU', explanation: '正確！這是一份完整的根因分析報告。(1) 清楚指出根因（referral abuse/fraud）、(2) 有數據支撐（45 萬來自同一 campaign、使用時間 2 分鐘、同 IP）、(3) 有短期和長期建議、(4) 建議重新計算「真實」MAU 排除 fraud 影響。' },
+              { id: 'C', text: '我們的 MAU 定義有問題，這些 fraud 帳號不應該算在 MAU 裡。調整定義後 MAU 其實沒有下降', explanation: '雖然排除 fraud 很重要，但你不能只是重新定義指標來「解決」問題。fraud 本身需要被處理，campaign 需要被修正。' },
+              { id: 'D', text: '需要更多數據才能確認是 fraud，不能妄下結論', explanation: '使用時間 2 分鐘、200+ 邀請、同 IP/設備——這已經是非常明確的 fraud pattern。面試中，你需要展示決斷力，不能一直說「需要更多數據」。' },
+            ],
+            correctAnswer: 'B',
+            hints: [
+              '一份好的分析報告要包含：根因、證據、短期和長期建議。',
+              '除了「暫停 campaign」，還需要什麼行動？',
+            ],
+            explanation: '這個 Boss Challenge 展示了完整的數據調查流程：(1) 看整體指標異常 → (2) 拆解公式找主因 → (3) 按 segment 拆找到異常群體 → (4) 深入調查該群體的特徵 → (5) 找到根因 → (6) 提出行動建議。面試中做到這個流程，就能展示結構化分析能力。',
+            frameworkTip: '完整調查報告：指標異常 → 公式拆解 → Segment 分析 → Root Cause → 數據佐證 → 行動建議（短期 + 長期）',
           },
         ],
       },
@@ -1080,718 +1440,1496 @@ export const WORLDS = [
   },
   {
     id: 4,
-    name: 'React 前線',
-    emoji: '⚔️',
-    description: '199 個 component 構成了使用者看到的一切',
-    color: 'from-cyan-500 to-blue-600',
+    name: 'SQL 與資料素養',
+    emoji: '🗄️',
+    description: '面試中的 SQL 思維和資料理解力',
+    color: 'from-orange-500 to-amber-500',
     quests: [
-      {
-        id: '4-1', name: 'JSX 基礎', description: '讀懂 component 結構', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '建立元素', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `createElement(tag, props, children)` — 模擬 React.createElement。回傳 `{type: tag, props: {...props, children}}`。如果 children 是 undefined 就不加。',
-            defaultCode: `function createElement(tag, props, children) {\n  const element = { type: tag, props: { ...props } };\n  if (children !== undefined) {\n    element.props.children = children;\n  }\n  return element;\n}`,
-            example: {
-              title: '範例：建立簡單物件結構',
-              code: 'function makeNode(name, value) {\n  return { name, data: value };\n}\nconsole.log(makeNode("p", 42));',
-              output: '{ name: "p", data: 42 }',
-              explanation: '函式接收參數，組合成物件後回傳，概念與 createElement 相同。',
-            },
-            tests: [
-              { description: '建立 div', fn: '(ctx) => { const e = ctx.createElement("div",{className:"card"},"Hello"); return e.type==="div" && e.props.className==="card" && e.props.children==="Hello"; }' },
-              { description: '無 children', fn: '(ctx) => ctx.createElement("br",{}).props.children === undefined' },
-              { description: '巢狀結構', fn: '(ctx) => { const child = ctx.createElement("span",{},"text"); const parent = ctx.createElement("div",{},child); return parent.props.children.type === "span"; }' },
+      { id: '4-1', name: 'SQL 查詢思維', description: '面試中如何說明你會怎麼查資料', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '基本 SELECT 與篩選',
+          type: 'code',
+          difficulty: 'easy',
+          scenario: {
+            title: '電商訂單查詢',
+            narrative: '你剛加入一家電商公司的資料團隊。PM 想了解今年一月的訂單狀況，請你從 orders 資料表中查詢。\n\n資料表結構：orders (id, customer_id, amount, order_date, status)',
+            data: [
+              { id: 1, customer_id: 101, amount: 250, order_date: '2024-01-15', status: 'completed' },
+              { id: 2, customer_id: 102, amount: 180, order_date: '2024-01-20', status: 'completed' },
+              { id: 3, customer_id: 103, amount: 320, order_date: '2024-02-01', status: 'pending' },
+              { id: 4, customer_id: 101, amount: 95, order_date: '2024-01-28', status: 'completed' },
             ],
-            returnVars: ['createElement'],
+            dataCaption: 'orders 資料表（部分範例）',
           },
-          {
-            id: 2, name: '解析 JSX 結構', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `countElements(tree)` — 遞迴計算虛擬 DOM 樹中有多少個元素節點。tree 是 `{type, props: {children}}` 結構，children 可以是：物件（單個子元素）、陣列（多個子元素）、字串（文字節點，不算）、或 undefined。',
-            defaultCode: `function countElements(tree) {\n  if (!tree || typeof tree === "string") return 0;\n  let count = 1; // 自己\n  const children = tree.props?.children;\n  // 遞迴計算子元素\n  \n  return count;\n}`,
-            example: {
-              title: '範例：遞迴計算巢狀深度',
-              code: 'function depth(node) {\n  if (!node || !node.child) return 1;\n  return 1 + depth(node.child);\n}\nconsole.log(depth({child:{child:null}}));',
-              output: '2',
-              explanation: '遞迴走訪巢狀結構並計數，與遍歷虛擬 DOM 樹的概念類似。',
-            },
-            tests: [
-              { description: '單一元素', fn: '(ctx) => ctx.countElements({type:"div",props:{}}) === 1' },
-              { description: '有子元素', fn: '(ctx) => ctx.countElements({type:"div",props:{children:{type:"span",props:{}}}}) === 2' },
-              { description: '陣列子元素', fn: '(ctx) => ctx.countElements({type:"div",props:{children:[{type:"p",props:{}},{type:"p",props:{}}]}}) === 3' },
-              { description: '文字節點不算', fn: '(ctx) => ctx.countElements({type:"div",props:{children:"hello"}}) === 1' },
+          question: '寫一段 SQL 查詢，找出 2024 年 1 月的所有訂單，按金額由大到小排序。',
+          sampleSchema: `
+            CREATE TABLE orders (id INTEGER, customer_id INTEGER, amount REAL, order_date TEXT, status TEXT);
+            INSERT INTO orders VALUES (1, 101, 250.00, '2024-01-15', 'completed');
+            INSERT INTO orders VALUES (2, 102, 180.00, '2024-01-20', 'completed');
+            INSERT INTO orders VALUES (3, 103, 320.00, '2024-02-01', 'pending');
+            INSERT INTO orders VALUES (4, 101, 95.00, '2024-01-28', 'completed');
+            INSERT INTO orders VALUES (5, 104, 410.00, '2024-01-05', 'completed');
+            INSERT INTO orders VALUES (6, 105, 75.00, '2024-02-10', 'cancelled');
+          `,
+          starterCode: "SELECT *\nFROM orders\nWHERE -- 篩選一月的訂單\nORDER BY -- 按金額排序;",
+          expectedQuery: "SELECT * FROM orders WHERE order_date LIKE '2024-01%' ORDER BY amount DESC;",
+          hints: ['WHERE 可以用 LIKE 配合 % 來比對日期前綴', 'ORDER BY column DESC 代表由大到小'],
+          explanation: "使用 WHERE order_date LIKE '2024-01%' 篩選一月的資料，ORDER BY amount DESC 依金額由大到小排列。這是最基本的查詢結構：FROM → WHERE → SELECT → ORDER BY。",
+          frameworkTip: 'SQL 思考順序：先想「從哪張表」→「篩選什麼」→「要哪些欄位」→「怎麼排序」',
+        },
+        {
+          id: 2,
+          name: 'GROUP BY 與聚合',
+          type: 'code',
+          difficulty: 'easy',
+          scenario: {
+            title: '客戶消費統計',
+            narrative: '主管想了解每位客戶的消費狀況，包含訂單數量和總消費金額。你需要對 orders 資料進行分組統計。',
+            data: [
+              { id: 1, customer_id: 101, amount: 250, order_date: '2024-01-15', status: 'completed' },
+              { id: 2, customer_id: 102, amount: 180, order_date: '2024-01-20', status: 'completed' },
+              { id: 4, customer_id: 101, amount: 95, order_date: '2024-01-28', status: 'completed' },
             ],
-            returnVars: ['countElements'],
+            dataCaption: 'orders 資料表（部分範例）',
           },
-        ],
-      },
-      {
-        id: '4-2', name: 'Props 與 State', description: '改一個 component 的行為', xp: 50,
-        challenges: [
-          {
-            id: 1, name: 'Props 合併', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `mergeProps(defaultProps, userProps)` — 用 userProps 覆蓋 defaultProps 中同名的屬性。回傳新物件，不修改原物件。',
-            defaultCode: `function mergeProps(defaultProps, userProps) {\n  \n}`,
-            example: {
-              title: '範例：用 spread 合併物件',
-              code: 'const a = { x: 1, y: 2 };\nconst b = { y: 3, z: 4 };\nconsole.log({ ...a, ...b });',
-              output: '{ x: 1, y: 3, z: 4 }',
-              explanation: '後面的物件會覆蓋前面同名的屬性，這就是 Props 合併的核心概念。',
-            },
-            tests: [
-              { description: '覆蓋預設值', fn: '(ctx) => { const r = ctx.mergeProps({size:"md",color:"blue"},{color:"red"}); return r.size==="md" && r.color==="red"; }' },
-              { description: '不修改原物件', fn: '(ctx) => { const d={a:1}; ctx.mergeProps(d,{a:2}); return d.a === 1; }' },
-              { description: '新增屬性', fn: '(ctx) => ctx.mergeProps({a:1},{b:2}).b === 2' },
+          question: '寫一段 SQL，計算每位客戶的訂單數和總消費金額，按總金額由大到小排序。',
+          sampleSchema: `
+            CREATE TABLE orders (id INTEGER, customer_id INTEGER, amount REAL, order_date TEXT, status TEXT);
+            INSERT INTO orders VALUES (1, 101, 250.00, '2024-01-15', 'completed');
+            INSERT INTO orders VALUES (2, 102, 180.00, '2024-01-20', 'completed');
+            INSERT INTO orders VALUES (3, 103, 320.00, '2024-02-01', 'pending');
+            INSERT INTO orders VALUES (4, 101, 95.00, '2024-01-28', 'completed');
+            INSERT INTO orders VALUES (5, 104, 410.00, '2024-01-05', 'completed');
+            INSERT INTO orders VALUES (6, 105, 75.00, '2024-02-10', 'cancelled');
+          `,
+          starterCode: "SELECT customer_id,\n       COUNT(*) AS order_count,\n       SUM(amount) AS total_amount\nFROM orders\nGROUP BY -- 按什麼分組？\nORDER BY -- 排序;",
+          expectedQuery: "SELECT customer_id, COUNT(*) AS order_count, SUM(amount) AS total_amount FROM orders GROUP BY customer_id ORDER BY total_amount DESC;",
+          hints: ['GROUP BY customer_id 可以按客戶分組', 'SUM() 和 COUNT() 是最常用的聚合函數'],
+          explanation: "GROUP BY customer_id 把同一個客戶的訂單合併計算。COUNT(*) 算筆數，SUM(amount) 算總金額。面試中這是非常基礎但重要的題型 — 你需要展示你能從原始資料中提取 business insight。",
+          frameworkTip: '面試答 SQL 題時，先口述你的思路（分組 → 聚合 → 排序），再寫 code',
+        },
+        {
+          id: 3,
+          name: 'HAVING 與條件篩選',
+          type: 'code',
+          difficulty: 'medium',
+          scenario: {
+            title: '高價值客戶篩選',
+            narrative: '行銷團隊想找出「高價值客戶」（消費超過 200 元的客戶），針對他們做促銷活動。你需要先聚合再篩選。',
+          },
+          question: '寫一段 SQL，找出總消費金額超過 200 的客戶，顯示客戶 ID、訂單數、總金額。',
+          sampleSchema: `
+            CREATE TABLE orders (id INTEGER, customer_id INTEGER, amount REAL, order_date TEXT, status TEXT);
+            INSERT INTO orders VALUES (1, 101, 250.00, '2024-01-15', 'completed');
+            INSERT INTO orders VALUES (2, 102, 180.00, '2024-01-20', 'completed');
+            INSERT INTO orders VALUES (3, 103, 320.00, '2024-02-01', 'pending');
+            INSERT INTO orders VALUES (4, 101, 95.00, '2024-01-28', 'completed');
+            INSERT INTO orders VALUES (5, 104, 410.00, '2024-01-05', 'completed');
+            INSERT INTO orders VALUES (6, 105, 75.00, '2024-02-10', 'cancelled');
+          `,
+          starterCode: "SELECT customer_id,\n       COUNT(*) AS order_count,\n       SUM(amount) AS total_amount\nFROM orders\nGROUP BY customer_id\n-- 怎麼篩選聚合後的結果？\nORDER BY total_amount DESC;",
+          expectedQuery: "SELECT customer_id, COUNT(*) AS order_count, SUM(amount) AS total_amount FROM orders GROUP BY customer_id HAVING total_amount > 200 ORDER BY total_amount DESC;",
+          hints: ['聚合後的篩選不能用 WHERE，要用 HAVING', 'HAVING 放在 GROUP BY 之後、ORDER BY 之前'],
+          explanation: "WHERE 在聚合前篩選原始資料，HAVING 在聚合後篩選結果。這是面試常考的概念 — 面試官想看你是否理解 SQL 的執行順序：FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY。",
+          frameworkTip: 'WHERE vs HAVING：WHERE 篩原始行，HAVING 篩聚合結果。面試時務必講清楚差異。',
+        },
+      ] },
+      { id: '4-2', name: 'Event Data vs Transactional Data', description: '理解不同資料類型的特性', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '識別資料類型',
+          type: 'multiple-choice',
+          difficulty: 'easy',
+          scenario: {
+            title: '電商平台的資料表',
+            narrative: '你加入了一家電商公司的 Data Team。主管給你看了幾張資料表，要你分清楚哪些是 Event Data、哪些是 Transactional Data，因為查詢方式不同。',
+            data: [
+              { table_name: 'page_views', sample_columns: 'user_id, page_url, timestamp, device', 特性: '每次瀏覽一筆，量很大' },
+              { table_name: 'orders', sample_columns: 'order_id, user_id, amount, status, created_at', 特性: '有生命週期，會更新狀態' },
+              { table_name: 'button_clicks', sample_columns: 'user_id, button_id, page, timestamp', 特性: '每次點擊一筆，不可修改' },
+              { table_name: 'subscriptions', sample_columns: 'sub_id, user_id, plan, start_date, end_date', 特性: '代表一個持續的狀態' },
             ],
-            returnVars: ['mergeProps'],
+            dataCaption: '公司的部分資料表',
           },
-          {
-            id: 2, name: '模擬 useState', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `createState(initialValue)` — 回傳 `[getter, setter]`。getter() 回傳目前的值，setter(newValue) 更新值。',
-            defaultCode: `function createState(initialValue) {\n  let value = initialValue;\n  function getter() {\n    // 回傳目前值\n  }\n  function setter(newValue) {\n    // 更新值\n  }\n  return [getter, setter];\n}`,
-            example: {
-              title: '範例：閉包保存狀態',
-              code: 'function makeCounter() {\n  let n = 0;\n  return { get: () => n, inc: () => n++ };\n}\nconst c = makeCounter();\nc.inc(); console.log(c.get());',
-              output: '1',
-              explanation: '用閉包把變數藏在函式內部，外部透過方法存取，與 useState 原理相同。',
-            },
-            tests: [
-              { description: '取得初始值', fn: '(ctx) => { const [get] = ctx.createState(42); return get() === 42; }' },
-              { description: '更新值', fn: '(ctx) => { const [get, set] = ctx.createState(0); set(10); return get() === 10; }' },
-              { description: '多次更新', fn: '(ctx) => { const [get, set] = ctx.createState("a"); set("b"); set("c"); return get() === "c"; }' },
+          question: '以下哪個說法是正確的？',
+          options: [
+            { id: 'A', text: 'page_views 和 orders 都是 Event Data', explanation: 'orders 有生命週期（created → paid → shipped），會被更新，是 Transactional Data。' },
+            { id: 'B', text: 'page_views 和 button_clicks 是 Event Data；orders 和 subscriptions 是 Transactional Data', explanation: '正確！Event Data 記錄每一個行為事件，不可修改、量大。Transactional Data 代表業務實體的狀態，有生命週期、會被更新。' },
+            { id: 'C', text: '所有跟使用者行為有關的都是 Event Data', explanation: '「使用者下訂單」是行為，但 orders 表記錄的是訂單這個業務實體的狀態，不是單純的行為事件。' },
+            { id: 'D', text: '只有 button_clicks 是 Event Data，其他都是 Transactional', explanation: 'page_views 也是 Event Data — 每次瀏覽產生一筆，不會被修改。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['Event Data 的特徵：每次發生就記錄一筆、不會被修改', 'Transactional Data 的特徵：代表一個實體、有狀態變化'],
+          explanation: 'Event Data 記錄「發生了什麼」（page_view、click），每一筆都是一個時間點上的事件。Transactional Data 記錄「業務實體的狀態」（orders、subscriptions），會隨時間更新。搞清楚這個區別，你才知道用哪張表回答哪種問題。',
+          frameworkTip: '面試時聽到「使用者做了什麼」→ Event Data；「業務狀況怎樣」→ Transactional Data',
+        },
+        {
+          id: 2,
+          name: '選對資料表',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '回答不同的業務問題',
+            narrative: 'PM 和 Finance 各丟了一個問題給你：\n\n• PM 問：「使用者在結帳流程哪一步流失最多？」\n• Finance 問：「上個月的退款金額是多少？」\n\n你需要判斷各自該查哪種資料。',
+          },
+          question: '關於這兩個問題，以下哪個分析策略最正確？',
+          options: [
+            { id: 'A', text: '兩個都查 orders 表就好', explanation: 'PM 的問題需要看使用者的行為步驟（哪一步流失），orders 表只記錄最終結果，看不到中間步驟。' },
+            { id: 'B', text: 'PM 的問題查 Event Data（看 funnel 每一步），Finance 的問題查 Transactional Data（看 refunds）', explanation: '正確！使用者流失分析需要看行為事件的每一步（page_view → add_to_cart → checkout → payment）。退款金額需要看交易表的 refund 記錄。' },
+            { id: 'C', text: '兩個都查 Event Data，因為都跟使用者行為有關', explanation: 'Finance 要的是精確的退款金額，Event Data 可能有重複觸發或定義不一致的問題，不適合算金額。' },
+            { id: 'D', text: 'PM 的問題查 Transactional Data（看訂單狀態），Finance 的問題查 Event Data（看退款事件）', explanation: '反了。訂單狀態看不到「使用者在哪一步離開」，退款事件可能重複觸發，不適合算金額。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['想想看：PM 要看的是「過程」還是「結果」？', 'Finance 要的是精確金額，哪種資料更可靠？'],
+          explanation: '「過程」問題用 Event Data（行為追蹤），「結果」問題用 Transactional Data（業務記錄）。面試中展示你知道用對資料來回答對的問題，比你會寫 SQL 更重要。',
+          frameworkTip: '面試黃金句：「這個問題需要看使用者行為的每一步，所以我會用 event data 來建 funnel。」',
+        },
+      ] },
+      { id: '4-3', name: 'JOIN 與 Aggregation', description: '合併和聚合資料的思路', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '基本 JOIN',
+          type: 'code',
+          difficulty: 'easy',
+          scenario: {
+            title: '訂單與客戶資料合併',
+            narrative: 'PM 想要一份報表，同時看到訂單資訊和客戶名稱。你需要把 orders 和 customers 兩張表 JOIN 起來。\n\n資料表：\n• orders (id, customer_id, amount, order_date)\n• customers (id, name, email, city)',
+          },
+          question: '寫一段 SQL，查詢所有訂單的客戶名稱、訂單金額和訂單日期。',
+          sampleSchema: `
+            CREATE TABLE customers (id INTEGER, name TEXT, email TEXT, city TEXT);
+            INSERT INTO customers VALUES (101, 'Alice', 'alice@mail.com', 'Taipei');
+            INSERT INTO customers VALUES (102, 'Bob', 'bob@mail.com', 'Kaohsiung');
+            INSERT INTO customers VALUES (103, 'Charlie', 'charlie@mail.com', 'Taipei');
+            CREATE TABLE orders (id INTEGER, customer_id INTEGER, amount REAL, order_date TEXT);
+            INSERT INTO orders VALUES (1, 101, 250.00, '2024-01-15');
+            INSERT INTO orders VALUES (2, 102, 180.00, '2024-01-20');
+            INSERT INTO orders VALUES (3, 101, 95.00, '2024-01-28');
+            INSERT INTO orders VALUES (4, 103, 320.00, '2024-02-01');
+          `,
+          starterCode: "SELECT c.name, o.amount, o.order_date\nFROM orders o\n-- JOIN 語法\nORDER BY o.order_date;",
+          expectedQuery: "SELECT c.name, o.amount, o.order_date FROM orders o JOIN customers c ON o.customer_id = c.id ORDER BY o.order_date;",
+          hints: ['JOIN customers c ON o.customer_id = c.id', '用 alias（o, c）讓程式碼更簡潔'],
+          explanation: "INNER JOIN 把兩張表透過共同欄位連接。面試重點不只是語法，而是你能不能說清楚「為什麼要 JOIN」以及「JOIN 的 key 是什麼」。",
+          frameworkTip: '回答 JOIN 題時：(1) 說明為什麼需要合併 (2) 指出 JOIN key (3) 考慮 NULL 和重複的影響',
+        },
+        {
+          id: 2,
+          name: 'LEFT JOIN 與缺失資料',
+          type: 'code',
+          difficulty: 'medium',
+          scenario: {
+            title: '找出沒下單的客戶',
+            narrative: '行銷團隊想知道有哪些註冊客戶從來沒下過單，好做再行銷。你需要用 LEFT JOIN 找出這些「沉睡客戶」。',
+          },
+          question: '寫一段 SQL，找出所有沒有任何訂單的客戶名稱。',
+          sampleSchema: `
+            CREATE TABLE customers (id INTEGER, name TEXT, email TEXT, city TEXT);
+            INSERT INTO customers VALUES (101, 'Alice', 'alice@mail.com', 'Taipei');
+            INSERT INTO customers VALUES (102, 'Bob', 'bob@mail.com', 'Kaohsiung');
+            INSERT INTO customers VALUES (103, 'Charlie', 'charlie@mail.com', 'Taipei');
+            INSERT INTO customers VALUES (104, 'Diana', 'diana@mail.com', 'Taichung');
+            INSERT INTO customers VALUES (105, 'Eve', 'eve@mail.com', 'Hsinchu');
+            CREATE TABLE orders (id INTEGER, customer_id INTEGER, amount REAL, order_date TEXT);
+            INSERT INTO orders VALUES (1, 101, 250.00, '2024-01-15');
+            INSERT INTO orders VALUES (2, 102, 180.00, '2024-01-20');
+            INSERT INTO orders VALUES (3, 101, 95.00, '2024-01-28');
+          `,
+          starterCode: "SELECT c.name\nFROM customers c\n-- 用什麼 JOIN？\nWHERE -- 怎麼找到「沒有訂單」的客戶？;",
+          expectedQuery: "SELECT c.name FROM customers c LEFT JOIN orders o ON c.id = o.customer_id WHERE o.id IS NULL;",
+          hints: ['LEFT JOIN 保留左表所有行，即使右表沒有匹配', 'WHERE o.id IS NULL 可以找到沒有匹配的行'],
+          explanation: "LEFT JOIN + IS NULL 是找「不存在於另一張表」的經典模式。面試中這代表你理解不同 JOIN 類型的語意差異，也是 churn 分析、缺失資料檢測的基礎。",
+          frameworkTip: 'INNER JOIN 找交集，LEFT JOIN 保留全部左表 — 面試時用集合圖解釋最清楚',
+        },
+        {
+          id: 3,
+          name: 'JOIN + GROUP BY 綜合',
+          type: 'code',
+          difficulty: 'medium',
+          scenario: {
+            title: '各城市消費統計',
+            narrative: '主管想知道各城市的客戶消費狀況。你需要 JOIN 客戶和訂單資料，再按城市分組統計。',
+          },
+          question: '寫一段 SQL，統計每個城市的客戶數、總訂單數、總消費金額，按總金額由大到小排序。',
+          sampleSchema: `
+            CREATE TABLE customers (id INTEGER, name TEXT, email TEXT, city TEXT);
+            INSERT INTO customers VALUES (101, 'Alice', 'alice@mail.com', 'Taipei');
+            INSERT INTO customers VALUES (102, 'Bob', 'bob@mail.com', 'Kaohsiung');
+            INSERT INTO customers VALUES (103, 'Charlie', 'charlie@mail.com', 'Taipei');
+            CREATE TABLE orders (id INTEGER, customer_id INTEGER, amount REAL, order_date TEXT);
+            INSERT INTO orders VALUES (1, 101, 250.00, '2024-01-15');
+            INSERT INTO orders VALUES (2, 102, 180.00, '2024-01-20');
+            INSERT INTO orders VALUES (3, 101, 95.00, '2024-01-28');
+            INSERT INTO orders VALUES (4, 103, 320.00, '2024-02-01');
+          `,
+          starterCode: "SELECT c.city,\n       COUNT(DISTINCT c.id) AS customer_count,\n       COUNT(o.id) AS order_count,\n       SUM(o.amount) AS total_amount\nFROM customers c\n-- JOIN\nGROUP BY -- ?\nORDER BY total_amount DESC;",
+          expectedQuery: "SELECT c.city, COUNT(DISTINCT c.id) AS customer_count, COUNT(o.id) AS order_count, SUM(o.amount) AS total_amount FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.city ORDER BY total_amount DESC;",
+          hints: ['JOIN orders o ON c.id = o.customer_id', 'COUNT(DISTINCT c.id) 避免因為 JOIN 產生的重複計算'],
+          explanation: "JOIN + GROUP BY 是面試中最常見的組合。關鍵是 COUNT(DISTINCT) — 當 JOIN 產生一對多時，直接 COUNT 會重複計算。這展示你理解 JOIN 對行數的影響。",
+          frameworkTip: '面試時永遠要提到：JOIN 可能產生重複行，聚合時注意是否需要 DISTINCT',
+        },
+      ] },
+      { id: '4-4', name: 'Window Functions', description: '進階分析：排名、移動平均、前後比較', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '理解 Window Functions',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '用戶購買排名',
+            narrative: '你需要分析每個用戶的購買紀錄，找出每個人的「第幾次購買」。PM 想知道用戶通常第幾次購買時金額最高。\n\n你打算用 ROW_NUMBER() 來做。',
+            data: [
+              { user_id: 'A01', amount: 120, order_date: '2024-01-10', '第幾次購買': '?' },
+              { user_id: 'A01', amount: 350, order_date: '2024-02-15', '第幾次購買': '?' },
+              { user_id: 'A01', amount: 85, order_date: '2024-03-20', '第幾次購買': '?' },
+              { user_id: 'B02', amount: 200, order_date: '2024-01-25', '第幾次購買': '?' },
+              { user_id: 'B02', amount: 180, order_date: '2024-03-01', '第幾次購買': '?' },
             ],
-            returnVars: ['createState'],
+            dataCaption: '訂單資料（需要計算每個用戶的第幾次購買）',
           },
-        ],
-      },
-      {
-        id: '4-3', name: 'useEffect 與生命週期', description: '修復一個 bug', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '淺比較陣列', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `shallowEqual(arr1, arr2)` — 比較兩個陣列是否長度相同且每個元素用 === 比較都相等。回傳 true 或 false。',
-            defaultCode: `function shallowEqual(arr1, arr2) {\n  // 比較兩個陣列是否淺相等\n  \n}`,
-            example: {
-              title: '範例：比較兩個字串是否相同',
-              code: 'function eq(a, b) {\n  return a === b;\n}\nconsole.log(eq("hi", "hi"), eq("hi", "ho"));',
-              output: 'true false',
-              explanation: '用 === 嚴格比較兩個值；淺比較陣列就是對每個元素做一樣的事。',
-            },
-            tests: [
-              { description: '相同陣列', fn: '(ctx) => ctx.shallowEqual([1,2,3], [1,2,3]) === true' },
-              { description: '不同長度', fn: '(ctx) => ctx.shallowEqual([1,2], [1,2,3]) === false' },
-              { description: '不同元素', fn: '(ctx) => ctx.shallowEqual([1,2,3], [1,2,4]) === false' },
-              { description: '空陣列', fn: '(ctx) => ctx.shallowEqual([], []) === true' },
-              { description: '嚴格比較', fn: '(ctx) => ctx.shallowEqual([1], ["1"]) === false' },
+          question: '以下哪段 SQL 邏輯可以正確計算「每個用戶的第幾次購買」？',
+          options: [
+            { id: 'A', text: 'GROUP BY user_id，然後用 COUNT(*) 算每個用戶的購買次數', explanation: 'GROUP BY 會把每個用戶合併成一行，你就看不到每一筆訂單了。Window Function 可以在不合併行的情況下做計算。' },
+            { id: 'B', text: 'ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY order_date)', explanation: '正確！PARTITION BY user_id 表示「對每個用戶分別計算」，ORDER BY order_date 表示「按購買時間排序編號」。結果就是每個用戶的第 1、2、3... 次購買。' },
+            { id: 'C', text: 'ROW_NUMBER() OVER (ORDER BY order_date)', explanation: '少了 PARTITION BY，這樣會對所有用戶混在一起編號，不是「每個用戶的第幾次」。' },
+            { id: 'D', text: 'RANK() OVER (ORDER BY amount DESC)', explanation: 'RANK 是排名不是編號，而且按金額排序不是按時間，也沒有按用戶分組。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['Window Function 的重點是 PARTITION BY — 想成「在每個分組內獨立計算」', 'ROW_NUMBER 給每一行一個序號，不會合併行（跟 GROUP BY 的差別）'],
+          explanation: 'Window Functions 的核心概念：在不合併行的前提下，對一組相關的行做計算。PARTITION BY 定義「分組」，ORDER BY 定義「順序」。ROW_NUMBER 按順序編號，RANK 按排名（可並列），LAG/LEAD 拿前/後一行的值。',
+          frameworkTip: '面試時描述 Window Function：「我會用 ROW_NUMBER，PARTITION BY 用戶分組，ORDER BY 時間排序，找出每個用戶的第 N 次行為。」',
+        },
+        {
+          id: 2,
+          name: 'LAG 與前後比較',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '月營收成長率',
+            narrative: '主管要你計算每個月的營收跟上個月比的成長率。你需要用 LAG 函數來取得「上個月的營收」。',
+            data: [
+              { month: '2024-01', revenue: 500000 },
+              { month: '2024-02', revenue: 520000 },
+              { month: '2024-03', revenue: 480000 },
+              { month: '2024-04', revenue: 550000 },
             ],
-            returnVars: ['shallowEqual'],
+            dataCaption: '月營收數據',
           },
-          {
-            id: 2, name: '模擬 useEffect', type: 'coding', difficulty: 'hard',
-            instruction: '寫 `createEffect(callback, deps)` — 模擬 useEffect 的依賴比較：\n- 回傳 `{shouldRun, cleanup}` 物件\n- 第一次呼叫永遠 shouldRun=true\n- 之後比較 deps 陣列（淺比較），有改變才 shouldRun=true\n- 如果 deps 是 undefined，每次都 shouldRun=true\n- 如果 deps 是空陣列 []，只有第一次 shouldRun=true',
-            defaultCode: `function createEffectTracker() {\n  let prevDeps = undefined;\n  let isFirst = true;\n  \n  return function check(deps) {\n    if (isFirst) {\n      isFirst = false;\n      prevDeps = deps;\n      return { shouldRun: true };\n    }\n    \n    // 沒給 deps → 每次都執行\n    if (deps === undefined) {\n      return { shouldRun: true };\n    }\n    \n    // 空陣列 → 只執行一次\n    // 比較每個 dep\n    \n    prevDeps = deps;\n    return { shouldRun: false };\n  };\n}`,
-            example: {
-              title: '範例：追蹤值是否改變',
-              code: 'let prev = null;\nfunction changed(val) {\n  const diff = val !== prev;\n  prev = val;\n  return diff;\n}\nconsole.log(changed(1), changed(1), changed(2));',
-              output: 'true false true',
-              explanation: '記住上次的值，跟新值比較決定是否有變化，這就是 useEffect 依賴追蹤的核心。',
-            },
-            tests: [
-              { description: '首次執行', fn: '(ctx) => { const check = ctx.createEffectTracker(); return check([1]).shouldRun === true; }' },
-              { description: 'deps 不變→不執行', fn: '(ctx) => { const check = ctx.createEffectTracker(); check([1,2]); return check([1,2]).shouldRun === false; }' },
-              { description: 'deps 變了→執行', fn: '(ctx) => { const check = ctx.createEffectTracker(); check([1]); return check([2]).shouldRun === true; }' },
-              { description: '無 deps→每次執行', fn: '(ctx) => { const check = ctx.createEffectTracker(); check(); return check().shouldRun === true; }' },
-              { description: '空陣列→只一次', fn: '(ctx) => { const check = ctx.createEffectTracker(); check([]); return check([]).shouldRun === false; }' },
-            ],
-            returnVars: ['createEffectTracker'],
+          question: '以下哪個 SQL 邏輯可以計算 MoM（Month-over-Month）成長率？',
+          options: [
+            { id: 'A', text: '用 self-join 把 revenue 表跟自己 JOIN，配對每個月和上個月', explanation: '可以做到但很複雜，Window Function 更優雅。面試中展示你會用更簡潔的方式解決問題。' },
+            { id: 'B', text: '(revenue - LAG(revenue) OVER (ORDER BY month)) / LAG(revenue) OVER (ORDER BY month)', explanation: '正確！LAG(revenue) OVER (ORDER BY month) 取得上一個月的營收，然後計算 (本月 - 上月) / 上月 = 成長率。' },
+            { id: 'C', text: 'SUM(revenue) OVER (ORDER BY month) 計算累計營收，然後相減', explanation: '這計算的是累計營收，不是月對月的成長率。' },
+            { id: 'D', text: 'AVG(revenue) OVER (ORDER BY month ROWS 1 PRECEDING) 算移動平均', explanation: '移動平均可以看趨勢，但不是成長率。成長率需要用 LAG 取前一行做除法。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['LAG(column) 取得「前一行」的值，LEAD(column) 取得「後一行」的值', '成長率 = (本期 - 上期) / 上期'],
+          explanation: 'LAG 和 LEAD 是面試中非常實用的 Window Functions。LAG 取前一行、LEAD 取後一行。計算成長率、環比、同比都會用到。面試官常問 MoM、WoW、YoY 的計算方式。',
+          frameworkTip: '面試遇到「跟上一期比較」的問題 → 用 LAG。「跟下一期比較」→ 用 LEAD。',
+        },
+      ] },
+      { id: '4-5', name: 'Source of Truth', description: '為什麼不同報表數字不一樣？', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '數字不一致的根因',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '三個部門，三個數字',
+            narrative: '你是公司的 Business Analyst。在季度 review 會議上：\n\n• Marketing 報告：「Q1 新增 12,000 個用戶」\n• Product 報告：「Q1 新增 9,500 個用戶」\n• Finance 報告：「Q1 新增 8,200 個付費用戶」\n\nCEO 很困惑：「到底哪個數字是對的？」',
           },
-        ],
-      },
-      {
-        id: '4-4', name: 'Context 與全域狀態', description: '追蹤資料流', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '閉包盒子', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `createBox(value)` — 用閉包回傳一個物件 `{get(), set(v)}`。get() 回傳目前值，set(v) 更新值。',
-            defaultCode: `function createBox(value) {\n  // 用閉包保存 value\n  return {\n    get() {\n      // 回傳目前值\n    },\n    set(v) {\n      // 更新值\n    }\n  };\n}`,
-            example: {
-              title: '範例：閉包封裝私有變數',
-              code: 'function secret(val) {\n  return { peek: () => val };\n}\nconsole.log(secret(99).peek());',
-              output: '99',
-              explanation: '閉包讓函式記住建立時的變數，外部只能透過回傳的方法存取。',
-            },
-            tests: [
-              { description: '取得初始值', fn: '(ctx) => ctx.createBox(42).get() === 42' },
-              { description: '更新值', fn: '(ctx) => { const box = ctx.createBox(1); box.set(2); return box.get() === 2; }' },
-              { description: '多次更新', fn: '(ctx) => { const box = ctx.createBox("a"); box.set("b"); box.set("c"); return box.get() === "c"; }' },
-              { description: '獨立實例', fn: '(ctx) => { const b1 = ctx.createBox(1); const b2 = ctx.createBox(2); return b1.get() === 1 && b2.get() === 2; }' },
-            ],
-            returnVars: ['createBox'],
+          question: '最有可能的原因是什麼？',
+          options: [
+            { id: 'A', text: '有人的數據是錯的，需要找到 bug', explanation: '不一定有 bug。三個團隊可能用不同的「用戶」定義和不同的資料來源，每個都是「對的」。' },
+            { id: 'B', text: '三個團隊對「新用戶」的定義不同', explanation: '正確！Marketing 可能算「完成註冊」，Product 算「完成 onboarding」，Finance 算「完成首次付款」。每個定義都合理，但數字不同。這就是 Source of Truth 問題。' },
+            { id: 'C', text: '時區不同導致 Q1 的起止日期不一樣', explanation: '時區確實會造成差異，但差異不會這麼大（12K vs 8.2K）。更可能是定義不同。' },
+            { id: 'D', text: '應該用三個數字的平均值', explanation: '平均值沒有意義。每個數字衡量的是不同的東西，應該先統一定義。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['同樣叫「新用戶」，不同團隊的定義可能完全不同', 'Marketing 關心註冊、Product 關心活躍、Finance 關心付費'],
+          explanation: 'Source of Truth 問題在真實工作中極其常見。解法不是找「正確答案」，而是：(1) 釐清每個團隊的定義 (2) 確認各自的資料來源 (3) 對齊一個大家同意的定義 (4) 建立共同的 dashboard。',
+          frameworkTip: '面試黃金句：「在分析之前，我會先跟 stakeholder 確認指標的定義和資料來源，確保我們看的是同一份數據。」',
+        },
+        {
+          id: 2,
+          name: '資料品質問題',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '日報數字不對',
+            narrative: '你的日報顯示昨天的 DAU 是 85,000，但 PM 說他在另一個 dashboard 看到是 92,000。你開始調查差異。\n\n你發現：\n• 你的報表用 UTC 時間，dashboard 用台灣時間（UTC+8）\n• 你的報表排除了 bot 流量，dashboard 沒排除\n• 你的報表只算「至少瀏覽 1 頁」，dashboard 算「打開 app」',
           },
-          {
-            id: 2, name: '模擬 Context', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `createContext(defaultValue)` — 回傳一個物件 `{Provider, useContext}`：\n- `Provider(value)` 設定 context 的當前值\n- `useContext()` 取得當前值，如果沒有 Provider 設過值就回傳 defaultValue',
-            defaultCode: `function createContext(defaultValue) {\n  let current = defaultValue;\n  return {\n    Provider(value) {\n      // 設定值\n    },\n    useContext() {\n      // 取得值\n    }\n  };\n}`,
-            example: {
-              title: '範例：全域變數讀寫',
-              code: 'let theme = "light";\nfunction setTheme(t) { theme = t; }\nfunction getTheme() { return theme; }\nsetTheme("dark");\nconsole.log(getTheme());',
-              output: 'dark',
-              explanation: '用函式包裝全域變數的讀寫，與 Context 的 Provider/useContext 模式相似。',
-            },
-            tests: [
-              { description: '預設值', fn: '(ctx) => { const c = ctx.createContext("default"); return c.useContext() === "default"; }' },
-              { description: 'Provider 設值', fn: '(ctx) => { const c = ctx.createContext(0); c.Provider(42); return c.useContext() === 42; }' },
-              { description: '多次更新', fn: '(ctx) => { const c = ctx.createContext("a"); c.Provider("b"); c.Provider("c"); return c.useContext() === "c"; }' },
-            ],
-            returnVars: ['createContext'],
+          question: '最好的解決方式是什麼？',
+          options: [
+            { id: 'A', text: '用你的報表，因為排除了 bot 比較準確', explanation: '你的報表可能比較「乾淨」，但問題不在誰對誰錯，而是要建立統一標準。' },
+            { id: 'B', text: '統一使用 dashboard 的數字，因為 PM 在看', explanation: '不是因為誰在看就用誰的。需要先定義清楚再決定。' },
+            { id: 'C', text: '記錄差異的原因（時區、bot、定義），提出統一定義標準，讓團隊對齊', explanation: '正確！先調查清楚差異來源，然後提議一個團隊共識的定義和計算方式。「DAU = UTC+8 時區內，排除 bot，至少完成 1 個 pageview 的 unique users」。' },
+            { id: 'D', text: '兩個數字都保留，在報表裡註明定義差異', explanation: '短期可以，但長期會造成更多混亂。應該推動統一。' },
+          ],
+          correctAnswer: 'C',
+          hints: ['解決 Source of Truth 問題的第一步不是選一個數字，而是搞清楚為什麼不一樣'],
+          explanation: '常見的資料品質問題：時區不一致、bot 過濾邏輯不同、指標定義不同、資料延遲。面試中展示你有這個 awareness，並且知道怎麼系統性解決（定義 → 來源 → 計算邏輯 → 對齊），會大大加分。',
+          frameworkTip: '資料不一致時的排查順序：定義 → 來源 → 時區 → 過濾邏輯 → 去重方式',
+        },
+      ] },
+      { id: '4-6', name: 'Boss: 資料分析設計', description: '設計一個完整的資料分析計畫', xp: 200, isBoss: true, challenges: [
+        {
+          id: 1,
+          name: 'Boss: 設計分析計畫',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: '訂閱制 SaaS 的 Churn 調查',
+            narrative: '你是一家 B2B SaaS 公司的 Data Analyst。VP of Customer Success 找你說：\n\n「我們的月 churn rate 從 3% 上升到 5%。CEO 要在下週的 board meeting 上報告原因和對策。我需要你做一份完整的分析。」\n\n你有以下資料表可用：\n• subscriptions（sub_id, company_id, plan, start_date, end_date, mrr）\n• usage_events（company_id, feature, timestamp, user_count）\n• support_tickets（ticket_id, company_id, category, created_at, resolved_at, satisfaction_score）\n• companies（company_id, name, industry, size, signup_date）',
           },
-          {
-            id: 3, name: '模擬 useReducer', type: 'coding', difficulty: 'hard',
-            instruction: '寫 `createStore(reducer, initialState)` — reducer 是 `(state, action) => newState`。回傳 `{getState, dispatch}`：\n- `getState()` 回傳目前 state\n- `dispatch(action)` 用 reducer 計算新 state 並更新',
-            defaultCode: `function createStore(reducer, initialState) {\n  let state = initialState;\n  return {\n    getState() {\n      \n    },\n    dispatch(action) {\n      \n    }\n  };\n}`,
-            example: {
-              title: '範例：用函式計算新狀態',
-              code: 'function apply(state, fn) {\n  return fn(state);\n}\nconsole.log(apply(5, s => s * 2));',
-              output: '10',
-              explanation: '把「如何更新狀態」交給外部函式決定，這就是 reducer 的核心概念。',
-            },
-            tests: [
-              { description: '初始狀態', fn: '(ctx) => { const s = ctx.createStore((s,a)=>s, {count:0}); return s.getState().count === 0; }' },
-              { description: 'dispatch 更新', fn: '(ctx) => { const s = ctx.createStore((s,a)=>a.type==="INC"?{count:s.count+1}:s, {count:0}); s.dispatch({type:"INC"}); return s.getState().count === 1; }' },
-              { description: '多次 dispatch', fn: '(ctx) => { const s = ctx.createStore((s,a)=>({count:s.count+a.payload}), {count:0}); s.dispatch({payload:5}); s.dispatch({payload:3}); return s.getState().count === 8; }' },
-            ],
-            returnVars: ['createStore'],
-          },
-        ],
-      },
-      {
-        id: '4-5', name: '條件渲染與列表', description: '寫一個風險列表 component', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '條件渲染邏輯', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `renderStatus(item)` — item 有 `{name, stock, threshold}` 欄位。回傳：\n- stock <= 0 → `{text: "缺貨", level: "critical"}`\n- stock <= threshold → `{text: "低庫存", level: "warning"}`\n- 否則 → `{text: "正常", level: "safe"}`',
-            defaultCode: `function renderStatus(item) {\n  \n}`,
-            example: {
-              title: '範例：根據溫度回傳狀態',
-              code: 'function tempLabel(t) {\n  if (t > 35) return "hot";\n  if (t > 20) return "warm";\n  return "cold";\n}\nconsole.log(tempLabel(40));',
-              output: 'hot',
-              explanation: '用 if/else 根據數值區間回傳不同標籤，跟條件渲染邏輯一模一樣。',
-            },
-            tests: [
-              { description: '缺貨', fn: '(ctx) => { const r = ctx.renderStatus({name:"A",stock:0,threshold:10}); return r.text==="缺貨" && r.level==="critical"; }' },
-              { description: '低庫存', fn: '(ctx) => { const r = ctx.renderStatus({name:"B",stock:5,threshold:10}); return r.text==="低庫存" && r.level==="warning"; }' },
-              { description: '正常', fn: '(ctx) => { const r = ctx.renderStatus({name:"C",stock:100,threshold:10}); return r.text==="正常" && r.level==="safe"; }' },
-            ],
-            returnVars: ['renderStatus'],
-          },
-          {
-            id: 2, name: '列表處理', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `renderList(items, filterLevel)` — items 是 `[{name, stock, threshold}]` 陣列。filterLevel 可以是 "all", "warning", "critical"。回傳：\n- "all" → 全部項目加上狀態\n- "warning" → 只回傳 warning 和 critical\n- "critical" → 只回傳 critical\n\n每項回傳 `{name, ...renderStatus(item)}`',
-            defaultCode: `function renderStatus(item) {\n  if (item.stock <= 0) return { text: "缺貨", level: "critical" };\n  if (item.stock <= item.threshold) return { text: "低庫存", level: "warning" };\n  return { text: "正常", level: "safe" };\n}\n\nfunction renderList(items, filterLevel) {\n  // 加上狀態後過濾\n  \n}`,
-            example: {
-              title: '範例：過濾陣列再加工',
-              code: 'const nums = [1, 2, 3, 4, 5];\nconst big = nums.filter(n => n > 3).map(n => n * 10);\nconsole.log(big);',
-              output: '[40, 50]',
-              explanation: '先 filter 篩選，再 map 轉換，這是列表處理的標準流程。',
-            },
-            tests: [
-              { description: 'all 回傳全部', fn: '(ctx) => ctx.renderList([{name:"A",stock:100,threshold:10},{name:"B",stock:5,threshold:10}],"all").length === 2' },
-              { description: 'warning 過濾', fn: '(ctx) => { const r = ctx.renderList([{name:"A",stock:100,threshold:10},{name:"B",stock:5,threshold:10},{name:"C",stock:0,threshold:10}],"warning"); return r.length === 2; }' },
-              { description: 'critical 過濾', fn: '(ctx) => { const r = ctx.renderList([{name:"A",stock:100,threshold:10},{name:"B",stock:5,threshold:10},{name:"C",stock:0,threshold:10}],"critical"); return r.length === 1 && r[0].name === "C"; }' },
-            ],
-            returnVars: ['renderList'],
-          },
-        ],
-      },
-      {
-        id: '4-6', name: 'Boss: 從零寫 Dashboard Card', description: '完整 component + 樣式', xp: 200, isBoss: true,
-        challenges: [
-          {
-            id: 1, name: '完整 Dashboard 資料處理', type: 'coding', difficulty: 'hard',
-            instruction: '寫 `createDashboard(inventoryData)` — inventoryData 是 `[{name, stock, dailyDemand, threshold, unitCost}]`。回傳：\n```\n{\n  totalItems: 總品項數,\n  totalValue: 總庫存價值 (stock × unitCost 的加總),\n  criticalItems: 缺貨品項名稱陣列,\n  warningItems: 低庫存品項名稱陣列 (stock <= threshold 但 > 0),\n  avgDaysToStockout: 平均可用天數 (stock / dailyDemand，忽略 dailyDemand=0 的品項)，四捨五入到小數第一位,\n  riskScore: criticalItems 數量 / totalItems 的百分比，四捨五入到整數\n}\n```',
-            defaultCode: `function createDashboard(inventoryData) {\n  const result = {\n    totalItems: 0,\n    totalValue: 0,\n    criticalItems: [],\n    warningItems: [],\n    avgDaysToStockout: 0,\n    riskScore: 0,\n  };\n  \n  // 你的程式碼\n  \n  return result;\n}`,
-            referenceCode: `// 在真實 DI 專案中，InventoryDashboard.jsx 會呼叫\n// calculator.js 的函式來取得這些資料\n// 這裡你要自己實作底層邏輯`,
-            example: {
-              title: '範例：統計陣列基本資訊',
-              code: 'const prices = [10, 20, 30];\nconst total = prices.reduce((s, p) => s + p, 0);\nconst avg = total / prices.length;\nconsole.log(total, avg);',
-              output: '60 20',
-              explanation: '用 reduce 加總、算平均，Dashboard 就是把這些統計組合在一起。',
-            },
-            tests: [
-              { description: '基本統計', fn: '(ctx) => { const d = ctx.createDashboard([{name:"A",stock:100,dailyDemand:10,threshold:20,unitCost:50},{name:"B",stock:0,dailyDemand:5,threshold:10,unitCost:100}]); return d.totalItems === 2 && d.totalValue === 5000; }' },
-              { description: '缺貨分類', fn: '(ctx) => { const d = ctx.createDashboard([{name:"A",stock:0,dailyDemand:10,threshold:20,unitCost:50},{name:"B",stock:5,dailyDemand:5,threshold:10,unitCost:100}]); return d.criticalItems[0]==="A" && d.warningItems[0]==="B"; }' },
-              { description: '平均天數', fn: '(ctx) => { const d = ctx.createDashboard([{name:"A",stock:100,dailyDemand:10,threshold:20,unitCost:50},{name:"B",stock:50,dailyDemand:5,threshold:10,unitCost:100}]); return d.avgDaysToStockout === 10; }' },
-              { description: '風險分數', fn: '(ctx) => { const d = ctx.createDashboard([{name:"A",stock:0,dailyDemand:10,threshold:20,unitCost:50},{name:"B",stock:100,dailyDemand:5,threshold:10,unitCost:100}]); return d.riskScore === 50; }' },
-            ],
-            returnVars: ['createDashboard'],
-          },
-        ],
-      },
+          prompt: '請設計一份完整的分析計畫來調查 churn rate 上升的原因。包含：\n1. 你會定義什麼指標？怎麼確認 churn 的定義？\n2. 你會查哪些表？怎麼 JOIN？\n3. 你會做哪些分析？（趨勢、分群、cohort 等）\n4. 你預期可能發現什麼？\n5. 有什麼資料品質要注意的？',
+          evaluationCriteria: [
+            '明確定義 churn（什麼算 churn？end_date 在本月？還是沒有續約？）',
+            '有系統的分析計畫（不是直接猜原因）',
+            '使用多種分析方法（趨勢、分群、cohort）',
+            '指出需要 JOIN 哪些表來獲得完整圖景',
+            '考慮資料品質和限制（定義一致性、資料延遲等）',
+          ],
+          sampleAnswer: '1. 定義：Churn = 訂閱到期未續約（end_date 在本月且沒有新的 subscription）。確認跟 Finance 和 CS 的定義一致。\n\n2. 資料：subscriptions LEFT JOIN companies ON company_id（看公司特徵），LEFT JOIN usage_events（看使用行為），LEFT JOIN support_tickets（看客服互動）。\n\n3. 分析：\n- Trend：churn rate 是突然上升還是逐漸？什麼時候開始？\n- Segmentation：按 plan、company size、industry 切開看，哪個 segment churn 最嚴重？\n- Cohort：不同註冊時間的 cohort，churn 曲線有變化嗎？\n- Usage：churn 客戶在離開前的使用行為有什麼變化？（usage 下降？）\n- Support：churn 客戶的 support ticket 數量和滿意度如何？\n\n4. 預期發現：可能是某個 plan 或 size 的客戶 churn 特別高，或是最近的 cohort 品質下降，或是某個功能問題導致使用量下降。\n\n5. 注意：確認 churn 定義一致、排除季節性因素（年約到期月份）、注意 survivorship bias（只看留存客戶的數據會有偏差）。',
+          hints: ['先定義清楚什麼是 churn，再開始分析', '想想你有 4 張表，各自能告訴你什麼'],
+          explanation: '這是完整的資料分析設計題。面試官看的是你能不能系統性地規劃分析，而不是直接猜原因。好的回答要有：清楚的定義 → 資料盤點 → 分析方法 → 預期結果 → 注意事項。',
+          frameworkTip: '分析設計六步：釐清問題 → 定義指標 → 盤點資料 → 設計分析 → 預期產出 → 注意事項',
+        },
+      ] },
     ],
   },
   {
     id: 5,
-    name: 'Agent 深淵',
-    emoji: '🌀',
-    description: 'AI Agent 怎麼思考和行動',
-    color: 'from-orange-500 to-red-600',
+    name: 'Product Thinking',
+    emoji: '💡',
+    description: 'User journey、Pain points、Feature 成功評估',
+    color: 'from-rose-500 to-red-500',
     quests: [
-      {
-        id: '5-1', name: 'Async/Await', description: '理解非同步程式設計', xp: 50,
-        challenges: [
-          {
-            id: 1, name: 'Promise 基礎', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `delay(ms)` 回傳一個 Promise，在 ms 毫秒後 resolve 字串 "done"。',
-            defaultCode: `function delay(ms) {\n  // 回傳一個 Promise\n  return new Promise((resolve) => {\n    // 你的程式碼\n  });\n}`,
-            example: {
-              title: '範例：建立一個立即 resolve 的 Promise',
-              code: 'const p = new Promise(resolve => resolve("hi"));\np.then(v => console.log(v));',
-              output: 'hi',
-              explanation: 'Promise 建構時傳入 resolve 函式，呼叫它就會把值傳給 .then()。',
-            },
-            tests: [
-              { description: '回傳 Promise', fn: '(ctx) => ctx.delay(10) instanceof Promise' },
-              { description: 'resolve "done"', fn: '(ctx) => ctx.delay(10).then(v => v === "done")' },
-            ],
-            returnVars: ['delay'],
+      { id: '5-1', name: 'User Journey Mapping', description: '畫出使用者旅程，找到痛點', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '識別 Journey 階段',
+          type: 'multiple-choice',
+          difficulty: 'easy',
+          scenario: {
+            title: 'SaaS 產品的使用者旅程',
+            narrative: '你是一家 project management 工具的 Product Analyst。PM 說：「我們的 free trial → paid 轉換率只有 2%，遠低於業界平均 5%。」\n\n你需要先畫出 User Journey 才能找到問題。',
           },
-          {
-            id: 2, name: '執行順序', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `getOrder()` — 模擬非同步執行順序。回傳一個陣列記錄執行順序。\n\n規則：同步程式碼先執行，Promise.resolve().then() 裡的後執行。',
-            defaultCode: `function getOrder() {\n  const order = [];\n  order.push("sync1");\n  Promise.resolve().then(() => order.push("micro"));\n  order.push("sync2");\n  // 回傳的是「同步程式碼跑完後」的順序\n  return order;\n}`,
-            example: {
-              title: '範例：同步 vs 非同步順序',
-              code: 'console.log("A");\nsetTimeout(() => console.log("B"), 0);\nconsole.log("C");',
-              output: 'A\nC\nB',
-              explanation: '同步程式碼（A、C）一定先跑完，非同步回呼（B）排在後面。',
-            },
-            tests: [
-              { description: '同步先執行', fn: '(ctx) => { const r = ctx.getOrder(); return r[0] === "sync1" && r[1] === "sync2"; }' },
-              { description: '微任務還沒跑', fn: '(ctx) => ctx.getOrder().length === 2' },
+          question: '以下哪個 User Journey 最完整、最適合分析 trial-to-paid 轉換問題？',
+          options: [
+            { id: 'A', text: '註冊 → 付費', explanation: '太粗了。中間有很多步驟，你不知道用戶卡在哪裡。' },
+            { id: 'B', text: '搜尋/廣告 → Landing Page → 註冊 → Onboarding → 建立第一個專案 → 邀請團隊 → 持續使用 → 付費', explanation: '正確！完整的 journey 包含每一個關鍵步驟。這樣你才能看到用戶在「建立專案」和「邀請團隊」之間是不是有大量流失。' },
+            { id: 'C', text: '註冊 → 用了幾天 → 覺得好不好用 → 付不付費', explanation: '太模糊了。「用了幾天」不是一個具體的行為步驟，你需要更精確的 action。' },
+            { id: 'D', text: '註冊 → 功能 A → 功能 B → 功能 C → 付費', explanation: '功能導向的 journey 不一定符合使用者的實際路徑。應該從使用者「要完成什麼任務」出發。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['好的 User Journey 要有具體的 action（動作），不是模糊的感受', '想想使用者從第一次接觸到付費，中間會做哪些「事情」'],
+          explanation: 'User Journey 的目的是把使用者的路徑具體化，這樣你才能在每一步量化轉換率，找到 drop-off 最大的地方。越具體的 journey 越有分析價值。',
+          frameworkTip: 'User Journey 要素：Stages（階段）→ Actions（行為）→ Touchpoints（接觸點）→ Pain Points（痛點）',
+        },
+        {
+          id: 2,
+          name: '找到 Journey 中的痛點',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: 'Onboarding 漏斗數據',
+            narrative: '你拿到了 Onboarding 流程的漏斗數據：',
+            data: [
+              { step: '1. 完成註冊', users: 10000, conversion: '100%' },
+              { step: '2. Email 驗證', users: 7200, conversion: '72%' },
+              { step: '3. 填寫 Profile', users: 6800, conversion: '94%' },
+              { step: '4. 建立第一個專案', users: 2100, conversion: '31%' },
+              { step: '5. 邀請第一個隊友', users: 1800, conversion: '86%' },
+              { step: '6. 完成第一個任務', users: 1500, conversion: '83%' },
             ],
-            returnVars: ['getOrder'],
+            dataCaption: 'Onboarding 漏斗（過去 30 天）',
           },
-        ],
-      },
-      {
-        id: '5-2', name: 'Pub/Sub 模式', description: '自己寫 EventBus', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '回呼清單', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `createCallbackList()` — 回傳一個物件 `{add(fn), run(data)}`。add(fn) 把函式加到內部陣列，run(data) 依序呼叫所有已加入的函式並傳入 data。',
-            defaultCode: `function createCallbackList() {\n  const callbacks = [];\n  return {\n    add(fn) {\n      // 把 fn 加入 callbacks\n    },\n    run(data) {\n      // 依序呼叫所有 callback\n    }\n  };\n}`,
-            example: {
-              title: '範例：陣列存函式並依序呼叫',
-              code: 'const fns = [x => x + 1, x => x * 2];\nfns.forEach(fn => console.log(fn(5)));',
-              output: '6\n10',
-              explanation: '把函式存進陣列，之後遍歷呼叫，這就是回呼清單的基本原理。',
-            },
-            tests: [
-              { description: '加入並執行', fn: '(ctx) => { const list = ctx.createCallbackList(); let result = 0; list.add(d => result = d); list.run(42); return result === 42; }' },
-              { description: '多個 callback', fn: '(ctx) => { const list = ctx.createCallbackList(); let a=0,b=0; list.add(d => a=d); list.add(d => b=d*2); list.run(5); return a===5 && b===10; }' },
-              { description: '無 callback 不報錯', fn: '(ctx) => { const list = ctx.createCallbackList(); list.run(1); return true; }' },
+          question: '從數據來看，最大的痛點在哪裡？',
+          options: [
+            { id: 'A', text: 'Email 驗證（28% 流失）', explanation: 'Email 驗證流失 28% 確實不少，但不是最大的。繼續看其他步驟。' },
+            { id: 'B', text: '填寫 Profile → 建立第一個專案（69% 流失）', explanation: '正確！從 6,800 到 2,100，流失了 69%。這是整個漏斗中 drop-off 最大的一步。用戶完成了 profile 但不知道怎麼建立專案，或者覺得太複雜。' },
+            { id: 'C', text: '邀請隊友（14% 流失）', explanation: '14% 的流失率在 onboarding 中算正常，不是主要問題。' },
+            { id: 'D', text: '整體都有問題，需要全面改善', explanation: '分析的關鍵是找到最大的槓桿點。資源有限，應該優先解決 drop-off 最大的步驟。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['看每一步的 conversion rate，哪一步最低？', '31% 代表什麼？為什麼只有不到 1/3 的人跨過這一步？'],
+          explanation: '漏斗分析的核心是找到「最大 drop-off」。這裡第 3 步到第 4 步的轉換率只有 31%，遠低於其他步驟。改善這一步的 ROI 最高 — 如果能從 31% 提升到 50%，整個漏斗的最終轉換會顯著改善。',
+          frameworkTip: '找到最大 drop-off 後，下一步是問：「為什麼？」可能是 UX 問題、引導不足、或功能太複雜。',
+        },
+      ] },
+      { id: '5-2', name: 'Feature 成功評估', description: '新功能上線後怎麼判斷成不成功', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '定義成功指標',
+          type: 'multiple-choice',
+          difficulty: 'easy',
+          scenario: {
+            title: '新搜尋功能上線',
+            narrative: '你的電商平台剛上線了一個改良版搜尋功能，PM 問你：「怎麼判斷新搜尋有沒有成功？」\n\n新搜尋的目標是：讓用戶更快找到想要的商品。',
+          },
+          question: '以下哪組指標最適合評估這個搜尋功能？',
+          options: [
+            { id: 'A', text: 'DAU 和 MAU', explanation: 'DAU/MAU 是產品整體指標，不是搜尋功能的成功指標。搜尋改善不一定直接影響 DAU。' },
+            { id: 'B', text: '搜尋使用次數', explanation: '搜尋次數高可能代表用戶找不到東西所以一直搜。使用次數高不等於成功。' },
+            { id: 'C', text: 'Primary: 搜尋後點擊率和購買轉換率 / Guardrail: 頁面載入時間、整體 conversion', explanation: '正確！搜尋後有點擊結果（task completion）和購買轉換（downstream impact）直接衡量「更快找到想要的商品」。Guardrail 確保新功能不會拖慢速度或傷害整體轉換。' },
+            { id: 'D', text: '用戶滿意度調查分數', explanation: '調查是輔助指標，但不能作為唯一判斷。需要搭配行為數據才完整。' },
+          ],
+          correctAnswer: 'C',
+          hints: ['回到功能的目標：「讓用戶更快找到商品」。什麼數據能反映這個目標？', 'Guardrail metrics 是「不能變差」的指標'],
+          explanation: 'Feature 評估的核心：先定義成功（Primary metric），再設安全線（Guardrail）。Primary metric 要直接反映功能的目標，Guardrail 確保不會有副作用。',
+          frameworkTip: '面試黃金句：「在評估之前，我會先定義 primary metric 和 guardrail，確保我們知道成功長什麼樣。」',
+        },
+        {
+          id: 2,
+          name: 'Before / During / After',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '通知功能的成效評估',
+            narrative: '你的 SaaS 產品新增了「智慧通知」功能，會在用戶的任務快到期時發 push notification。上線一個月了，你要做成效報告。\n\n數據：\n• 通知開啟率：65%\n• 通知後 1 小時內打開 app 的比例：40%\n• 使用智慧通知的用戶 D7 retention：+8pp（vs 未使用者）\n• 但整體的 notification opt-out rate 從 12% 上升到 18%',
+          },
+          question: '這個功能算成功嗎？最好的判斷方式是？',
+          options: [
+            { id: 'A', text: '成功，因為 retention 提升了 8pp', explanation: 'retention 提升是好消息，但 opt-out rate 上升是警訊。不能只看好的面。' },
+            { id: 'B', text: '失敗，因為 opt-out rate 上升表示用戶覺得被打擾', explanation: 'opt-out 上升確實是問題，但功能有正面影響，不能直接判定失敗。' },
+            { id: 'C', text: '需要更多分析：retention 提升是否有因果關係？opt-out 集中在哪些用戶？', explanation: '正確！(1) Retention 差異可能是 selection bias（主動開通知的用戶本來就比較活躍）。(2) opt-out 如果集中在低活躍用戶，影響可能可接受。需要更深入分析。' },
+            { id: 'D', text: '成功，因為 65% 的開啟率很高', explanation: '開啟率高只代表 discoverability 好，不代表功能有價值。' },
+          ],
+          correctAnswer: 'C',
+          hints: ['correlation ≠ causation：使用功能的用戶 retention 高，不代表是功能造成的', '看到 guardrail metric 變差（opt-out rate）時，不能忽略'],
+          explanation: '真實的功能評估很少是非黑即白的。好的分析師會：(1) 質疑因果關係（selection bias）(2) 看 guardrail metrics (3) 做 segment 分析。面試中展示這種批判性思維會加分。',
+          frameworkTip: 'Feature 評估三階段：Before（定義成功）→ During（監控健康）→ After（全面覆盤）',
+        },
+      ] },
+      { id: '5-3', name: 'Adoption 問題診斷', description: '為什麼沒人用你的功能？', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '三層模型診斷',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '報表功能沒人用',
+            narrative: '你的 B2B SaaS 產品花了三個月開發了一個「自訂報表」功能，但上線一個月後只有 8% 的客戶使用過。PM 很沮喪。\n\n你拿到了以下數據：',
+            data: [
+              { metric: '報表功能入口的曝光次數', value: '45,000 次/月' },
+              { metric: '點擊進入報表功能', value: '1,200 次/月', conversion: '2.7%' },
+              { metric: '開始建立報表', value: '900 次', conversion: '75%' },
+              { metric: '成功完成報表', value: '320 次', conversion: '36%' },
+              { metric: '7 天內再次使用', value: '180 次', conversion: '56%' },
             ],
-            returnVars: ['createCallbackList'],
+            dataCaption: '報表功能漏斗',
           },
-          {
-            id: 2, name: '實作 EventBus', type: 'coding', difficulty: 'medium',
-            instruction: '實作一個 EventBus class，支援：\n- `on(event, callback)` — 訂閱，回傳取消訂閱函式\n- `emit(event, data)` — 發送事件\n- `off(event, callback)` — 取消訂閱',
-            defaultCode: `class EventBus {\n  constructor() {\n    this._listeners = new Map();\n  }\n  on(event, callback) {\n    // 訂閱事件，回傳 unsubscribe 函式\n    \n  }\n  emit(event, data) {\n    // 觸發所有訂閱者\n    \n  }\n  off(event, callback) {\n    // 取消訂閱\n    \n  }\n}`,
-            referenceCode: CODE_SNIPPETS.eventBusSnippet,
-            example: {
-              title: '範例：用 Map 儲存多組回呼',
-              code: 'const m = new Map();\nm.set("click", [() => console.log("clicked")]);\nm.get("click").forEach(fn => fn());',
-              output: 'clicked',
-              explanation: '用事件名稱當 key、回呼陣列當 value，就是 EventBus 的儲存方式。',
-            },
-            tests: [
-              { description: '基本訂閱+發送', fn: '(ctx) => { const bus = new ctx.EventBus(); let received = null; bus.on("test", d => received = d); bus.emit("test", 42); return received === 42; }' },
-              { description: '取消訂閱', fn: '(ctx) => { const bus = new ctx.EventBus(); let count = 0; const unsub = bus.on("x", () => count++); bus.emit("x"); unsub(); bus.emit("x"); return count === 1; }' },
-              { description: '多個訂閱者', fn: '(ctx) => { const bus = new ctx.EventBus(); let a=0,b=0; bus.on("e",()=>a++); bus.on("e",()=>b++); bus.emit("e"); return a===1 && b===1; }' },
-              { description: 'off 取消', fn: '(ctx) => { const bus = new ctx.EventBus(); let c=0; const fn=()=>c++; bus.on("e",fn); bus.off("e",fn); bus.emit("e"); return c===0; }' },
+          question: '根據 Discoverability → Usability → Value 模型，最大的問題在哪一層？',
+          options: [
+            { id: 'A', text: 'Discoverability — 用戶不知道有這個功能', explanation: '入口曝光有 45,000 次，用戶有看到。但點擊率只有 2.7%，這確實是 Discoverability/入口設計的問題。不過要跟其他層一起看。' },
+            { id: 'B', text: 'Usability — 用戶用了但用不完', explanation: '完成率 36% 確實偏低，但最大的 drop-off 在第一步。' },
+            { id: 'C', text: 'Value — 用完了但覺得沒價值', explanation: '7 天內再次使用 56%，其實不算差。Value 不是最大的問題。' },
+            { id: 'D', text: 'Discoverability + Usability 都有問題，但 Discoverability 更嚴重', explanation: '正確！最大的 drop-off 在「看到 → 點擊」（2.7%），代表入口設計或 messaging 有問題。其次是「開始 → 完成」（36%），代表流程有 usability 問題。應該先解決 Discoverability — 讓更多人嘗試。' },
+          ],
+          correctAnswer: 'D',
+          hints: ['看漏斗每一步的轉換率，哪一步的 drop-off 最大？', '2.7% 的點擊率意味著什麼？'],
+          explanation: '三層模型的診斷邏輯：Discoverability（看到但不點 → 入口或 messaging 問題）→ Usability（點了但完不成 → 流程或設計問題）→ Value（完成了但不再用 → 功能不解決問題）。要從漏斗的最上面開始修，因為後面的改善沒有流量也沒用。',
+          frameworkTip: '三層模型的診斷口訣：看到嗎？用得完嗎？會再用嗎？',
+        },
+        {
+          id: 2,
+          name: '提出改善方案',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '續上題：改善報表功能 Adoption',
+            narrative: '你已經診斷出主要問題在 Discoverability（入口點擊率 2.7%）和 Usability（完成率 36%）。現在要提出改善方案。',
+          },
+          question: '以下哪個改善策略最有效率？',
+          options: [
+            { id: 'A', text: '重新設計整個報表功能，讓它更強大', explanation: '功能的 Value 層其實還行（56% 再次使用）。重新設計成本高，且不解決真正的問題。' },
+            { id: 'B', text: '先改入口（更明顯的位置 + 更清楚的 CTA），再簡化建立流程（模板、引導步驟）', explanation: '正確！先解決 Discoverability（讓更多人嘗試），再解決 Usability（讓嘗試的人完成）。這是最高 ROI 的順序。' },
+            { id: 'C', text: '發 email 通知所有用戶有這個新功能', explanation: '短期可能有效，但不是長期解法。用戶被通知後點進來如果 usability 也沒改善，反而會有負面印象。' },
+            { id: 'D', text: '做一個教學影片放在功能入口', explanation: '教學影片可以幫助 usability，但如果入口點擊率只有 2.7%，很少人會看到影片。要先解決入口問題。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['改善的順序應該跟漏斗一致 — 先讓更多人進來，再讓進來的人用得完'],
+          explanation: '改善 adoption 的優先順序：先 Discoverability → 再 Usability → 最後 Value。就像修水管，要從漏水最嚴重的上游開始修。',
+          frameworkTip: '提改善方案時，面試官看的是你的「排優先級」能力，不是列越多越好。',
+        },
+      ] },
+      { id: '5-4', name: 'Usage vs Value', description: '使用率高不代表有價值', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '區分 Usage 和 Value',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '搜尋功能的假象',
+            narrative: '你的電商 app 的搜尋功能使用率非常高 — 每個 session 平均搜尋 4.2 次。PM 很開心，覺得搜尋功能做得很好。\n\n但你進一步分析發現：',
+            data: [
+              { metric: '平均每 session 搜尋次數', value: '4.2 次' },
+              { metric: '搜尋後有點擊結果的比例', value: '35%' },
+              { metric: '搜尋後完成購買的比例', value: '8%' },
+              { metric: '用搜尋的用戶 vs 用分類瀏覽的用戶購買率', value: '8% vs 15%' },
             ],
-            returnVars: ['EventBus'],
+            dataCaption: '搜尋功能數據',
           },
-        ],
-      },
-      {
-        id: '5-3', name: 'Semaphore 並發控制', description: '限制同時執行的數量', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '計數器', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `createCounter(max)` — 回傳物件 `{increment(), decrement(), isFull()}`。increment() 讓計數 +1（不超過 max），decrement() 讓計數 -1（不低於 0），isFull() 回傳計數是否已達 max。',
-            defaultCode: `function createCounter(max) {\n  let count = 0;\n  return {\n    increment() {\n      // count + 1，但不超過 max\n    },\n    decrement() {\n      // count - 1，但不低於 0\n    },\n    isFull() {\n      // 是否達到 max\n    }\n  };\n}`,
-            example: {
-              title: '範例：簡單的上下限數值',
-              code: 'let n = 0;\nfunction up() { n = Math.min(n + 1, 3); }\nfunction down() { n = Math.max(n - 1, 0); }\nup(); up(); console.log(n);',
-              output: '2',
-              explanation: '用 Math.min/max 限制數值範圍，計數器就是用這個技巧。',
-            },
-            tests: [
-              { description: '初始不滿', fn: '(ctx) => ctx.createCounter(3).isFull() === false' },
-              { description: '增到滿', fn: '(ctx) => { const c = ctx.createCounter(2); c.increment(); c.increment(); return c.isFull() === true; }' },
-              { description: '不超過 max', fn: '(ctx) => { const c = ctx.createCounter(1); c.increment(); c.increment(); c.decrement(); return c.isFull() === false; }' },
-              { description: '不低於 0', fn: '(ctx) => { const c = ctx.createCounter(3); c.decrement(); c.increment(); return c.isFull() === false; }' },
+          question: '這些數據告訴你什麼？',
+          options: [
+            { id: 'A', text: '搜尋功能很成功，使用率很高', explanation: '使用率高可能代表用戶找不到東西所以一直搜。要看 outcome，不只看 usage。' },
+            { id: 'B', text: '搜尋功能的 usage 高但 value 低 — 用戶搜了很多次但找不到想要的東西', explanation: '正確！平均搜 4.2 次但只有 35% 點擊結果，代表大部分搜尋沒找到有用的結果。購買率比分類瀏覽更低，代表搜尋反而阻礙了購買。高 usage 在這裡是負面訊號。' },
+            { id: 'C', text: '搜尋購買率 8% 已經很好了', explanation: '要跟其他路徑比較。分類瀏覽的購買率 15% 是搜尋的將近兩倍，代表搜尋功能有問題。' },
+            { id: 'D', text: '需要更多數據才能判斷', explanation: '現有數據已經很有說服力了。搜尋多次但少點擊、少購買、比其他路徑差 — 問題很明確。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['搜尋次數多不一定是好事 — 如果一次就找到，為什麼要搜 4 次？', '比較搜尋 vs 分類瀏覽的購買率，哪個更有效？'],
+          explanation: 'Usage ≠ Value 是產品分析中最重要的概念之一。高 usage 可能代表：(1) 功能好用所以常用（好的）(2) 功能不好用所以重複嘗試（壞的）(3) 被迫使用（中性）。要看 outcome 才能判斷。',
+          frameworkTip: '面試黃金句：「使用率是起點，但我更關注 outcome — 使用者完成了他的目標嗎？」',
+        },
+        {
+          id: 2,
+          name: '衡量真正的 Value',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '自動備份功能的價值',
+            narrative: '你的雲端文件產品有一個「自動備份」功能。它的使用數據：\n• 手動觸發備份：只有 5% 的用戶每月會做\n• 功能設定頁面訪問：2% 的 MAU\n\n但離開分析顯示：關閉自動備份的用戶，60 天內的 churn rate 是 25%；開啟的用戶是 8%。',
+          },
+          question: '怎麼評估自動備份功能的價值？',
+          options: [
+            { id: 'A', text: '使用率太低（5%），功能不成功，應該移除', explanation: '使用率低不代表沒價值。自動備份的價值是「安全感」，不需要主動使用就能提供。' },
+            { id: 'B', text: '用 comparative method — 比較有無使用的用戶 retention，證明功能有高留存價值', explanation: '正確！這是低 usage 高 value 的經典案例。自動備份像保險 — 你不常用到，但少了它你就會離開。衡量這類功能要看 counterfactual 或 comparative，不是看使用率。' },
+            { id: 'C', text: '做滿意度調查，問用戶覺得備份重不重要', explanation: '調查可以做，但行為數據（retention 差異）比主觀回答更有說服力。' },
+            { id: 'D', text: '把備份功能做得更明顯，提高使用率', explanation: '自動備份本來就不需要主動使用。提高使用率不是正確的目標。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['有些功能的價值不在「被使用」，而在「存在本身」', '比較有/沒有這個功能的用戶行為差異'],
+          explanation: '衡量 Value 的四種方法：(1) Outcome-based — 用了之後目標行為改善了嗎？(2) Comparative — 有用 vs 沒用的差異 (3) Counterfactual — 移除後會怎樣？(4) Survey — 直接問用戶。低 usage 高 value 的功能在面試中是加分題。',
+          frameworkTip: '面試小技巧：主動提到「usage 和 value 是不同的概念」，展示你有深度思考。',
+        },
+      ] },
+      { id: '5-5', name: 'Discoverability vs Usability vs Value', description: '產品問題的三層拆解', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '三層完整分析',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '報表功能 vs Excel',
+            narrative: '你的 B2B 產品有內建報表功能，但大部分客戶還是在用 Excel。PM 問你：「為什麼？」\n\n你做了以下調查：',
+            data: [
+              { finding: '功能入口在設定選單的第三層', source: '產品分析' },
+              { finding: '65% 的用戶不知道有這個功能', source: '用戶訪談' },
+              { finding: '知道的人中，40% 嘗試後覺得操作步驟太多', source: '漏斗數據' },
+              { finding: '成功用完的人中，70% 會再次使用', source: '行為數據' },
+              { finding: '用報表功能的人平均省 2 小時/週', source: '效率分析' },
             ],
-            returnVars: ['createCounter'],
+            dataCaption: '調查結果',
           },
-          {
-            id: 2, name: '實作 Semaphore', type: 'coding', difficulty: 'medium',
-            instruction: '實作 `AsyncSemaphore` class：\n- `constructor(max)` — 最大並發數\n- `async acquire()` — 取得位子（如果滿了就等）\n- `release()` — 釋放位子',
-            defaultCode: `class AsyncSemaphore {\n  constructor(max) {\n    this._max = max;\n    this._active = 0;\n    this._queue = [];\n  }\n  async acquire() {\n    // 如果 _active < _max，直接 _active++ 回傳\n    // 否則 new Promise 等待\n    \n  }\n  release() {\n    // _active--，如果有人在等就讓下一個進\n    \n  }\n}`,
-            referenceCode: CODE_SNIPPETS.semaphoreSnippet,
-            example: {
-              title: '範例：用 Promise 排隊',
-              code: 'let busy = false;\nasync function enter() {\n  if (!busy) { busy = true; return; }\n  // 否則等待...\n}\nenter(); console.log(busy);',
-              output: 'true',
-              explanation: '用旗標記錄是否有空位，沒有空位就等待，這是 Semaphore 的簡化版。',
-            },
-            tests: [
-              { description: '基本 acquire/release', fn: '(ctx) => { const s = new ctx.AsyncSemaphore(2); s.acquire(); s.acquire(); return s._active === 2; }' },
-              { description: 'release 後 active 減少', fn: '(ctx) => { const s = new ctx.AsyncSemaphore(1); s.acquire(); s.release(); return s._active === 0; }' },
+          question: '根據三層模型的分析，正確的優先順序是？',
+          options: [
+            { id: 'A', text: '先改善 Value（讓報表更有用）', explanation: '70% 再次使用率和省 2 小時/週，Value 層其實沒什麼問題。' },
+            { id: 'B', text: '先改善 Discoverability（讓更多人知道），再改善 Usability（簡化操作）', explanation: '正確！65% 不知道有這個功能 → Discoverability 是最大問題。然後 40% 嘗試後覺得太複雜 → Usability 是第二問題。Value 其實很好（70% 復用、省 2 小時），不需要改。' },
+            { id: 'C', text: '同時改善三層，全面升級', explanation: '資源有限，要有優先級。Value 層不需要改，先集中火力在 Discoverability 和 Usability。' },
+            { id: 'D', text: '先改善 Usability（簡化操作），因為 40% 的流失很嚴重', explanation: '40% 的 usability 流失確實要修，但 65% 不知道有這功能的問題更大。如果沒人進來，改善體驗也沒用。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['想像一個漏斗：先要有人「看到」，才能「用」，用了才能「感受到價值」', '哪一層的問題影響最多人？'],
+          explanation: '三層模型的分析邏輯：從上到下診斷（D → U → V），從上到下修復。先確保用戶知道功能存在，再確保用得順暢，最後才處理價值問題。很多產品功能失敗不是因為沒價值，而是根本沒人知道。',
+          frameworkTip: '完整回答結構：「我會用 Discoverability → Usability → Value 三層來分析，先找到問題在哪一層，再依序改善。」',
+        },
+      ] },
+      { id: '5-6', name: 'Boss: 產品分析 Case', description: '完整的產品分析面試題', xp: 200, isBoss: true, challenges: [
+        {
+          id: 1,
+          name: 'Boss: 產品分析完整 Case',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: '社交電商 App 的 Referral 功能分析',
+            narrative: '你是一家社交電商 App 的 Product Analyst。這個 App 讓用戶可以分享購物清單給朋友，朋友可以直接購買。\n\n三個月前上線了 Referral 功能：用戶邀請朋友註冊，雙方都得 $10 折扣。\n\n目前數據：\n• 10% 的 MAU 使用了分享功能\n• Referral link 被點擊 50,000 次/月\n• 點擊後註冊率：15%\n• 新用戶 D7 retention：22%（vs 自然用戶的 35%）\n• 每個 referral 用戶的 CAC：$18（vs paid ads 的 $12）\n• 邀請者的 30 天回購率：提升 12%',
+            data: [
+              { metric: 'MAU 使用分享功能', value: '10%' },
+              { metric: 'Referral link 點擊', value: '50,000/月' },
+              { metric: '點擊→註冊轉換率', value: '15%' },
+              { metric: '被推薦用戶 D7 Retention', value: '22%' },
+              { metric: '自然用戶 D7 Retention', value: '35%' },
+              { metric: 'Referral CAC', value: '$18' },
+              { metric: 'Paid Ads CAC', value: '$12' },
+              { metric: '邀請者 30天回購率提升', value: '+12%' },
             ],
-            returnVars: ['AsyncSemaphore'],
+            dataCaption: 'Referral 功能數據',
           },
-        ],
-      },
-      {
-        id: '5-4', name: 'Circuit Breaker', description: '實作三態熔斷器', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '簡易狀態機', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `createStateMachine(initialState, transitions)` — transitions 是 `{state: {action: nextState}}` 格式。回傳 `{getState(), transition(action)}`。transition 根據目前狀態和 action 切換到下一個狀態；如果找不到對應的 transition 就不變。',
-            defaultCode: `function createStateMachine(initialState, transitions) {\n  let state = initialState;\n  return {\n    getState() {\n      // 回傳目前狀態\n    },\n    transition(action) {\n      // 根據 transitions 切換狀態\n    }\n  };\n}`,
-            example: {
-              title: '範例：用物件定義轉換規則',
-              code: 'const rules = { red: { next: "green" }, green: { next: "red" } };\nlet s = "red";\ns = rules[s].next;\nconsole.log(s);',
-              output: 'green',
-              explanation: '用物件描述「在某狀態下，某動作會轉到哪個新狀態」，這就是狀態機。',
-            },
-            tests: [
-              { description: '初始狀態', fn: '(ctx) => ctx.createStateMachine("idle", {}).getState() === "idle"' },
-              { description: '狀態轉換', fn: '(ctx) => { const sm = ctx.createStateMachine("idle", {idle:{start:"running"}, running:{stop:"idle"}}); sm.transition("start"); return sm.getState() === "running"; }' },
-              { description: '無效 action 不變', fn: '(ctx) => { const sm = ctx.createStateMachine("idle", {idle:{start:"running"}}); sm.transition("invalid"); return sm.getState() === "idle"; }' },
-              { description: '連續轉換', fn: '(ctx) => { const sm = ctx.createStateMachine("a", {a:{go:"b"},b:{go:"c"}}); sm.transition("go"); sm.transition("go"); return sm.getState() === "c"; }' },
-            ],
-            returnVars: ['createStateMachine'],
-          },
-          {
-            id: 2, name: '三態狀態機', type: 'coding', difficulty: 'medium',
-            instruction: '實作 CircuitBreaker class：\n- 初始狀態 CLOSED\n- `recordFailure()` — 記錄失敗，3 次失敗進入 OPEN\n- `recordSuccess()` — 如果在 HALF_OPEN 狀態，回到 CLOSED\n- `canRequest()` — CLOSED 回 true；OPEN 且冷卻時間到了進 HALF_OPEN 回 true；否則 false',
-            defaultCode: `class CircuitBreaker {\n  constructor(threshold = 3) {\n    this.state = "CLOSED";\n    this.failures = 0;\n    this.threshold = threshold;\n  }\n  recordFailure() {\n    // 記錄失敗\n    \n  }\n  recordSuccess() {\n    // HALF_OPEN → CLOSED\n    \n  }\n  canRequest() {\n    // 判斷能不能發請求\n    \n  }\n}`,
-            referenceCode: CODE_SNIPPETS.circuitBreakerSnippet,
-            example: {
-              title: '範例：累計失敗次數切換狀態',
-              code: 'let fails = 0;\nlet open = false;\nfunction fail() { fails++; if (fails >= 3) open = true; }\nfail(); fail(); fail();\nconsole.log(open);',
-              output: 'true',
-              explanation: '累計失敗超過門檻就「斷開」，這就是 Circuit Breaker 的核心邏輯。',
-            },
-            tests: [
-              { description: '初始是 CLOSED', fn: '(ctx) => new ctx.CircuitBreaker().state === "CLOSED"' },
-              { description: '3 次失敗變 OPEN', fn: '(ctx) => { const cb = new ctx.CircuitBreaker(3); cb.recordFailure(); cb.recordFailure(); cb.recordFailure(); return cb.state === "OPEN"; }' },
-              { description: 'OPEN 時 canRequest 是 false', fn: '(ctx) => { const cb = new ctx.CircuitBreaker(1); cb.recordFailure(); return cb.canRequest() === false; }' },
-              { description: 'CLOSED 時 canRequest 是 true', fn: '(ctx) => new ctx.CircuitBreaker().canRequest() === true' },
-            ],
-            returnVars: ['CircuitBreaker'],
-          },
-        ],
-      },
-      {
-        id: '5-5', name: 'ReAct Loop', description: '理解思考行動觀察迴圈', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '解析工具呼叫', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `parseToolCalls(text)` — 找出 text 中所有 `[toolName]` 格式的工具名稱，回傳一個工具名稱的陣列。例如 `parseToolCalls("用 [search] 和 [calc] 處理")` → `["search", "calc"]`。',
-            defaultCode: `function parseToolCalls(text) {\n  // 找出所有 [toolName] 並回傳名稱陣列\n  \n}`,
-            example: {
-              title: '範例：用正則取出中括號內容',
-              code: 'const text = "use [search] here";\nconst m = text.match(/\\[(\\w+)\\]/g);\nconsole.log(m);',
-              output: '["[search]"]',
-              explanation: '用正則表達式 /\\[\\w+\\]/g 匹配方括號中的文字，再擷取名稱。',
-            },
-            tests: [
-              { description: '找到工具', fn: '(ctx) => { const r = ctx.parseToolCalls("用 [search] 找資料"); return r.length === 1 && r[0] === "search"; }' },
-              { description: '多個工具', fn: '(ctx) => { const r = ctx.parseToolCalls("[fetch] 然後 [calc]"); return r.length === 2 && r[0] === "fetch" && r[1] === "calc"; }' },
-              { description: '沒有工具', fn: '(ctx) => ctx.parseToolCalls("沒有工具標記").length === 0' },
-            ],
-            returnVars: ['parseToolCalls'],
-          },
-          {
-            id: 2, name: '思考-行動-觀察', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `reactStep(state, tools)` — 模擬 ReAct 迴圈的一步：\n- state 有 `{goal, observations, history}` — observations 是上次行動的結果字串\n- tools 是 `{toolName: fn}` 物件\n- 回傳 `{thought, action, result}`\n\n規則：\n- thought: 如果 observations 包含 goal 中的關鍵資訊，thought = "找到答案了"\n- action: 如果還沒找到答案，呼叫 tools 中第一個工具（按 Object.keys 順序）\n- result: 工具回傳的值，或如果已找到答案則為 observations',
-            defaultCode: `function reactStep(state, tools) {\n  const { goal, observations, history } = state;\n  \n  // 判斷是否已經找到答案\n  // 如果 observations 包含 "ANSWER:" 就表示找到了\n  \n  // 還沒找到 → 呼叫工具\n  const toolNames = Object.keys(tools);\n  \n  return {\n    thought: "",\n    action: "",\n    result: ""\n  };\n}`,
-            example: {
-              title: '範例：根據條件選擇動作',
-              code: 'function decide(info) {\n  if (info.includes("ANSWER:")) return "done";\n  return "keep_searching";\n}\nconsole.log(decide("ANSWER: 42"));',
-              output: 'done',
-              explanation: '根據觀察結果判斷下一步動作，這就是 ReAct 迴圈中「思考」的簡化版。',
-            },
-            tests: [
-              { description: '呼叫工具', fn: '(ctx) => { const r = ctx.reactStep({goal:"找庫存",observations:"",history:[]},{search:()=>"庫存: 100"}); return r.action === "search" && r.result === "庫存: 100"; }' },
-              { description: '找到答案', fn: '(ctx) => { const r = ctx.reactStep({goal:"找庫存",observations:"ANSWER: 100",history:[]},{search:()=>"x"}); return r.thought === "找到答案了"; }' },
-              { description: '結果傳遞', fn: '(ctx) => { const r = ctx.reactStep({goal:"x",observations:"ANSWER: done",history:[]},{}); return r.result === "ANSWER: done"; }' },
-            ],
-            returnVars: ['reactStep'],
-          },
-        ],
-      },
-      {
-        id: '5-6', name: 'Boss: 自己寫一個 Mini Agent', description: '完整的 tool-calling agent', xp: 200, isBoss: true,
-        challenges: [
-          {
-            id: 1, name: '工具調度 Agent', type: 'coding', difficulty: 'hard',
-            instruction: '寫 `createAgent(tools)` — tools 是 `{name: fn}` 物件。回傳一個 `run(task)` 函式：\n\n`run(task)` 的邏輯：\n1. 解析 task 字串，找出其中提到的工具名稱（task 會包含 `[toolName]` 格式）\n2. 按順序呼叫找到的工具，每個工具的輸入是 task\n3. 收集所有結果到陣列\n4. 回傳 `{task, steps: [{tool, result}], finalAnswer}` — finalAnswer 是最後一個工具的結果',
-            defaultCode: `function createAgent(tools) {\n  const toolNames = Object.keys(tools);\n  \n  return function run(task) {\n    const steps = [];\n    \n    // 找出 task 中提到的 [toolName]\n    // 按順序呼叫，收集結果\n    \n    return {\n      task,\n      steps,\n      finalAnswer: steps.length > 0 ? steps[steps.length - 1].result : null\n    };\n  };\n}`,
-            referenceCode: CODE_SNIPPETS.reactLoopSnippet,
-            example: {
-              title: '範例：從字典呼叫函式',
-              code: 'const tools = { add: (a, b) => a + b };\nconst name = "add";\nconsole.log(tools[name](3, 4));',
-              output: '7',
-              explanation: '用字串當 key 查找並呼叫對應函式，Agent 的工具調度就是這個模式。',
-            },
-            tests: [
-              { description: '單工具呼叫', fn: '(ctx) => { const agent = ctx.createAgent({search:(t)=>"found:42"}); const r = agent.run("請用 [search] 找資料"); return r.steps.length === 1 && r.steps[0].tool === "search" && r.finalAnswer === "found:42"; }' },
-              { description: '多工具呼叫', fn: '(ctx) => { const agent = ctx.createAgent({fetch:(t)=>"data",calc:(t)=>"result"}); const r = agent.run("[fetch] 然後 [calc]"); return r.steps.length === 2 && r.finalAnswer === "result"; }' },
-              { description: '無匹配工具', fn: '(ctx) => { const agent = ctx.createAgent({search:()=>"x"}); const r = agent.run("沒有工具標記"); return r.steps.length === 0 && r.finalAnswer === null; }' },
-              { description: 'task 保留', fn: '(ctx) => { const agent = ctx.createAgent({}); return agent.run("hello").task === "hello"; }' },
-            ],
-            returnVars: ['createAgent'],
-          },
-        ],
-      },
+          prompt: '請做一份完整的產品分析：\n1. 這個 Referral 功能算成功嗎？用什麼框架評估？\n2. 被推薦用戶的 retention 低很多（22% vs 35%），你怎麼分析原因？\n3. CAC 比 paid ads 高，這代表什麼？應該停掉嗎？\n4. 你會建議什麼改善方案？怎麼排優先級？',
+          evaluationCriteria: [
+            '不是簡單判斷成功/失敗，而是用框架分析',
+            '區分 usage 和 value 來評估功能',
+            '分析 retention 差異的可能原因（用戶動機、品質、onboarding）',
+            '考慮 CAC 和 LTV 的關係，不只看單一指標',
+            '改善建議有優先級且有邏輯支撐',
+          ],
+          sampleAnswer: '1. 評估框架：用 Adoption（10% 使用率中等）、Engagement（15% 註冊轉換率不錯）、Retention（22% 偏低）、Revenue Impact（邀請者回購率+12% 是正面）。結論：功能有潛力，但被推薦用戶的質量是瓶頸。\n\n2. Retention 低的可能原因：(a) 用戶動機不對 — 只為了 $10 折扣才註冊，沒有真正的購物需求 (b) Onboarding 缺失 — 被推薦用戶跟自然用戶走不同的 onboarding flow？(c) Product-market fit — 推薦帶來的用戶可能不是目標受眾。我會按 user segment 切開看。\n\n3. CAC 分析：$18 vs $12 不能只看表面。要看 LTV — 如果 referral 用戶的 LTV 更高（因為有社交黏性），可能還是值得。另外邀請者的回購率提升是額外收益，要算進去。如果 referral 帶來的「邀請者 LTV 提升 + 新用戶 LTV > CAC」，就值得繼續。\n\n4. 改善建議（優先級）：(a) 最優先：改善被推薦用戶的 onboarding，讓他們看到「朋友買了什麼」而不只是折扣 (b) 其次：調整激勵機制，$10 折扣可能吸引了低質量用戶，改成「雙方各得朋友購物清單推薦」(c) 長期：A/B test 不同的 referral 獎勵方式，找到最佳 balance。',
+          hints: ['不要急著判斷成功或失敗，先用框架分析', '想想 referral 用戶為什麼 retention 低 — 他們的動機是什麼？'],
+          explanation: '產品分析 Case 的核心是展示你的思考深度。不只看數字表面，要挖掘背後的原因，提出有邏輯的改善方案。面試官看的是你的分析框架和思路，不是答案本身。',
+          frameworkTip: '產品分析完整架構：定義成功 → 分層評估 → 診斷問題 → 提出方案 → 排優先級',
+        },
+      ] },
     ],
   },
   {
     id: 6,
-    name: '供應鏈商業案例',
-    emoji: '📊',
-    description: '技術只是手段，理解業務才是價值所在',
+    name: 'Business Process',
+    emoji: '⚙️',
+    description: 'Process mapping、Bottleneck、Workflow 優化',
+    color: 'from-sky-500 to-indigo-500',
+    quests: [
+      { id: '6-1', name: 'Process Mapping', description: '把商業流程畫出來分析', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '識別流程要素',
+          type: 'multiple-choice',
+          difficulty: 'easy',
+          scenario: {
+            title: '客訴處理流程',
+            narrative: '你加入了一家電商公司的 Operations 團隊。主管要你畫出客訴處理流程圖。目前的流程是：\n\n客戶打電話投訴 → 客服記錄問題 → 客服判斷問題類型 → 如果是物流問題，轉給物流部；如果是產品品質問題，轉給品管部 → 各部門調查 → 回覆客戶 → 確認客戶滿意 → 結案',
+          },
+          question: '這個流程中，「客服判斷問題類型」屬於什麼要素？',
+          options: [
+            { id: 'A', text: '步驟（Action Step）', explanation: '判斷問題類型不是單純的「做事」，而是一個需要做出選擇的點。' },
+            { id: 'B', text: '決策點（Decision Point）', explanation: '正確！「如果是物流問題 → 走 A 路線；如果是品質問題 → 走 B 路線」是一個分支判斷，在流程圖中用菱形表示。' },
+            { id: 'C', text: '等待（Wait State）', explanation: '判斷可能需要一些時間，但核心性質是「做決定」，不是被動等待。' },
+            { id: 'D', text: '觸發事件（Trigger）', explanation: '觸發事件是流程的起點（客戶打電話投訴）。判斷問題類型是流程中間的步驟。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['流程中有「如果...就...」的地方，都是決策點', '想想流程圖的基本圖形：矩形=步驟、菱形=決策、圓形=開始/結束'],
+          explanation: 'Process Map 的核心要素：觸發事件（起點）→ 步驟（動作）→ 決策點（分支）→ 等待（被動等候）→ 結束。識別決策點特別重要，因為每個決策點都是流程可能出錯或延遲的地方。',
+          frameworkTip: '面試中描述流程時，特別點出決策點和負責人：「在這一步需要做判斷，由 X 角色負責。」',
+        },
+        {
+          id: 2,
+          name: '畫出完整流程',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '採購審批流程',
+            narrative: '公司目前的採購流程：\n\n1. 員工提交採購申請\n2. 部門主管審核\n3. 如果金額 > $5,000，需要 VP 額外核准\n4. 採購部下單\n5. 供應商交貨\n6. 驗收\n7. 財務付款\n\n平均處理時間：12 個工作天。主管覺得太慢。',
+          },
+          question: '你要分析這個流程。以下哪個做法最正確？',
+          options: [
+            { id: 'A', text: '直接建議跳過 VP 審核來加速', explanation: '在理解完整流程和瓶頸之前就建議移除步驟是危險的。VP 審核可能有合規原因。' },
+            { id: 'B', text: '量化每一步的 processing time 和 wait time，找到最慢的環節', explanation: '正確！Process Mapping 的關鍵是量化。知道每一步花多少時間（做事 vs 等待），你才能找到 bottleneck。可能 VP 審核只花 5 分鐘，但「等 VP 看到」要 3 天。' },
+            { id: 'C', text: '直接把整個流程自動化', explanation: '不是所有步驟都適合自動化。需要先分析哪些步驟是瓶頸，哪些適合自動化。' },
+            { id: 'D', text: '問員工覺得哪一步最慢', explanation: '員工的感受是參考之一，但需要用數據驗證。人的感受不一定反映真實的瓶頸。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['Processing time 是「實際做事」的時間，Wait time 是「等待」的時間', '大部分流程的慢不在「做事」，而在「等待」'],
+          explanation: '畫流程圖只是第一步。真正有價值的是量化每一步的時間，特別是區分 processing time（做事時間）和 wait time（等待時間）。這樣你才能找到 bottleneck，提出有數據支撐的改善建議。',
+          frameworkTip: 'Process Mapping 三步：(1) 畫出步驟 (2) 標注負責人和時間 (3) 區分做事 vs 等待時間',
+        },
+      ] },
+      { id: '6-2', name: '找 Bottleneck', description: '流程中哪裡最容易卡', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '識別 Bottleneck',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '訂單處理流程分析',
+            narrative: '你量化了訂單處理流程的每一步時間：',
+            data: [
+              { step: '1. 接收訂單', processing: '即時（自動）', wait: '0', total: '0 min' },
+              { step: '2. 庫存檢查', processing: '2 min', wait: '0', total: '2 min' },
+              { step: '3. 信用審核', processing: '5 min', wait: '4 hours', total: '4h 5min' },
+              { step: '4. 揀貨包裝', processing: '15 min', wait: '30 min', total: '45 min' },
+              { step: '5. 物流安排', processing: '3 min', wait: '10 min', total: '13 min' },
+              { step: '6. 出貨通知', processing: '即時（自動）', wait: '0', total: '0 min' },
+            ],
+            dataCaption: '訂單處理流程時間分析',
+          },
+          question: '這個流程的 bottleneck 在哪裡？',
+          options: [
+            { id: 'A', text: '揀貨包裝（processing time 最長：15 min）', explanation: '15 分鐘的 processing time 確實最長，但 total 只有 45 分鐘。Bottleneck 要看 total lead time，不只看 processing time。' },
+            { id: 'B', text: '信用審核（wait time 最長：4 hours）', explanation: '正確！信用審核的 processing 只要 5 分鐘，但等待 4 小時。這 4 小時的等待佔了整個流程 80% 以上的時間。典型的 bottleneck — 問題不在「做事」而在「等待」。' },
+            { id: 'C', text: '物流安排（效率最低）', explanation: 'total 只有 13 分鐘，不是瓶頸。' },
+            { id: 'D', text: '沒有明顯的 bottleneck，流程很平衡', explanation: '信用審核的 4 小時等待遠超其他步驟，是非常明顯的 bottleneck。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['看 total lead time，不只看 processing time', '哪一步的 wait time 最長？為什麼？'],
+          explanation: '大部分 bottleneck 的問題出在「等待」而不是「做事」。信用審核本身只要 5 分鐘，但排隊等處理要 4 小時 — 可能是因為只有一個審核員，或審核系統不即時。解法：增加審核人手、提高自動審核比例、或設定低風險訂單免審核。',
+          frameworkTip: 'Bottleneck 分析口訣：找到 wait time 最長的那一步，那就是你的 bottleneck。',
+        },
+        {
+          id: 2,
+          name: 'Bottleneck 類型',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '客服 Ticket 堆積',
+            narrative: '客服 ticket 的平均處理時間從 2 小時變成 8 小時。你調查後發現：\n\n• ticket 量跟上個月差不多\n• 客服人數沒變\n• 但「指派」這一步的等待時間從 15 分鐘變成 5 小時\n• 原因：最近增加了一個規則 — 所有 ticket 必須先經過「L2 技術評估」才能指派，而 L2 只有 2 個人',
+          },
+          question: '這是什麼類型的 bottleneck？',
+          options: [
+            { id: 'A', text: '人力瓶頸 — L2 技術人員不夠', explanation: '部分正確，但更精確地說是政策導致的人力瓶頸。' },
+            { id: 'B', text: '系統瓶頸 — 系統處理速度慢', explanation: '不是系統的問題，是流程規則的問題。系統本身沒有變。' },
+            { id: 'C', text: '政策瓶頸 — 新規則創造了不必要的依賴', explanation: '正確！新加的「必須經過 L2 評估」規則，讓所有 ticket 都卡在 2 個 L2 人員身上。解法可能是：只有技術類 ticket 才需要 L2 評估，或訓練更多 L2，或讓 L1 有一定的自主判斷權。' },
+            { id: 'D', text: '資訊瓶頸 — 缺乏足夠資訊做判斷', explanation: '問題不在資訊不足，而在流程規則強制所有 ticket 都經過 L2。' },
+          ],
+          correctAnswer: 'C',
+          hints: ['ticket 量沒變、人數沒變，那什麼變了？', '新規則是不是對「所有」ticket 都必要？'],
+          explanation: '政策瓶頸常被忽視。很多流程效率問題不是人不夠或系統不好，而是「規則設計」創造了不必要的 bottleneck。解法通常是檢視規則是否對所有情境都必要，區分高風險 vs 低風險的處理路徑。',
+          frameworkTip: '面試時看到流程變慢但量沒變的情況，先問：「最近有什麼流程或規則的變化嗎？」',
+        },
+      ] },
+      { id: '6-3', name: 'Automation 決策', description: '哪些步驟該自動化、哪些不該', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '判斷自動化適合度',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '採購流程自動化評估',
+            narrative: '你的主管想把採購審批流程自動化。目前流程有 8 個步驟，你需要評估哪些適合自動化：',
+            data: [
+              { step: '1. 提交申請', frequency: '200 次/月', rule_clarity: '明確', error_cost: '低' },
+              { step: '2. 格式檢查', frequency: '200 次/月', rule_clarity: '非常明確', error_cost: '低' },
+              { step: '3. 預算餘額檢查', frequency: '200 次/月', rule_clarity: '明確', error_cost: '中' },
+              { step: '4. 供應商選擇', frequency: '150 次/月', rule_clarity: '模糊（需經驗判斷）', error_cost: '高' },
+              { step: '5. 主管審核', frequency: '150 次/月', rule_clarity: '依情境', error_cost: '高' },
+              { step: '6. 下單給供應商', frequency: '130 次/月', rule_clarity: '明確', error_cost: '中' },
+              { step: '7. 驗收確認', frequency: '120 次/月', rule_clarity: '部分明確', error_cost: '高' },
+              { step: '8. 付款通知', frequency: '120 次/月', rule_clarity: '非常明確', error_cost: '低' },
+            ],
+            dataCaption: '各步驟自動化評估',
+          },
+          question: '以下哪些步驟最適合優先自動化？',
+          options: [
+            { id: 'A', text: '全部自動化，省掉所有人工', explanation: '供應商選擇和主管審核需要判斷力，錯誤成本高，不適合完全自動化。' },
+            { id: 'B', text: '格式檢查 + 預算檢查 + 付款通知', explanation: '正確！這三步符合自動化三條件：(1) 頻率高 (2) 規則明確 (3) 錯誤成本低到中。格式檢查和付款通知幾乎零風險，預算檢查是簡單的數值比對。' },
+            { id: 'C', text: '主管審核 — 因為這一步最花時間', explanation: '主管審核需要人的判斷，且錯誤成本高。不適合完全自動化。可以做的是「低金額自動核准 + 高金額人工」。' },
+            { id: 'D', text: '只自動化付款通知就好，風險最低', explanation: '太保守了。格式檢查和預算檢查也完全適合自動化，可以大幅提升效率。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['自動化三要素：頻率高 + 規則明確 + 錯誤成本可控', '需要「經驗判斷」的步驟通常不適合完全自動化'],
+          explanation: '自動化決策的核心是風險和收益的 trade-off。最適合自動化的是「高頻 + 規則明確 + 低風險」的步驟。需要判斷力的步驟可以做部分自動化（如：低金額自動、高金額人工）。',
+          frameworkTip: '面試答題結構：「我會用三個維度評估：頻率、規則明確度、錯誤成本。優先自動化 high-frequency + clear-rule + low-risk 的步驟。」',
+        },
+      ] },
+      { id: '6-4', name: 'Permissions & Audit', description: '權限控制和可追蹤性設計', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '權限設計原則',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '費用報銷系統',
+            narrative: '你要設計一個費用報銷系統。目前的問題：\n\n• 有員工自己提交申請、自己核准（separation of duties 違規）\n• 有些人能看到全公司的報銷記錄（最小權限原則違規）\n• 有一筆 $50,000 的報銷被核准了，但找不到是誰核准的（audit trail 缺失）',
+          },
+          question: '以下哪個權限設計最符合最佳實踐？',
+          options: [
+            { id: 'A', text: '每個人只能看到自己的報銷、不能核准自己的申請、所有操作都記錄', explanation: '正確！這三個原則是：(1) 最小權限 — 只看自己的 (2) Separation of Duties — 不能既申請又核准 (3) Audit Trail — 全記錄。這是基本的內控設計。' },
+            { id: 'B', text: '讓主管能看到部門全員的報銷就好', explanation: '主管看部門記錄合理，但沒有解決 separation of duties 和 audit trail 的問題。' },
+            { id: 'C', text: '加一個「超級管理員」可以核准所有金額', explanation: '超級管理員過於集中權限，風險更高。應該用金額分級。' },
+            { id: 'D', text: '所有報銷都要 VP 核准，最安全', explanation: '過度審核會讓流程極慢。應該用分級機制（小額自動、中額主管、大額 VP）。' },
+          ],
+          correctAnswer: 'A',
+          hints: ['三個安全原則：最小權限、職責分離、可追蹤性', '平衡安全性和效率'],
+          explanation: '權限設計三原則：(1) Least Privilege — 只給需要的最小權限 (2) Separation of Duties — 同一人不能既執行又核准 (3) Audit Trail — 誰在什麼時候做了什麼都要有記錄。這在 SOX 合規和內部審計中非常重要。',
+          frameworkTip: '面試中提到 separation of duties 和 audit trail 會大大加分 — 展示你理解企業治理。',
+        },
+      ] },
+      { id: '6-5', name: 'Exception Handling', description: '例外情況的流程設計', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '設計例外處理',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '退貨流程的例外情況',
+            narrative: '你設計了一個退貨流程：客戶申請退貨 → 審核資格 → 安排取件 → 收到商品 → 檢查商品 → 退款 → 結案。\n\n但實際運作中遇到很多例外狀況。',
+          },
+          question: '以下哪個例外情況的設計方式最合理？',
+          options: [
+            { id: 'A', text: '超過退貨期限的一律拒絕，沒有例外', explanation: '太死板。會損失忠實客戶。應該有主管裁量權機制。' },
+            { id: 'B', text: '所有例外都交給客服主管逐一判斷', explanation: '這樣客服主管會變成新的 bottleneck。應該區分高/低頻率和高/低影響的例外。' },
+            { id: 'C', text: '高頻 + 低影響的例外用自動規則處理（如：超期 7 天內自動核准）；低頻 + 高影響的走人工 escalation（如：大量退貨觸發調查）', explanation: '正確！例外處理要分級：常見的小例外用規則自動處理（快且一致），少見的大例外走人工判斷和升級路徑（安全且有彈性）。' },
+            { id: 'D', text: '把所有例外情況寫成規則，完全自動化', explanation: '例外的本質是「預期之外」，你不可能預見所有情況。一定要保留人工判斷的路徑。' },
+          ],
+          correctAnswer: 'C',
+          hints: ['例外處理的設計跟功能的優先級一樣，要考慮頻率和影響', '不是所有例外都需要人工處理，也不是所有例外都能自動化'],
+          explanation: '例外處理矩陣：高頻+低影響 → 自動規則；低頻+低影響 → 簡單流程；高頻+高影響 → 可能要改核心流程；低頻+高影響 → 人工+escalation。流程設計不只是 happy path，考慮例外才是成熟的設計。',
+          frameworkTip: '面試加分句：「除了正常流程，我還會考慮例外情況的處理路徑和升級機制。」',
+        },
+      ] },
+      { id: '6-6', name: 'Boss: 流程改善 Case', description: '完整的流程優化面試題', xp: 200, isBoss: true, challenges: [
+        {
+          id: 1,
+          name: 'Boss: 流程優化完整 Case',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: '員工 Onboarding 流程改善',
+            narrative: '你是一家 300 人科技公司的 Business Systems Analyst。HR VP 找你：\n\n「新員工從收到 offer 到第一天能正常工作，平均要 15 個工作天。員工抱怨第一週什麼都做不了。競爭對手的 onboarding 只要 3 天。」\n\n目前流程：\n1. HR 發 offer letter（1 天）\n2. 等員工簽回（3 天等待）\n3. HR 通知 IT 建帳號（1 天）\n4. IT 建立 email + 系統權限（2 天）\n5. HR 通知 Finance 設定薪資（1 天）\n6. Finance 設定薪資和銀行帳戶（2 天）\n7. HR 通知 Manager 準備座位和設備（1 天）\n8. Manager 安排 buddy 和第一週行程（2 天）\n9. 員工到職日（Day 1）\n10. IT 現場協助設定筆電（2 天等待 IT 排班）',
+            data: [
+              { step: 'HR 發 offer', processing: '30min', wait: '0', responsible: 'HR' },
+              { step: '等員工簽回', processing: '0', wait: '3 days', responsible: '員工' },
+              { step: '通知 IT', processing: '10min', wait: '1 day', responsible: 'HR' },
+              { step: 'IT 建帳號', processing: '1hr', wait: '1 day', responsible: 'IT' },
+              { step: '通知 Finance', processing: '10min', wait: '1 day', responsible: 'HR' },
+              { step: 'Finance 設定', processing: '30min', wait: '1.5 days', responsible: 'Finance' },
+              { step: '通知 Manager', processing: '10min', wait: '1 day', responsible: 'HR' },
+              { step: 'Manager 準備', processing: '2hr', wait: '1.5 days', responsible: 'Manager' },
+              { step: '員工到職', processing: '-', wait: '-', responsible: '-' },
+              { step: 'IT 設定筆電', processing: '1hr', wait: '1 day', responsible: 'IT' },
+            ],
+            dataCaption: '各步驟時間分析',
+          },
+          prompt: '請提出完整的流程改善方案：\n1. 用 Process Mapping 分析現有流程，找出最大的問題\n2. 用 Bottleneck 分析找到最慢的環節\n3. 哪些步驟可以自動化或平行處理？\n4. 權限和 audit trail 需要考慮什麼？\n5. 可能的例外狀況有哪些？\n6. 改善後預期能縮短到幾天？',
+          evaluationCriteria: [
+            '正確識別流程的核心問題（序列化 + 大量等待）',
+            '找到 bottleneck（通知等待時間 + IT 排班）',
+            '提出平行處理方案（IT、Finance、Manager 可以同時進行）',
+            '考慮自動化機會（自動通知、帳號自動建立）',
+            '設計例外處理（offer 被拒、設備缺貨等）',
+          ],
+          sampleAnswer: '1. 核心問題：流程是完全序列化的 — 每一步都等上一步完成才開始。HR 要手動通知每個部門。Processing time 加起來不到 6 小時，但 wait time 超過 12 天。\n\n2. Bottleneck：(a) 手動通知 — HR 是所有步驟的中間人，每次通知都有等待 (b) IT 排班等待 — 到職日才安排設定筆電。\n\n3. 改善方案：\n- 平行處理：員工簽回 offer 後，系統自動同時通知 IT + Finance + Manager，三方平行作業。\n- 自動化：(a) 電子簽章取代實體簽名（3天→幾小時）(b) 帳號建立自動化（HR 系統觸發 IT provisioning）(c) 筆電預先設定好，到職日直接領取。\n- 預備制：不等員工到職才設定筆電，而是提前準備好。\n\n4. 權限：帳號建立需要 audit trail（誰在什麼時候建了什麼權限）。新員工的系統存取權限要按角色設定（least privilege），到職日才啟動。\n\n5. 例外：(a) 員工拒絕 offer → 取消所有平行流程 (b) 設備缺貨 → 備用設備 pool (c) 部門 manager 休假 → 代理人機制。\n\n6. 預期：從 15 天縮短到 3-5 天（簽回 1-2 天 + 平行準備 1-2 天 + 到職日即可工作）。',
+          hints: ['注意 processing time 和 wait time 的差距', '想想哪些步驟可以同時進行而不需要等前一步完成'],
+          explanation: '流程改善的核心思路：序列化 → 平行化、手動 → 自動化、到場才做 → 提前準備。面試中能完整走過 Process Mapping → Bottleneck → Automation → Permissions → Exception Handling 這個框架，就是 A+ 的回答。',
+          frameworkTip: '流程改善五步：畫出流程 → 找到瓶頸 → 平行化 + 自動化 → 加入權限管控 → 設計例外處理',
+        },
+      ] },
+    ],
+  },
+  {
+    id: 7,
+    name: 'Experiment & Validation',
+    emoji: '🧪',
+    description: 'A/B Test、Hypothesis、驗證你的建議',
+    color: 'from-lime-500 to-green-500',
+    quests: [
+      { id: '7-1', name: 'Hypothesis 設計', description: '怎麼把直覺變成可驗證的假設', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '好的假設 vs 壞的假設',
+          type: 'multiple-choice',
+          difficulty: 'easy',
+          scenario: {
+            title: '搜尋結果頁改善',
+            narrative: 'PM 覺得搜尋結果頁的 conversion 太低。你需要先提出假設，再設計實驗驗證。',
+          },
+          question: '以下哪個假設最好？（可驗證、有指標、有邏輯）',
+          options: [
+            { id: 'A', text: '「搜尋結果不好」', explanation: '太模糊。什麼叫「不好」？怎麼衡量？這不是一個可驗證的假設。' },
+            { id: 'B', text: '「如果在搜尋結果中加入商品評分和評論數，用戶會更容易做出購買決策，搜尋後的加購率會提升 10%」', explanation: '正確！這個假設有：(1) 具體的改變（加入評分和評論數）(2) 背後的邏輯（幫助購買決策）(3) 可衡量的預期結果（加購率 +10%）。' },
+            { id: 'C', text: '「用戶不喜歡我們的搜尋」', explanation: '主觀判斷，無法用數據驗證。好的假設需要具體的行為和指標。' },
+            { id: 'D', text: '「改善搜尋演算法會提升轉換率」', explanation: '方向對但太模糊。「改善」是什麼意思？「轉換率」是指什麼轉換？要更具體。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['好假設的結構：If we [做什麼改變], then [會發生什麼], because [為什麼]', '假設必須是可用數據驗證的'],
+          explanation: '好的假設有三個要素：(1) 具體的 intervention（做什麼改變）(2) 預期的 outcome（會發生什麼、衡量指標）(3) 背後的 rationale（為什麼這樣認為）。面試中能提出好的假設，代表你有結構化的思考能力。',
+          frameworkTip: '假設公式：If [intervention], then [outcome], because [rationale]',
+        },
+        {
+          id: 2,
+          name: '假設的優先排序',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '訂閱續約率下降',
+            narrative: '你的 SaaS 產品的月續約率從 92% 掉到 87%。團隊列了 4 個假設：\n\nH1：最近漲價 10% 導致價格敏感的客戶不續約\nH2：競爭對手上線了新功能，客戶被吸走了\nH3：客戶使用量下降（可能是因為核心功能有 bug）\nH4：客服回應時間變長，客戶不滿意',
+          },
+          question: '你會怎麼排優先級來驗證這些假設？',
+          options: [
+            { id: 'A', text: '按直覺覺得最可能的開始', explanation: '直覺不可靠。應該用數據的可取得性和影響力來排序。' },
+            { id: 'B', text: '先驗證最容易用現有數據確認/排除的（H1 漲價和 H3 使用量），再調查需要外部資料的（H2 競爭對手）', explanation: '正確！H1 可以看漲價前後的 churn 對比、price tier 分析；H3 可以看 usage 數據和 bug report。這些都能用內部數據快速驗證。H2 和 H4 需要外部調查或更深入分析，排後面。' },
+            { id: 'C', text: '四個同時驗證，最有效率', explanation: '資源有限，同時做四個分析會分散注意力。應該優先排除最可能和最容易驗證的。' },
+            { id: 'D', text: '先做客戶訪談，直接問他們為什麼不續約', explanation: '訪談是好方法，但需要時間安排。先用內部數據快速排除一些假設，再用訪談深入了解。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['驗證假設要考慮兩個因素：數據可取得性和排除假設的效率', '能用現有數據快速驗證的假設優先'],
+          explanation: '假設驗證的排序原則：(1) 可快速用內部數據驗證的先做（低成本高效率）(2) 高影響力的優先 (3) 需要外部調查的排後面。先排除容易排除的假設，縮小範圍。',
+          frameworkTip: '面試中列假設後，主動排優先級：「我會先驗證 H1 和 H3，因為這些可以用內部數據快速確認。」',
+        },
+      ] },
+      { id: '7-2', name: 'A/B Test 基礎', description: '實驗設計的基本概念', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: 'A/B Test 設計',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '結帳頁改版測試',
+            narrative: 'PM 要你設計一個 A/B test：把結帳頁從「3 步驟」改成「1 頁」，看轉換率有沒有提升。\n\n目前的結帳轉換率是 65%，PM 希望提升到 70%。DAU 大約 50,000。',
+          },
+          question: '以下哪個 A/B test 設計最正確？',
+          options: [
+            { id: 'A', text: '把全部流量切到新版，看轉換率有沒有變', explanation: '沒有控制組就無法確認變化是因為新設計還是其他因素（季節、活動等）。' },
+            { id: 'B', text: '50/50 隨機分流，Control 看原版，Treatment 看新版，跑 2 週，看結帳轉換率差異', explanation: '正確！隨機分流確保兩組可比較。50/50 給足夠 sample size。2 週覆蓋完整的週間/週末週期。Primary metric 是結帳轉換率。' },
+            { id: 'C', text: '讓用戶自己選要用哪個版本', explanation: '自選會產生 selection bias — 喜歡嘗試新東西的人可能本來就比較活躍，結果不可信。' },
+            { id: 'D', text: '先給新用戶看新版，老用戶看舊版', explanation: '新用戶和老用戶行為本來就不同，無法判斷是版本差異還是用戶差異造成的結果。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['A/B test 的關鍵：隨機分流 + 控制變量 + 足夠的 sample size', '實驗時間要覆蓋完整的 business cycle'],
+          explanation: 'A/B test 三要素：(1) 隨機分流（消除 selection bias）(2) 控制組 vs 實驗組（唯一差異是你要測的改變）(3) 足夠的樣本量和時間（統計顯著性）。面試中展示你理解這三點就夠了。',
+          frameworkTip: 'A/B test 設計清單：定義假設 → 選 metric → 決定分流比例 → 算 sample size → 設定實驗時間',
+        },
+        {
+          id: 2,
+          name: '解讀實驗結果',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: 'A/B Test 結果出來了',
+            narrative: '結帳頁 A/B test 跑了 2 週，結果如下：',
+            data: [
+              { group: 'Control（3步驟）', users: 25000, conversions: 16250, rate: '65.0%' },
+              { group: 'Treatment（1頁）', users: 25000, conversions: 16750, rate: '67.0%' },
+              { group: '差異', users: '-', conversions: '+500', rate: '+2.0pp' },
+            ],
+            dataCaption: 'A/B Test 結果',
+            additionalContext: 'p-value = 0.08，統計顯著性門檻 p < 0.05',
+          },
+          question: '你會怎麼報告這個結果？',
+          options: [
+            { id: 'A', text: '新版贏了 2%，建議全面上線', explanation: 'p-value = 0.08 > 0.05，結果不具統計顯著性。不能確定 2% 的差異是真實的還是隨機波動。' },
+            { id: 'B', text: '結果不顯著（p=0.08），建議延長實驗時間或增加 sample size 再看', explanation: '正確！2% 的提升看起來不錯，但 p-value 沒達到門檻，可能只是隨機波動。建議延長實驗（增加 sample size 來提高 power）。同時也可以看 secondary metrics 做輔助判斷。' },
+            { id: 'C', text: '新版沒有效果，放棄', explanation: '不顯著不等於「沒有效果」，只是現有數據不足以證明。延長實驗可能得到結論。' },
+            { id: 'D', text: 'p-value 0.08 很接近 0.05，可以當作顯著', explanation: '隨意放寬門檻是不嚴謹的。如果覺得 0.05 太嚴格，應該在實驗前就設定好門檻，不能事後調整。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['p-value > 0.05 代表結果不具統計顯著性', '不顯著 ≠ 沒效果，可能是 sample size 不夠'],
+          explanation: '解讀 A/B test 結果的關鍵：(1) 看統計顯著性（p-value）(2) 看效果量（effect size）(3) 看 guardrail metrics 有沒有受影響。不顯著時的正確做法是延長實驗或增加 sample，而不是直接放棄或強行上線。',
+          frameworkTip: '面試黃金句：「這個結果在方向上是正面的，但 p-value 沒有達到顯著水平，我建議延長實驗。」',
+        },
+      ] },
+      { id: '7-3', name: 'Metric 選擇與 Guardrail', description: '實驗要看什麼指標', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '選擇實驗指標',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '推薦演算法 A/B Test',
+            narrative: '你要測試新的商品推薦演算法。新演算法會推薦更多高價商品。\n\nPM 問你：「這個實驗應該看什麼指標？」',
+          },
+          question: '最好的指標設計是？',
+          options: [
+            { id: 'A', text: 'Primary: 點擊率（CTR）', explanation: 'CTR 只衡量「有沒有點」，不衡量最終價值。新演算法推高價商品，點擊率可能反而更低。' },
+            { id: 'B', text: 'Primary: Revenue per user / Guardrail: CTR、加購率、退貨率', explanation: '正確！Primary metric 直接衡量商業價值（revenue）。Guardrail 確保：(1) CTR 沒有大幅下降（用戶還會點）(2) 加購率沒有下降 (3) 退貨率沒有上升（不要推用戶不想要的高價商品然後退貨）。' },
+            { id: 'C', text: 'Primary: 曝光次數', explanation: '曝光次數衡量的是推薦有沒有被展示，不是推薦有沒有效果。' },
+            { id: 'D', text: 'Primary: 退貨率', explanation: '退貨率是 guardrail（不能變差），不是 primary（想要改善的）。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['Primary metric 要跟實驗的目標直接相關', 'Guardrail 是「不能變差」的指標 — 防止有副作用'],
+          explanation: 'Metric 選擇三層：(1) Primary — 直接衡量實驗目標的指標 (2) Secondary — 輔助理解的指標 (3) Guardrail — 不能變差的指標。推薦演算法的 guardrail 特別要注意退貨率 — 推高價商品如果退貨率上升，反而虧錢。',
+          frameworkTip: '永遠同時設 primary 和 guardrail：「我會用 X 衡量是否改善，用 Y 確保沒有副作用。」',
+        },
+      ] },
+      { id: '7-4', name: 'Sample Bias', description: '為什麼你的實驗結果可能是錯的', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '識別偏差',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '新功能的效果評估',
+            narrative: '產品團隊宣布：「使用我們新搜尋功能的用戶，購買率比不使用的高 40%！新功能超成功！」\n\n你身為 analyst 需要評估這個結論。',
+          },
+          question: '這個結論最大的問題是什麼？',
+          options: [
+            { id: 'A', text: '40% 的提升太大了，數據可能有錯', explanation: '提升大不一定代表數據錯。問題在於比較方式，不是數字大小。' },
+            { id: 'B', text: 'Selection bias — 主動使用新功能的用戶本來就更活躍，購買意願更高', explanation: '正確！這是典型的 selection bias。主動嘗試新功能的人通常是 power users，他們本來就比一般用戶更可能購買。40% 的差異可能大部分不是功能的效果，而是用戶本身的差異。需要用 A/B test 才能確認因果。' },
+            { id: 'C', text: '樣本量可能不夠', explanation: '即使樣本量夠，結論依然有問題 — 因為兩組用戶不是隨機分配的。' },
+            { id: 'D', text: '應該看 retention 而不是購買率', explanation: '指標選擇可以討論，但核心問題是比較方式有偏差，不是指標選錯。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['使用新功能的用戶和不使用的用戶，他們本身就一樣嗎？', '沒有隨機分流的比較，都有 selection bias 的風險'],
+          explanation: 'Selection bias 是最常見的分析陷阱。非隨機的 self-selected group 之間的比較，無法證明因果關係。使用者選擇用新功能 → 他們可能本來就更活躍。只有 A/B test（隨機分流）才能排除這種偏差。',
+          frameworkTip: '面試中聽到「用了 X 的人比沒用的人表現好」→ 立刻想到 selection bias。',
+        },
+      ] },
+      { id: '7-5', name: 'Correlation vs Causation', description: '相關不等於因果', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '相關 vs 因果',
+          type: 'multiple-choice',
+          difficulty: 'medium',
+          scenario: {
+            title: '客服和留存的關係',
+            narrative: '數據分析顯示：聯繫過客服的用戶，90 天 retention 率是 75%，沒聯繫過的是 60%。\n\n產品主管提議：「我們應該主動鼓勵用戶聯繫客服，這樣可以提升 retention！」',
+          },
+          question: '這個建議有什麼問題？',
+          options: [
+            { id: 'A', text: '沒問題，數據很清楚地支持這個建議', explanation: '數據顯示的是相關性，不是因果關係。主動聯繫客服不一定會提升 retention。' },
+            { id: 'B', text: '聯繫客服可能是 engaged 用戶的行為，不是 retention 高的原因。因果方向可能是反的', explanation: '正確！可能是因為用戶本來就很 engaged（重度使用產品），所以遇到問題會聯繫客服而不是直接離開。是 engagement → 聯繫客服 + 高 retention，而不是 聯繫客服 → 高 retention。強迫用戶聯繫客服不會讓不活躍的用戶突然變活躍。' },
+            { id: 'C', text: '75% vs 60% 的差異可能不顯著', explanation: '統計顯著性是一個考量，但更根本的問題是因果關係。' },
+            { id: 'D', text: '客服成本太高，不划算', explanation: '成本是考量之一，但核心問題是「鼓勵聯繫客服」是否真的能提升 retention。' },
+          ],
+          correctAnswer: 'B',
+          hints: ['想想看：是「聯繫客服」讓人留下來，還是「留下來的人」本來就更可能聯繫客服？', '相關 ≠ 因果。A 和 B 一起出現，不代表 A 導致 B'],
+          explanation: 'Correlation ≠ Causation 的三種可能：(1) A 導致 B (2) B 導致 A（反向因果）(3) C 同時導致 A 和 B（混淆因子）。這裡「用戶 engagement」可能是混淆因子 — 同時導致「聯繫客服」和「高 retention」。',
+          frameworkTip: '面試中聽到「X 的人比非 X 的人表現好」→ 問：「這是因果還是相關？有沒有 confounding variable？」',
+        },
+      ] },
+      { id: '7-6', name: 'Boss: 實驗設計 Case', description: '設計一個完整的驗證計畫', xp: 200, isBoss: true, challenges: [
+        {
+          id: 1,
+          name: 'Boss: 實驗設計完整 Case',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: '定價策略 A/B Test',
+            narrative: '你是一家 SaaS 公司的 Product Analyst。公司目前有三個方案：\n• Basic: $29/月（60% 用戶）\n• Pro: $79/月（30% 用戶）\n• Enterprise: $199/月（10% 用戶）\n\nCEO 想測試把 Pro 方案從 $79 改成 $99，看會不會增加 ARPU（Average Revenue Per User）。\n\n他問你：「幫我設計一個 A/B test。」',
+          },
+          prompt: '請設計一份完整的實驗計畫：\n1. 你的假設是什麼？（If / Then / Because）\n2. Primary metric 和 Guardrail metrics 是什麼？\n3. 實驗怎麼設計？（分流方式、sample size、時間）\n4. 有什麼潛在的偏差或風險？\n5. 如果結果是「ARPU 上升 5% 但新用戶轉 Pro 的比例下降 15%」，你怎麼判斷？',
+          evaluationCriteria: [
+            '假設結構清楚（有 intervention、outcome、rationale）',
+            'Primary 和 guardrail metrics 選擇合理',
+            '考慮定價實驗的特殊風險（價格敏感度、信任、PR 風險）',
+            '識別 short-term vs long-term 的 trade-off',
+            '結果解讀有深度（不只看單一指標）',
+          ],
+          sampleAnswer: '1. 假設：If we increase Pro price from $79 to $99, then ARPU will increase because the 20% price increase will outweigh any reduction in Pro conversion rate.\n\n2. Metrics:\n- Primary: ARPU（月營收/用戶數）\n- Guardrail: Pro plan conversion rate, overall churn rate, new user acquisition rate, customer satisfaction\n\n3. 實驗設計：\n- 只對新用戶做 A/B test（現有用戶看到漲價會不信任）\n- 50/50 隨機分流\n- 跑至少 4 週（涵蓋完整的 subscription cycle）\n- Sample size 要足夠大到能偵測 5% 的 ARPU 變化\n\n4. 風險：\n- 定價測試的 PR 風險：如果被發現同一產品不同價格，會有信任問題\n- 短期 vs 長期：短期 ARPU 可能上升（因為現有 Pro 用戶付更多），但長期如果 conversion 下降會影響 growth\n- 漲價可能把一些人推向 Basic 而不是 Pro\n\n5. 結果判斷：ARPU +5% 是好事，但 Pro conversion -15% 是嚴重的 guardrail 警告。需要計算 long-term impact：(a) 短期 ARPU 增加的收入 vs (b) 長期因為 conversion 下降損失的 Pro 用戶數。如果 -15% conversion 導致的長期收入損失 > +5% ARPU 的短期收益，就不應該漲價。可能的折衷：漲到 $89 而不是 $99。',
+          hints: ['定價 A/B test 有一個特殊風險：如果被用戶發現，會嚴重損害信任', '短期和長期的影響可能完全相反'],
+          explanation: '定價 A/B test 是面試中的進階題。關鍵是展示你知道定價測試比一般功能測試更敏感 — 有 PR 風險、信任問題、和 short-term vs long-term 的 trade-off。能討論這些就是 senior level 的思維。',
+          frameworkTip: '實驗設計完整架構：假設 → 指標 → 分流 → 風險 → 結果解讀',
+        },
+      ] },
+    ],
+  },
+  {
+    id: 8,
+    name: 'Mock Interview',
+    emoji: '🎯',
+    description: '綜合練習：模擬面試 Case Study',
     color: 'from-amber-500 to-orange-600',
     quests: [
-      {
-        id: '6-1', name: '需求預測', description: '實作移動平均預測', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '移動平均', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `movingAverage(data, window)` — 取最後 window 筆資料的平均值。',
-            defaultCode: `function movingAverage(data, window) {\n  // 取最後 window 筆的平均\n  \n}`,
-            example: {
-              title: '範例：取陣列最後 N 個元素的平均',
-              code: 'const arr = [10, 20, 30, 40];\nconst last2 = arr.slice(-2);\nconsole.log(last2.reduce((a,b) => a+b, 0) / last2.length);',
-              output: '35',
-              explanation: '用 slice(-N) 取最後 N 個，再加總除以數量就是平均，移動平均的核心。',
-            },
-            tests: [
-              { description: '4 期平均', fn: '(ctx) => ctx.movingAverage([100,120,90,110], 4) === 105' },
-              { description: '2 期平均', fn: '(ctx) => ctx.movingAverage([100,120,90,110], 2) === 100' },
-              { description: '單期', fn: '(ctx) => ctx.movingAverage([100,120,90,110], 1) === 110' },
+      { id: '8-1', name: 'KPI 掉了怎麼查', description: '經典面試題型：指標下降的調查流程', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '面試實戰：指標下降',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: '電商 GMV 下降 20%',
+            narrative: '你正在面試一家電商公司的 Business Analyst 職位。面試官問你：\n\n「我們的 GMV（Gross Merchandise Value）上個月比前個月下降了 20%。你會怎麼分析？」\n\n面試官給了你以下數據：',
+            data: [
+              { metric: 'GMV', last_month: '$5.2M', this_month: '$4.16M', change: '-20%' },
+              { metric: 'Orders', last_month: '52,000', this_month: '48,000', change: '-7.7%' },
+              { metric: 'AOV', last_month: '$100', this_month: '$86.7', change: '-13.3%' },
+              { metric: 'DAU', last_month: '180K', this_month: '175K', change: '-2.8%' },
+              { metric: 'Conversion Rate', last_month: '2.9%', this_month: '2.7%', change: '-6.9%' },
             ],
-            returnVars: ['movingAverage'],
+            dataCaption: '關鍵指標',
           },
-          {
-            id: 2, name: '預測誤差', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `mae(actual, predicted)` — 計算 Mean Absolute Error（平均絕對誤差）。',
-            defaultCode: `function mae(actual, predicted) {\n  // |actual[0]-predicted[0]| + ... / n\n  \n}`,
-            example: {
-              title: '範例：計算兩數差的絕對值',
-              code: 'const actual = 10;\nconst predicted = 13;\nconsole.log(Math.abs(actual - predicted));',
-              output: '3',
-              explanation: 'Math.abs 取絕對值，MAE 就是把所有差的絕對值加起來再平均。',
-            },
-            tests: [
-              { description: '完全準確', fn: '(ctx) => ctx.mae([10,20,30],[10,20,30]) === 0' },
-              { description: '有誤差', fn: '(ctx) => ctx.mae([10,20,30],[12,18,33]) === 3' },
+          prompt: '請用完整的分析框架回答面試官。你的分析思路是什麼？會用什麼方法？會提出什麼假設？',
+          evaluationCriteria: [
+            '用 Trend Analysis 確認是否真實問題（vs 季節性）',
+            '拆解 GMV = Orders × AOV，找到 AOV 下降是主因',
+            '用 Segmentation 切開看（品類、用戶群、通路）',
+            '提出具體的假設並說明驗證方式',
+            '有結構化的回答框架（不是零散的猜測）',
+          ],
+          sampleAnswer: '我會用以下步驟分析：\n\n1. 確認問題：GMV -20% = Orders -7.7% × AOV -13.3%。AOV 下降是主要驅動因素（貢獻更大）。\n\n2. Trend：這是突然下降還是逐漸？上個月有沒有特殊因素（促銷結束、季節性）？跟去年同期比呢？\n\n3. 拆解 AOV 下降：\n- 是所有品類都在降，還是高單價品類的銷售特別差？\n- 用 Segmentation 按品類切開：如果電子類從 40% 佔比掉到 25%，AOV 自然會降。\n- 有沒有折扣或促銷活動影響？\n\n4. 假設：\n- H1：上個月有大促（如 618），高單價商品促銷結束後回歸正常\n- H2：某個高單價品類的供應出問題（缺貨）\n- H3：新用戶佔比增加（新用戶通常 AOV 較低）\n\n5. 驗證：用內部數據切 segment 看是否集中在某個品類或用戶群。如果是 H1（促銷後回歸），看歷史數據確認這是季節性模式。',
+          hints: ['先把 GMV 拆解成 Orders × AOV，看哪個因素影響比較大', '不要一開始就猜原因，先用數據縮小範圍'],
+          explanation: '「KPI 掉了」是面試最高頻的題型。完美的回答結構：確認問題 → 拆解指標 → Trend 分析 → Segmentation → 提假設 → 驗證計畫 → 建議行動。',
+          frameworkTip: 'Case Answer Framework: Goal → Metrics → Flow → Segment → Recommend → Validate',
+        },
+      ] },
+      { id: '8-2', name: 'Feature 成功嗎', description: '經典面試題型：功能評估', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '面試實戰：功能評估',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: 'Instagram Reels 的成功評估',
+            narrative: '面試官問你：\n\n「假設你是 Instagram 的 Product Analyst。Reels 功能上線 6 個月了，怎麼評估它是否成功？」',
+          },
+          prompt: '請回答這個面試題。要求：\n1. 先釐清 Reels 的目標（為什麼做這個功能？）\n2. 定義 primary metrics 和 guardrail metrics\n3. 分析框架（怎麼看數據？切什麼 segment？）\n4. 可能的 trade-offs',
+          evaluationCriteria: [
+            '回到功能目標（對抗 TikTok、提升 engagement）',
+            'Metrics 選擇合理（不只看 Reels usage，要看對整體 app 的影響）',
+            '考慮 cannibalization（Reels 搶走 Feed/Stories 的時間？）',
+            '分 segment 看（新用戶 vs 老用戶、creator vs viewer）',
+            '討論 short-term vs long-term trade-offs',
+          ],
+          sampleAnswer: '1. 目標：Reels 最可能的目標是（a）對抗 TikTok 的用戶流失（b）提升整體 time-spent（c）吸引年輕用戶。\n\n2. Metrics：\n- Primary: DAU/MAU 趨勢（有沒有止住流失？）、time-spent per session（整體和 Reels 分開看）\n- Secondary: Reels adoption rate、creation rate、completion rate\n- Guardrail: Feed/Stories 的 time-spent（有沒有被 Reels cannibalize）、creator 的 posting frequency（不能因為 Reels 就不發一般貼文）\n\n3. 分析：\n- Segment by age：年輕用戶（18-24）的 Reels 使用和 retention 變化\n- Segment by activity：之前開始流失（to TikTok）的用戶，Reels 上線後有沒有回來？\n- Creator vs viewer：有多少人從 viewer 變 creator？\n- Cohort：Reels 上線前後的 cohort retention 比較\n\n4. Trade-offs：\n- Reels 可能 cannibalize Feed 和 Stories 的 time-spent。如果總 time-spent 增加但 Feed engagement 下降，要評估 advertiser 的影響。\n- Short-term：Reels 可能降低 Feed 廣告收入。Long-term：如果能留住用戶對抗 TikTok，整體收入會受益。',
+          hints: ['先想 Reels 為什麼存在 — Instagram 的戰略目標是什麼？', '考慮功能對整體 app 的影響，不只看功能本身'],
+          explanation: '大公司的功能評估面試題，關鍵是展示你能從戰略角度思考 — 不只看功能的 usage，還要看對整體產品和商業的影響。特別是 cannibalization 和 trade-off 的討論。',
+          frameworkTip: '大功能評估：目標 → Metrics → Adoption × Engagement × Retention → Cannibalization → Trade-offs',
+        },
+      ] },
+      { id: '8-3', name: '流程怎麼改', description: '經典面試題型：流程改善', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '面試實戰：流程改善',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: '客服流程改善',
+            narrative: '面試官問你：\n\n「我們的客服 first response time 是 24 小時，目標是降到 4 小時。但我們不想增加客服人手。你怎麼做？」\n\n目前狀況：\n• 每天約 500 張 ticket\n• 15 位客服人員，每人每天處理 25-30 張\n• 60% 是常見問題（退貨、密碼重設、運送查詢）\n• 40% 需要調查才能回覆\n• 沒有自動分類機制，全部由主管手動指派',
+          },
+          prompt: '請提出完整的改善方案。包含流程分析、bottleneck 識別、具體改善措施和預期效果。',
+          evaluationCriteria: [
+            '識別核心 bottleneck（手動指派 + 常見問題佔太多人力）',
+            '提出自動化機會（自動分類、常見問題自動回覆）',
+            '考慮分級處理（L1 自動 / L2 人工）',
+            '量化預期改善（如果 60% 自動回覆，人力可集中在 40% 複雜問題）',
+            '考慮例外和風險（自動回覆答錯怎麼辦）',
+          ],
+          sampleAnswer: '分析：\n1. Bottleneck：(a) 手動指派導致所有 ticket 等待分類（b) 60% 常見問題佔用太多客服時間\n\n改善方案（不增人手）：\n\n1. 自動分類（取代手動指派）：用關鍵字或 ML 自動把 ticket 分成「常見」和「需調查」兩類。省掉主管每天分類 500 張 ticket 的時間。\n\n2. 常見問題自動回覆：60% 的 ticket 是退貨/密碼/運送 → 建立自動回覆模板或 chatbot。如果自動解決 70% 的常見問題 = 210 張/天不需要人工。\n\n3. 重新分配人力：15 位客服從處理 500 張/天變成處理 290 張/天（500-210）。每人 19 張/天，有更多時間處理複雜問題。\n\n4. 分級 SLA：常見問題自動回覆 < 5 分鐘；需調查的 < 4 小時。\n\n5. 風險：自動回覆答錯 → 加一個「這有解決你的問題嗎？」的確認，沒解決的自動轉人工。\n\n預期效果：first response time 從 24hr → 常見問題 < 5min，複雜問題 < 4hr。整體平均 < 4hr 目標達成。',
+          hints: ['不能增加人手，那就要想辦法減少「需要人工處理」的 ticket 數量', '60% 是常見問題 — 這是自動化的最大機會'],
+          explanation: '流程改善面試題的核心：在不增加資源的前提下提升效率。通常答案是 (1) 減少不必要的步驟 (2) 自動化重複性工作 (3) 重新分配資源到高價值活動。',
+          frameworkTip: '流程改善答題結構：現狀分析 → Bottleneck → 改善方案 → 量化預期效果 → 風險管理',
+        },
+      ] },
+      { id: '8-4', name: 'Dashboard 設計', description: '經典面試題型：設計一個 dashboard', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '面試實戰：Dashboard 設計',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: 'SaaS 產品的 Executive Dashboard',
+            narrative: '面試官問你：\n\n「假設你是一家 B2B SaaS 公司的 analyst，CEO 要你設計一個 executive dashboard，讓他每天早上花 5 分鐘看就知道公司狀況。你會放什麼？」',
+          },
+          prompt: '請設計這個 dashboard。包含：\n1. 你會放哪些指標？為什麼？\n2. 怎麼分組織架構？\n3. 有什麼視覺化的考量？\n4. 什麼情況下 CEO 看到 dashboard 應該要有 action？',
+          evaluationCriteria: [
+            '指標選擇覆蓋 Revenue、Growth、Retention、Efficiency',
+            '有層次結構（高層摘要 + 可下鑽）',
+            '考慮 CEO 的需求（5 分鐘內看出趨勢和異常）',
+            '設計異常警示機制（什麼情況要注意）',
+            '指標之間有邏輯關係（不是隨便列一堆數字）',
+          ],
+          sampleAnswer: '1. 指標設計（按 CEO 關心的四大面向）：\n\n• Revenue 健康：MRR、MRR 成長率、Net Revenue Retention\n• Growth 引擎：新客戶數、CAC、Sales Pipeline\n• Retention 信號：Monthly Churn Rate、NPS、Top 10 客戶的使用量\n• Operational Efficiency：Burn Rate、Revenue per Employee\n\n2. 組織結構：\n• 第一層：4 個大數字 + 趨勢箭頭（MRR、Churn、New Customers、NPS）\n• 第二層：每個指標的 30 天趨勢圖\n• 第三層：可下鑽到 segment（by plan、by region、by cohort）\n\n3. 視覺化考量：\n• 用紅/黃/綠顏色標示是否在目標範圍\n• 每個指標旁邊有 MoM 變化百分比\n• 避免超過 8 個主要指標（cognitive overload）\n\n4. Action Triggers：\n• Churn rate 連續 2 週上升 → 啟動 customer success 調查\n• MRR 低於月度目標 20% → 跟 sales team 對齊\n• NPS 下降 10+ → 啟動 customer feedback review\n• Top 10 客戶使用量下降 → 主動聯繫',
+          hints: ['CEO 只有 5 分鐘，不能放太多數字', 'Dashboard 不只是展示數據，更要讓人看了知道該不該做什麼'],
+          explanation: 'Dashboard 設計面試題的關鍵：(1) 站在 audience 的角度（CEO 要什麼？）(2) 有層次（摘要→細節）(3) 有 actionability（什麼數字代表要行動）。不是堆越多指標越好。',
+          frameworkTip: 'Dashboard 設計框架：Audience → Key Questions → Metrics → Layout → Action Triggers',
+        },
+      ] },
+      { id: '8-5', name: 'User Segmentation', description: '經典面試題型：使用者分群', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1,
+          name: '面試實戰：用戶分群',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: '音樂串流 App 的用戶分群',
+            narrative: '面試官問你：\n\n「你是一家音樂串流服務（類似 Spotify）的 Product Analyst。你要幫行銷團隊做用戶分群，讓他們能對不同群體做不同的行銷策略。你會怎麼做？」',
+          },
+          prompt: '請說明你的分群策略：\n1. 你會用什麼維度分群？為什麼？\n2. 你預期會分出哪些群體？\n3. 每個群體的行銷策略有什麼不同？\n4. 怎麼驗證分群是否有效？',
+          evaluationCriteria: [
+            '分群維度合理（行為 > 人口統計）',
+            '考慮業務價值（不是為分群而分群）',
+            '每個群體有具體的 persona 描述',
+            '行銷策略跟群體特徵相配',
+            '有驗證分群效果的方法',
+          ],
+          sampleAnswer: '1. 分群維度：\n- 使用頻率：每週聽幾天\n- 使用深度：只聽推薦 vs 主動搜尋/建立歌單\n- 消費行為：免費 vs 付費、付費時長\n- 內容偏好：音樂 vs Podcast\n（行為維度優於年齡性別，因為更直接反映需求和價值）\n\n2. 預期群體：\n- Casual Listeners（30%）：每週聽 1-2 天，免費方案，主要聽推薦\n- Daily Commuters（25%）：每天通勤時聽，付費但只用基本功能\n- Music Enthusiasts（20%）：每天聽 2hr+，大量建歌單，跟朋友分享\n- Podcast Converts（15%）：主要聽 podcast，音樂偶爾\n- Dormant（10%）：曾經活躍但已超過 30 天沒用\n\n3. 行銷策略：\n- Casual → 推廣免費轉付費（試用期優惠）\n- Commuters → 推送 offline download 和 podcast 擴展功能\n- Enthusiasts → VIP 活動、演唱會早鳥票、社交功能\n- Podcast → 推薦更多 podcast 內容、exclusive podcast\n- Dormant → Re-engagement（你錯過了 XX 新專輯）\n\n4. 驗證：A/B test 每個群體的行銷策略 vs 統一行銷。看 conversion rate、retention、ARPU 是否有差異。如果分群策略 > 統一策略，分群有效。',
+          hints: ['分群的目的是讓每個群體收到更相關的內容', '行為分群通常比人口統計分群更有效'],
+          explanation: '用戶分群面試題的核心：(1) 分群要有目的（為了做什麼？）(2) 行為 > 人口統計 (3) 每個群體要有 actionable 的策略 (4) 分群效果要可驗證。',
+          frameworkTip: '分群四步：選維度 → 描述群體 → 設計策略 → 驗證效果',
+        },
+      ] },
+      { id: '8-6', name: 'Boss: 完整模擬面試', description: '全套面試模擬（開放式 + AI 評分）', xp: 200, isBoss: true, challenges: [
+        {
+          id: 1,
+          name: 'Boss: 模擬面試 — 綜合 Case',
+          type: 'open-ended',
+          difficulty: 'hard',
+          scenario: {
+            title: '外送平台的完整 Case Study',
+            narrative: '你正在面試一家外送平台（類似 Uber Eats / foodpanda）的 Business Analyst 職位。\n\n面試官給你一個情境：\n\n「我們發現過去三個月，台北市的訂單完成率（Order Completion Rate）從 95% 下降到 88%。所謂『未完成』是指訂單被取消（用戶取消、餐廳取消、或外送員取消）。\n\n這已經影響到用戶體驗和商家關係。CEO 要你在兩週內提出分析和改善方案。」',
+            data: [
+              { month: '10月', total_orders: 850000, completed: 807500, completion_rate: '95.0%' },
+              { month: '11月', total_orders: 880000, completed: 809600, completion_rate: '92.0%' },
+              { month: '12月', total_orders: 920000, completed: 809600, completion_rate: '88.0%' },
             ],
-            returnVars: ['mae'],
+            dataCaption: '台北市訂單完成率趨勢',
           },
-        ],
-      },
-      {
-        id: '6-2', name: '安全庫存策略', description: '計算最佳安全庫存', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '標準差', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `stdDev(data)` — 計算母體標準差。公式：先算平均值 μ，再算每個值與 μ 的差的平方的平均，最後開根號。結果四捨五入到小數第二位。',
-            defaultCode: `function stdDev(data) {\n  // 1. 算平均值\n  // 2. 算方差（每個值與平均的差的平方的平均）\n  // 3. 開根號\n  // 4. 四捨五入到小數第二位\n  \n}`,
-            example: {
-              title: '範例：計算方差',
-              code: 'const data = [4, 6];\nconst mean = (4 + 6) / 2; // 5\nconst variance = ((4-5)**2 + (6-5)**2) / 2;\nconsole.log(variance);',
-              output: '1',
-              explanation: '方差是每個值與平均的差的平方的平均；標準差就是方差開根號。',
-            },
-            tests: [
-              { description: '基本計算', fn: '(ctx) => ctx.stdDev([2, 4, 4, 4, 5, 5, 7, 9]) === 2' },
-              { description: '全部相同', fn: '(ctx) => ctx.stdDev([5, 5, 5, 5]) === 0' },
-              { description: '兩個值', fn: '(ctx) => ctx.stdDev([0, 10]) === 5' },
-            ],
-            returnVars: ['stdDev'],
-          },
-          {
-            id: 2, name: '安全庫存公式', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `safetyStock(zScore, demandStdDev, leadTimeDays)` — 公式：`z × σ × √LT`。結果四捨五入到整數。',
-            defaultCode: `function safetyStock(zScore, demandStdDev, leadTimeDays) {\n  // z × σ × √LT，四捨五入\n  \n}`,
-            example: {
-              title: '範例：簡單的乘法公式',
-              code: 'const z = 1.65;\nconst sigma = 10;\nconst lt = 4;\nconsole.log(Math.round(z * sigma * Math.sqrt(lt)));',
-              output: '33',
-              explanation: 'z x sigma x sqrt(LT) 就是安全庫存公式，最後四捨五入。',
-            },
-            tests: [
-              { description: '95% 服務水準', fn: '(ctx) => ctx.safetyStock(1.65, 20, 7) === 87' },
-              { description: '99% 服務水準', fn: '(ctx) => ctx.safetyStock(2.33, 20, 7) === 123' },
-              { description: '短前置時間', fn: '(ctx) => ctx.safetyStock(1.65, 10, 1) === 17' },
-            ],
-            returnVars: ['safetyStock'],
-          },
-        ],
-      },
-      {
-        id: '6-3', name: 'BOM 成本分析', description: '展開 BOM 算總成本', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '點積', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `sumProducts(quantities, prices)` — 計算兩個等長陣列的點積（dot product），也就是 quantities[0]*prices[0] + quantities[1]*prices[1] + ...。',
-            defaultCode: `function sumProducts(quantities, prices) {\n  // 計算點積\n  \n}`,
-            example: {
-              title: '範例：兩個陣列對應相乘再加總',
-              code: 'const a = [2, 3];\nconst b = [5, 10];\nconsole.log(a[0]*b[0] + a[1]*b[1]);',
-              output: '40',
-              explanation: '對應位置相乘後加總就是點積，可以用 reduce 簡化。',
-            },
-            tests: [
-              { description: '基本計算', fn: '(ctx) => ctx.sumProducts([3, 2], [10, 20]) === 70' },
-              { description: '空陣列', fn: '(ctx) => ctx.sumProducts([], []) === 0' },
-              { description: '單一元素', fn: '(ctx) => ctx.sumProducts([5], [10]) === 50' },
-            ],
-            returnVars: ['sumProducts'],
-          },
-          {
-            id: 2, name: '產品成本計算', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `productCost(components, priceMap)` — components 是 `[{material, quantity}]`，priceMap 是 `{material: unitPrice}`。回傳總成本。',
-            defaultCode: `function productCost(components, priceMap) {\n  // 加總每個零件的 quantity × unitPrice\n  \n}`,
-            example: {
-              title: '範例：查表計算總價',
-              code: 'const items = [{name:"A", qty:2}];\nconst prices = {A: 15};\nconsole.log(items[0].qty * prices[items[0].name]);',
-              output: '30',
-              explanation: '從價格表查出單價再乘以數量，對所有零件做一遍就是產品成本。',
-            },
-            tests: [
-              { description: '計算正確', fn: '(ctx) => ctx.productCost([{material:"A",quantity:3},{material:"B",quantity:2}],{A:10,B:20}) === 70' },
-              { description: '空零件', fn: '(ctx) => ctx.productCost([],{}) === 0' },
-              { description: '找不到價格當 0', fn: '(ctx) => ctx.productCost([{material:"X",quantity:5}],{}) === 0' },
-            ],
-            returnVars: ['productCost'],
-          },
-        ],
-      },
-      {
-        id: '6-4', name: '風險量化', description: '用機率算風險分數', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '風險分數', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `riskScore(probability, impactAmount)` — 回傳 probability × impactAmount。',
-            defaultCode: `function riskScore(probability, impactAmount) {\n  \n}`,
-            example: {
-              title: '範例：機率乘以影響',
-              code: 'const prob = 0.5;\nconst impact = 200;\nconsole.log(prob * impact);',
-              output: '100',
-              explanation: '風險分數 = 發生機率 x 影響金額，概念很直觀。',
-            },
-            tests: [
-              { description: '基本計算', fn: '(ctx) => ctx.riskScore(0.3, 500000) === 150000' },
-              { description: '零機率', fn: '(ctx) => ctx.riskScore(0, 1000000) === 0' },
-            ],
-            returnVars: ['riskScore'],
-          },
-          {
-            id: 2, name: '風險排序', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `rankRisks(items)` — items 是 `[{name, probability, impact}]`，回傳按風險分數（probability × impact）由高到低排序的陣列，每項加上 `riskScore` 欄位。',
-            defaultCode: `function rankRisks(items) {\n  // 加上 riskScore 並排序\n  \n}`,
-            example: {
-              title: '範例：依分數排序物件',
-              code: 'const arr = [{n:"X",s:30},{n:"Y",s:50}];\narr.sort((a,b) => b.s - a.s);\nconsole.log(arr[0].n);',
-              output: 'Y',
-              explanation: '用 sort 依照分數由高到低排序，風險排序就是先算分再排。',
-            },
-            tests: [
-              { description: '排序正確', fn: '(ctx) => { const r = ctx.rankRisks([{name:"A",probability:0.1,impact:1000},{name:"B",probability:0.5,impact:500}]); return r[0].name === "B" && r[0].riskScore === 250; }' },
-            ],
-            returnVars: ['rankRisks'],
-          },
-        ],
-      },
-      {
-        id: '6-5', name: '場景模擬', description: '如果原料漲價 20%...', xp: 50,
-        challenges: [
-          {
-            id: 1, name: '克隆並修改', type: 'coding', difficulty: 'easy',
-            instruction: '寫 `cloneAndModify(obj, key, newValue)` — 回傳一個新物件，跟 obj 一樣但把 key 對應的值改成 newValue。不修改原物件。',
-            defaultCode: `function cloneAndModify(obj, key, newValue) {\n  // 回傳新物件，修改 key 的值\n  \n}`,
-            example: {
-              title: '範例：用 spread 複製再修改',
-              code: 'const obj = { a: 1, b: 2 };\nconst copy = { ...obj, a: 99 };\nconsole.log(copy, obj.a);',
-              output: '{ a: 99, b: 2 } 1',
-              explanation: '展開運算子建立淺拷貝，修改不影響原物件。',
-            },
-            tests: [
-              { description: '修改值', fn: '(ctx) => { const r = ctx.cloneAndModify({a:1, b:2}, "a", 10); return r.a === 10 && r.b === 2; }' },
-              { description: '不修改原物件', fn: '(ctx) => { const orig = {x:1}; ctx.cloneAndModify(orig, "x", 2); return orig.x === 1; }' },
-              { description: '新增欄位', fn: '(ctx) => ctx.cloneAndModify({a:1}, "b", 2).b === 2' },
-            ],
-            returnVars: ['cloneAndModify'],
-          },
-          {
-            id: 2, name: 'What-If 分析', type: 'coding', difficulty: 'medium',
-            instruction: '寫 `whatIf(base, changes)` — base 是 `{dailyDemand, unitPrice, leadTimeDays}`，changes 是 `[{field, percentage}]`。回傳調整後的新物件（不修改原物件）。percentage 表示增減百分比，例如 20 表示 +20%。',
-            defaultCode: `function whatIf(base, changes) {\n  // 複製 base，套用 changes\n  \n}`,
-            example: {
-              title: '範例：按百分比調整數值',
-              code: 'let price = 100;\nconst pct = 20; // +20%\nprice = price * (1 + pct / 100);\nconsole.log(price);',
-              output: '120',
-              explanation: '百分比調整公式：原值 x (1 + percentage/100)，What-If 就是套用多個這樣的調整。',
-            },
-            tests: [
-              { description: '需求增加 50%', fn: '(ctx) => { const r = ctx.whatIf({dailyDemand:100,unitPrice:10,leadTimeDays:7},[{field:"dailyDemand",percentage:50}]); return r.dailyDemand === 150; }' },
-              { description: '價格降低 20%', fn: '(ctx) => { const r = ctx.whatIf({dailyDemand:100,unitPrice:10,leadTimeDays:7},[{field:"unitPrice",percentage:-20}]); return r.unitPrice === 8; }' },
-              { description: '不修改原物件', fn: '(ctx) => { const b = {dailyDemand:100,unitPrice:10,leadTimeDays:7}; ctx.whatIf(b,[{field:"dailyDemand",percentage:50}]); return b.dailyDemand === 100; }' },
-              { description: '多個調整', fn: '(ctx) => { const r = ctx.whatIf({dailyDemand:100,unitPrice:10,leadTimeDays:7},[{field:"dailyDemand",percentage:50},{field:"unitPrice",percentage:20}]); return r.dailyDemand === 150 && r.unitPrice === 12; }' },
-            ],
-            returnVars: ['whatIf'],
-          },
-        ],
-      },
-      {
-        id: '6-6', name: 'Boss: 完整商業簡報', description: '給數據分析做決策建議', xp: 200, isBoss: true,
-        challenges: [
-          {
-            id: 1, name: '商業決策報告', type: 'coding', difficulty: 'hard',
-            instruction: '寫 `generateReport(data)` — data 是：\n```\n{\n  products: [{name, stock, dailyDemand, unitCost, threshold, leadTimeDays}],\n  budget: 可用預算\n}\n```\n回傳決策報告物件：\n```\n{\n  summary: { totalProducts, totalValue, avgDaysToStockout },\n  critical: [缺貨品項名稱],\n  recommendations: [{product, action, reason, cost}],\n  totalCost: 建議方案的總成本\n}\n```\n\n建議規則：\n- stock=0 的品項 → action:"緊急補貨", reason:"已缺貨", cost = dailyDemand × leadTimeDays × unitCost\n- stock <= threshold 的品項 → action:"補貨", reason:"低於安全庫存", cost = threshold × unitCost\n- 如果 totalCost > budget，只保留成本最低的建議直到預算內',
-            defaultCode: `function generateReport(data) {\n  const { products, budget } = data;\n  \n  const summary = {\n    totalProducts: products.length,\n    totalValue: 0,\n    avgDaysToStockout: 0\n  };\n  \n  const critical = [];\n  let recommendations = [];\n  \n  // 分析每個產品\n  \n  // 如果超出預算，按成本排序只保留預算內的\n  \n  let totalCost = recommendations.reduce((s, r) => s + r.cost, 0);\n  \n  return { summary, critical, recommendations, totalCost };\n}`,
-            referenceCode: `// 在真實 DI 專案中，這類報告由 AI Agent 根據\n// calculator.js 和 bomCalculator.js 的結果自動生成\n// 你正在學習背後的決策邏輯`,
-            example: {
-              title: '範例：彙整陣列成摘要物件',
-              code: 'const items = [{v:10},{v:20},{v:30}];\nconst summary = {\n  count: items.length,\n  total: items.reduce((s,i) => s + i.v, 0)\n};\nconsole.log(summary);',
-              output: '{ count: 3, total: 60 }',
-              explanation: '遍歷資料算出各種統計，組合成報告物件，商業決策報告就是更完整的版本。',
-            },
-            tests: [
-              { description: '基本統計', fn: '(ctx) => { const r = ctx.generateReport({products:[{name:"A",stock:100,dailyDemand:10,unitCost:5,threshold:20,leadTimeDays:3},{name:"B",stock:0,dailyDemand:5,unitCost:10,threshold:10,leadTimeDays:5}],budget:10000}); return r.summary.totalProducts === 2; }' },
-              { description: '識別缺貨', fn: '(ctx) => { const r = ctx.generateReport({products:[{name:"X",stock:0,dailyDemand:10,unitCost:5,threshold:20,leadTimeDays:3}],budget:10000}); return r.critical.includes("X"); }' },
-              { description: '緊急補貨建議', fn: '(ctx) => { const r = ctx.generateReport({products:[{name:"X",stock:0,dailyDemand:10,unitCost:5,threshold:20,leadTimeDays:3}],budget:10000}); return r.recommendations[0].action === "緊急補貨" && r.recommendations[0].cost === 150; }' },
-              { description: '預算限制', fn: '(ctx) => { const r = ctx.generateReport({products:[{name:"A",stock:0,dailyDemand:100,unitCost:100,threshold:50,leadTimeDays:10},{name:"B",stock:5,dailyDemand:1,unitCost:10,threshold:10,leadTimeDays:3}],budget:200}); return r.totalCost <= 200; }' },
-            ],
-            returnVars: ['generateReport'],
-          },
-        ],
-      },
+          prompt: '請給出完整的分析和建議。這是你的 final boss — 用你學到的所有技能：\n\n1. 問題拆解：怎麼拆解「訂單完成率下降」？\n2. 數據分析：你會做哪些分析？用什麼方法？\n3. 根因假設：你覺得最可能的原因是什麼？\n4. 改善建議：你的改善方案是什麼？怎麼排優先級？\n5. 衡量成效：改善後怎麼知道有效？\n6. 實驗驗證：怎麼用實驗驗證你的建議？',
+          evaluationCriteria: [
+            '問題拆解有結構（按取消方 × 時間 × 地區拆解）',
+            '分析方法多元（trend、funnel、segmentation、cohort）',
+            '假設有數據邏輯支撐（不是憑空猜測）',
+            '改善建議可執行且有優先級',
+            '有驗證計畫（A/B test 或 before/after）',
+            '考慮多方利益相關者（用戶、餐廳、外送員）',
+          ],
+          sampleAnswer: '1. 問題拆解：\nCompletion Rate = 1 - Cancel Rate\nCancel Rate 按取消方拆：用戶取消 / 餐廳取消 / 外送員取消 / 系統取消\n按時間拆：用餐尖峰 vs 離峰\n按地區拆：台北各區\n\n2. 分析計畫：\n- Trend：3 個月逐月下降，看每週的趨勢。什麼時候開始？有沒有突然跳變的時間點？\n- Segmentation：按取消方看，哪一方的取消增加最多？按餐廳類型看，是不是某些餐廳特別嚴重？\n- Funnel：從下單到完成的每一步：下單 → 餐廳接單 → 開始製作 → 外送員接單 → 取餐 → 配送 → 完成。哪一步的 drop-off 增加？\n- Cohort：新加入的餐廳和外送員的取消率是否比老的高？\n\n3. 假設：\n- H1：訂單量增加（85萬→92萬）但外送員沒有同比增加，導致等待時間過長，用戶取消\n- H2：新加入的餐廳品質參差不齊，準備時間過長導致取消\n- H3：尖峰時段（午餐/晚餐）的供需失衡特別嚴重\n\n4. 改善建議（按優先級）：\n(a) 短期：尖峰時段動態調整外送員獎勵，增加供給\n(b) 中期：設定餐廳的最大接單量上限（避免超過能力接單然後取消）\n(c) 中期：優化配對演算法，減少外送員等待時間\n(d) 長期：建立餐廳品質評分系統，低分餐廳限制曝光\n\n5. 衡量：\n- Primary: Order Completion Rate（目標回到 95%）\n- Guardrail: 訂單量不下降、外送員留存率、餐廳滿意度\n\n6. 驗證：\n- 外送員獎勵：A/B test 不同獎勵金額在不同區域\n- 餐廳接單上限：pilot 在某幾區先試行，看 before/after 完成率',
+          hints: ['先拆解：誰取消的？什麼時候取消的？哪裡取消的？', '注意訂單量在增加但完成率在降 — 這暗示供需失衡'],
+          explanation: '這是完整的面試 Case Study。好的回答需要：(1) 結構化拆解 (2) 多方位分析 (3) 有邏輯的假設 (4) 可執行的建議 (5) 有驗證計畫。展示你能把前 7 個 World 學到的技能串在一起。',
+          frameworkTip: 'Case Answer Framework: Goal → Metrics → Flow → Segment → Recommend → Validate — 這就是你的面試武器。',
+        },
+      ] },
+    ],
+  },
+  // ── World 9: Digital Worker 產品理解 ──────────────────────────
+  {
+    id: 9,
+    name: 'Digital Worker 產品理解',
+    emoji: '🤖',
+    description: '理解 Decision Intelligence 的產品定位、核心工作流程與功能模組',
+    color: 'from-violet-500 to-purple-500',
+    quests: [
+      { id: '9-1', name: '產品定位：不是 Chatbot', description: '理解 Digital Worker Platform 與聊天機器人的本質差異', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: '平台 vs 聊天機器人', type: 'multiple-choice', difficulty: 'easy',
+          scenario: { title: 'Decision Intelligence 的核心定位', narrative: '你的主管問你：「Decision Intelligence 跟 ChatGPT 有什麼不同？」你需要用一句話精準回答。' },
+          question: 'Decision Intelligence 最準確的產品定位是什麼？',
+          options: ['A. 企業版 ChatGPT，用自然語言回答商業問題', 'B. Digital Worker Platform — 自主執行端到端決策工作流的平台', 'C. 資料視覺化工具，類似 Tableau 加上 AI', 'D. 自動寫程式的 AI Copilot'],
+          correctAnswer: 'B',
+          hints: ['想想 Chatbot 是「回答問題」，Digital Worker 是「執行工作流程」'],
+          explanation: 'Decision Intelligence 是 Digital Worker Platform，核心能力是自主執行完整的決策工作流（Upload → Validate → Forecast → Plan → Approve → Export），而非單純回答問題。',
+          frameworkTip: '產品定位三問：它幫誰？做什麼？跟現有方案差在哪？',
+        },
+        {
+          id: 2, name: 'Digital Worker 的產出', type: 'multiple-choice', difficulty: 'easy',
+          scenario: { title: '定義 Digital Worker 的產出', narrative: '一個 Digital Worker 完成一次完整的工作，最終交付的是什麼？' },
+          question: 'Digital Worker 完成一次工作流的最終產出是什麼？',
+          options: ['A. 一段自然語言摘要', 'B. 一份可執行的決策計畫（含預測與建議行動）', 'C. 一組 SQL 查詢結果', 'D. 一個機器學習模型'],
+          correctAnswer: 'B',
+          hints: ['Golden Path 的最後兩步是 Approve 和 Export'],
+          explanation: 'Digital Worker 的產出不是資訊摘要，而是端到端的決策計畫 — 包含資料驗證、預測結果與建議行動，可直接 export 執行。',
+          frameworkTip: '評估 AI 產品時，看它的產出是「資訊」還是「可執行的決策」。',
+        },
+      ] },
+      { id: '9-2', name: 'Golden Path 六步工作流', description: '掌握 Upload→Validate→Forecast→Plan→Approve→Export', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: 'Golden Path 步驟排序', type: 'multiple-choice', difficulty: 'easy',
+          scenario: { title: 'Golden Path 工作流程', narrative: 'Decision Intelligence 的核心工作流程稱為 Golden Path，共六個步驟。' },
+          question: 'Golden Path 的正確順序是什麼？',
+          options: ['A. Upload → Forecast → Validate → Plan → Export → Approve', 'B. Upload → Validate → Forecast → Plan → Approve → Export', 'C. Validate → Upload → Plan → Forecast → Approve → Export', 'D. Upload → Validate → Plan → Forecast → Export → Approve'],
+          correctAnswer: 'B',
+          hints: ['先上傳資料，驗證後才能預測；有計畫後需要人類審批才能輸出'],
+          explanation: '正確順序：Upload → Validate → Forecast → Plan → Approve → Export。驗證在預測之前（確保資料品質），審批在輸出之前（人類把關）。',
+          frameworkTip: 'Golden Path 的設計邏輯：資料品質 → AI 推論 → 人類決策 → 執行。',
+        },
+        {
+          id: 2, name: 'Validate 步驟的意義', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: '為什麼需要 Validate', narrative: '團隊討論是否可以跳過 Validate 直接 Forecast。' },
+          question: '跳過 Validate 步驟最大的風險是什麼？',
+          options: ['A. 預測速度會變慢', 'B. Garbage In, Garbage Out — 錯誤資料產生不可靠的預測', 'C. 使用者介面會報錯', 'D. Export 格式會不正確'],
+          correctAnswer: 'B',
+          hints: ['資料品質是所有分析的基礎'],
+          explanation: 'Validate 確保資料品質，防止 GIGO。沒有驗證的預測可能基於錯誤資料，導致決策失誤。',
+          frameworkTip: '資料工作流永遠是：收集 → 清洗/驗證 → 分析 → 行動。',
+        },
+      ] },
+      { id: '9-3', name: '功能模組總覽', description: '認識 27 個頁面與主要功能模組', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: '核心工作區路由', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: '功能模組地圖', narrative: 'Decision Intelligence 有 27 個頁面，你需要辨別核心工作區。' },
+          question: '以下哪個是 Decision Intelligence 的核心工作區路由？',
+          options: ['A. /dashboard — 資料儀表板', 'B. /workspace — 統一工作畫布', 'C. /chat — AI 對話介面', 'D. /analytics — 分析報表'],
+          correctAnswer: 'B',
+          hints: ['/workspace 是路由收斂的核心'],
+          explanation: '/workspace 是統一工作畫布（Unified Canvas），所有 Golden Path 步驟都在同一個介面中完成。',
+          frameworkTip: '好的 SaaS 產品追求「路由收斂」— 減少頁面切換，提高效率。',
+        },
+        {
+          id: 2, name: '前端服務規模', type: 'multiple-choice', difficulty: 'easy',
+          scenario: { title: '前端服務架構', narrative: '你在閱讀前端程式碼，發現 services 目錄下有大量子目錄。' },
+          question: 'Decision Intelligence 前端大約有多少個 service 目錄？',
+          options: ['A. 約 10 個', 'B. 約 20 個', 'C. 約 31 個', 'D. 約 50 個'],
+          correctAnswer: 'C',
+          hints: ['這是企業級平台，服務模組數量反映其複雜度'],
+          explanation: '前端有約 31 個 service 目錄，涵蓋 auth、workspace、forecast、plan 等模組。',
+          frameworkTip: '評估專案規模時，service 目錄數量是一個快速指標。',
+        },
+      ] },
+      { id: '9-4', name: 'Digital Worker 自主等級', description: '理解 A1-A4 自主等級與信任漸進機制', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: '自主等級定義', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: 'Autonomy Levels A1-A4', narrative: 'Decision Intelligence 定義了四個自主等級。' },
+          question: 'A1 等級的 Digital Worker 行為最接近哪種描述？',
+          options: ['A. 完全自主決策，不需人類參與', 'B. 人類執行所有工作，AI 僅提供建議', 'C. AI 執行工作但每步都需人類批准', 'D. AI 和人類各做一半工作'],
+          correctAnswer: 'B',
+          hints: ['A1 是最低自主等級'],
+          explanation: 'A1 是最低自主等級 — 人類執行，AI 輔助建議。隨信任建立逐步提升到 A4（AI 自主執行，人類監督）。',
+          frameworkTip: 'Trust Progression: 先讓人類掌控 → 逐步放手 → 最終 AI 自主。',
+        },
+        {
+          id: 2, name: '信任漸進機制', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: 'Trust Progression', narrative: '客戶問：「為什麼不能一開始就全自動？」' },
+          question: '信任漸進（Trust Progression）的核心理由是什麼？',
+          options: ['A. 技術限制 — AI 還不夠聰明', 'B. 法規要求 — 法律規定必須人工審核', 'C. 風險管理 — 在 AI 證明可靠前，人類保持控制權', 'D. 成本考量 — 全自動太貴'],
+          correctAnswer: 'C',
+          hints: ['你會第一天就把財務決策交給新員工嗎？'],
+          explanation: '信任漸進是風險管理策略：讓 AI 在低風險場景先證明自己，累積信任後再擴大自主權。',
+          frameworkTip: 'AI 產品設計原則：使用者必須能控制自動化程度，且能隨時回退。',
+        },
+      ] },
+      { id: '9-5', name: '使用者旅程與路由收斂', description: '理解 /workspace 統一畫布的設計理念', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: '路由收斂策略', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: '為什麼用統一畫布', narrative: '設計團隊決定將所有工作流收斂到 /workspace。' },
+          question: '路由收斂到 /workspace 的主要好處是什麼？',
+          options: ['A. 減少程式碼量', 'B. 消除步驟間的上下文切換，保持工作流連續性', 'C. 讓 URL 更短', 'D. 降低伺服器負載'],
+          correctAnswer: 'B',
+          hints: ['想想在 Excel 裡工作 vs 每個步驟要開一個新軟體'],
+          explanation: '統一畫布消除了步驟間的上下文切換，所有 Golden Path 步驟在同一個畫面完成。',
+          frameworkTip: 'UX 原則：減少上下文切換 = 減少認知負擔 = 提高效率。',
+        },
+        {
+          id: 2, name: '統一畫布的取捨', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: '架構取捨', narrative: '工程師在討論統一畫布的代價。' },
+          question: '統一畫布（Unified Canvas）最大的工程挑戰是什麼？',
+          options: ['A. 需要更多伺服器資源', 'B. 單一元件的狀態管理複雜度高', 'C. 無法支援手機裝置', 'D. SEO 表現差'],
+          correctAnswer: 'B',
+          hints: ['所有功能在同一頁面，狀態管理會變得很複雜'],
+          explanation: '統一畫布將多步驟流程集中在一個路由，導致狀態管理複雜度顯著增加。',
+          frameworkTip: '架構決策永遠有取捨。統一畫布用工程複雜度換取使用者體驗。',
+        },
+      ] },
+      { id: '9-6', name: '產品 Pitch（Boss）', description: '向非技術主管用 60 秒解釋 Decision Intelligence', xp: 200, isBoss: true, challenges: [
+        {
+          id: 1, name: '電梯簡報：Decision Intelligence', type: 'open-ended', difficulty: 'hard',
+          scenario: { title: '60 秒產品 Pitch', narrative: '你在電梯裡遇到公司 CEO：「Decision Intelligence 是什麼？為什麼我們需要它？」你有 60 秒。' },
+          prompt: '請寫一段 60 秒的電梯簡報，向非技術 CEO 解釋 Decision Intelligence。要求：避免技術術語，用商業價值說話。',
+          evaluationCriteria: ['清楚定位：Digital Worker Platform（不是 Chatbot）', '說明核心價值：端到端決策自動化', '提到 Golden Path 工作流概念（用白話）', '提到信任漸進 — 人類保持控制權', '用商業語言（ROI、效率、風險降低）'],
+          hints: ['CEO 關心：成本、效率、風險、競爭優勢', '用類比：「像雇用一個永遠不休息的分析師」'],
+          explanation: '好的 Pitch 結構：問題 → 解決方案 → 差異化 → 價值。',
+          frameworkTip: 'Elevator Pitch 框架：Pain → Solution → Differentiation → Value → Call to Action',
+        },
+      ] },
+    ],
+  },
+  // ── World 10: 系統架構拓撲 ──────────────────────────────────
+  {
+    id: 10,
+    name: '系統架構拓撲',
+    emoji: '🏗️',
+    description: '理解 Decision Intelligence 的四層架構與請求流向',
+    color: 'from-teal-500 to-cyan-600',
+    quests: [
+      { id: '10-1', name: '四層架構概覽', description: '認識 Frontend / Supabase / Edge Functions / ML API', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: '四層架構識別', type: 'multiple-choice', difficulty: 'easy',
+          scenario: { title: '架構分層', narrative: 'Decision Intelligence 採用四層架構，你需要正確辨識。' },
+          question: 'Decision Intelligence 的四層架構正確組合是？',
+          options: ['A. Frontend / Node.js / PostgreSQL / ML API', 'B. Frontend / Supabase / Edge Functions / ML API', 'C. React / Express / MongoDB / Python', 'D. Frontend / Firebase / Cloud Functions / ML API'],
+          correctAnswer: 'B',
+          hints: ['Supabase 提供 Auth + DB + Storage'],
+          explanation: '四層：(1) React 19 Frontend (2) Supabase (3) Edge Functions (4) FastAPI ML API。',
+          frameworkTip: '架構閱讀法：先畫出分層圖，再追蹤請求如何在層間流動。',
+        },
+        {
+          id: 2, name: 'ML API 層職責', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: '層級職責', narrative: '你需要知道每層負責什麼。' },
+          question: 'ML API 層的主要職責是什麼？',
+          options: ['A. 使用者認證與權限管理', 'B. 頁面渲染與使用者互動', 'C. 預測推論、求解器與非同步作業', 'D. 資料庫查詢與檔案儲存'],
+          correctAnswer: 'C',
+          hints: ['ML = Machine Learning，處理計算密集型工作'],
+          explanation: 'ML API 層負責：預測推論（Forecast）、求解器（Solver）、非同步作業管理。',
+          frameworkTip: '分層架構核心原則：每層只做一件事，做好一件事。',
+        },
+      ] },
+      { id: '10-2', name: 'Frontend 服務層', description: '理解 31 個 service 目錄的組織方式', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: '服務目錄組織', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: '前端服務架構', narrative: '你打開 src/services 目錄，看到 31 個子目錄。' },
+          question: '前端服務目錄最可能按什麼原則組織？',
+          options: ['A. 按技術類型（api/、cache/、state/）', 'B. 按業務領域（workspace/、forecast/、auth/）', 'C. 按團隊分工（team-a/、team-b/）', 'D. 按字母排序的通用名稱'],
+          correctAnswer: 'B',
+          hints: ['企業級應用通常按業務領域組織代碼'],
+          explanation: '前端服務按業務領域組織（Domain-driven），每個目錄對應一個業務能力。',
+          frameworkTip: '代碼組織原則：按業務領域分，而非按技術分。',
+        },
+        {
+          id: 2, name: '前端框架選型', type: 'multiple-choice', difficulty: 'easy',
+          scenario: { title: '技術選型', narrative: 'Decision Intelligence 的前端技術棧。' },
+          question: 'Decision Intelligence 使用哪個前端框架？',
+          options: ['A. React 16 + Class Components', 'B. React 18 + Next.js', 'C. React 19（SPA + Vite）', 'D. Vue 3 + Nuxt'],
+          correctAnswer: 'C',
+          hints: ['React 19 是最新主要版本'],
+          explanation: '使用 React 19 SPA，搭配 Vite 建構，不使用 SSR 框架。',
+          frameworkTip: '技術選型要考慮：團隊熟悉度、生態系成熟度、產品需求。',
+        },
+      ] },
+      { id: '10-3', name: 'Supabase 層', description: '認識 Auth、Postgres、Storage、Edge Functions', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: 'Supabase 服務範圍', type: 'multiple-choice', difficulty: 'easy',
+          scenario: { title: 'Supabase 作為 BaaS', narrative: 'Decision Intelligence 使用 Supabase 而非自建後端。' },
+          question: '以下哪項不是 Supabase 在此專案中提供的服務？',
+          options: ['A. 使用者認證（Auth）', 'B. PostgreSQL 資料庫', 'C. ML 模型訓練', 'D. 檔案儲存（Storage）'],
+          correctAnswer: 'C',
+          hints: ['ML 相關工作由另一層負責'],
+          explanation: 'Supabase 提供 Auth、Postgres、Storage 和 Edge Functions。ML 由獨立的 FastAPI 層處理。',
+          frameworkTip: 'BaaS 的價值：減少自建基礎設施負擔，專注業務邏輯。',
+        },
+        {
+          id: 2, name: 'Edge Functions 角色', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: 'Edge Functions 用途', narrative: 'Edge Functions 在架構中扮演什麼角色？' },
+          question: 'Edge Functions 最主要的用途是？',
+          options: ['A. 渲染 HTML 頁面', 'B. 伺服器端業務邏輯（webhook、第三方整合）', 'C. 儲存靜態檔案', 'D. 執行 ML 推論'],
+          correctAnswer: 'B',
+          hints: ['輕量級伺服器端函數，處理不適合放在前端的邏輯'],
+          explanation: 'Edge Functions 處理需要伺服器端執行的邏輯，如 webhook、第三方 API 整合、敏感操作。',
+          frameworkTip: '判斷邏輯放哪層：需要秘密金鑰？伺服器端。需要 GPU？ML API。都不需要？前端。',
+        },
+      ] },
+      { id: '10-4', name: 'ML API 入口', description: '理解 FastAPI、solver、registry 與非同步作業', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: 'ML API 技術棧', type: 'multiple-choice', difficulty: 'easy',
+          scenario: { title: 'ML API 技術選型', narrative: 'ML API 是獨立部署的 Python 服務。' },
+          question: 'ML API 使用的 Python Web 框架是？',
+          options: ['A. Django', 'B. Flask', 'C. FastAPI', 'D. Tornado'],
+          correctAnswer: 'C',
+          hints: ['以高效能和自動 API 文件著稱'],
+          explanation: 'ML API 使用 FastAPI — 高效能、自動 OpenAPI 文件、原生 async/await。',
+          frameworkTip: 'ML 服務常選 FastAPI：型別提示 → 自動驗證 → 自動文件。',
+        },
+        {
+          id: 2, name: '非同步作業模式', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: '為什麼需要非同步', narrative: 'ML 推論可能需要數分鐘，前端不能一直等待。' },
+          question: '長時間 ML 推論任務使用什麼模式？',
+          options: ['A. 同步 HTTP 請求，前端等待', 'B. WebSocket 雙向通訊', 'C. 非同步作業 — 提交後輪詢狀態', 'D. 批次處理，每小時跑一次'],
+          correctAnswer: 'C',
+          hints: ['AsyncRunService 管理狀態：pending → running → completed/failed'],
+          explanation: '長時間任務採用非同步模式：提交任務 → 拿到 job ID → 輪詢狀態。避免 HTTP timeout。',
+          frameworkTip: '非同步作業三要素：提交（POST）、查詢（GET /status）、取消（DELETE）。',
+        },
+      ] },
+      { id: '10-5', name: '請求流向追蹤', description: '追蹤三條主要請求路徑', xp: 50, isBoss: false, challenges: [
+        {
+          id: 1, name: '認證流向', type: 'multiple-choice', difficulty: 'medium',
+          scenario: { title: '使用者登入流程', narrative: '追蹤登入請求在四層架構中的流向。' },
+          question: '使用者登入的請求流向是？',
+          options: ['A. Frontend → ML API → Database', 'B. Frontend → Supabase Auth → JWT → Frontend', 'C. Frontend → Edge Function → Supabase Auth', 'D. Frontend → Backend Server → Session Store'],
+          correctAnswer: 'B',
+          hints: ['Supabase Auth 直接處理認證，不經過 Edge Function'],
+          explanation: '登入流向：Frontend → Supabase Auth → 驗證成功返回 JWT → Frontend 存儲 JWT。',
+          frameworkTip: '追蹤請求流向時，畫出每個箭頭，標註傳遞的資料。',
+        },
+        {
+          id: 2, name: '預測請求流向', type: 'multiple-choice', difficulty: 'hard',
+          scenario: { title: '完整預測流程', narrative: '使用者點擊「執行預測」，追蹤請求經過的所有層。' },
+          question: '預測請求的完整流向最可能是？',
+          options: ['A. Frontend → Supabase DB → ML API', 'B. Frontend → Edge Function → ML API → Supabase DB', 'C. Frontend → ML API（帶 JWT）→ 非同步處理 → 結果寫回 DB', 'D. Frontend → Supabase RPC → 觸發 ML API'],
+          correctAnswer: 'C',
+          hints: ['Frontend 直接呼叫 ML API，JWT 用於認證'],
+          explanation: 'Frontend 帶 JWT → ML API 驗證 → 建立非同步作業 → 完成後結果寫回 DB → Frontend 輪詢獲取。',
+          frameworkTip: '複雜請求追蹤法：畫序列圖，標註每步的觸發條件和回傳資料。',
+        },
+      ] },
+      { id: '10-6', name: '架構白板題（Boss）', description: '畫出四層架構並說明每層的具體檔案', xp: 200, isBoss: true, challenges: [
+        {
+          id: 1, name: '架構圖說明', type: 'open-ended', difficulty: 'hard',
+          scenario: { title: '面試白板題：系統架構', narrative: '面試官：「請畫出 Decision Intelligence 的系統架構，每一層至少舉兩個具體模組。」' },
+          prompt: '請描述 Decision Intelligence 的四層架構。每層需要：(1) 名稱與技術 (2) 主要職責 (3) 至少 2 個具體模組 (4) 層間通訊方式。',
+          evaluationCriteria: ['正確識別四層：Frontend / Supabase / Edge Functions / ML API', '每層職責描述準確', '每層至少舉出 2 個具體模組', '說明層間通訊方式（REST、JWT、SSE 等）', '提到請求流向的方向性'],
+          hints: ['從上到下：UI → BaaS → Serverless → ML', '想想每層有哪些目錄或檔案'],
+          explanation: '架構白板題考：(1) 全貌理解 (2) 具體細節 (3) 層間關係。',
+          frameworkTip: '架構圖三要素：Components + Connections + Contracts。',
+        },
+      ] },
     ],
   },
 ]
 
-// ── 工具函式 ──────────────────────────────────────────────
+// ── Helper Functions ─────────────────────────────────────────
 
 export function getWorld(worldId) {
-  return WORLDS.find(w => w.id === Number(worldId))
+  return WORLDS.find(w => w.id === Number(worldId)) || null
 }
 
 export function getQuest(questId) {
@@ -1805,5 +2943,5 @@ export function getQuest(questId) {
 export function getChallenge(questId, challengeId) {
   const quest = getQuest(questId)
   if (!quest) return null
-  return quest.challenges.find(c => c.id === Number(challengeId)) || null
+  return quest.challenges?.find(c => c.id === Number(challengeId)) || null
 }

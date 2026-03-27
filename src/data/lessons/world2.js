@@ -1,914 +1,699 @@
-export default `
-# World 2：純函式神殿
+const world2 = `
+# World 2：KPI 與商業指標
 
-> **目標：** 理解純函式、輸入驗證、邊界處理、函式組合、自動化測試，最後挑戰 BOM 遞迴展開
-> **對應專案：** \`src/domains/inventory/calculator.js\`、\`src/domains/forecast/bomCalculator.js\`
-> **學完後你能：** 寫出可測試、無副作用、能處理各種意外輸入的函式
-
----
-
-## 2-1：什麼是純函式（Pure Function）
-
-### 比喻：販賣機 vs 餐廳服務生
-
-想像一台販賣機：你投 10 元硬幣、按「可樂」按鈕，它**永遠**給你一罐可樂。不會因為心情不好給你果汁，也不會偷偷拿走旁邊的零錢。這就是純函式。
-
-相比之下，餐廳服務生可能會說「今天可樂賣完了，幫你換果汁」，還會把你的餐費記到帳單上。它的行為取決於外部狀態，還會改變外部狀態。這就是「不純」的函式。
-
-### 兩條黃金規則
-
-**規則 1：相同的輸入，永遠得到相同的輸出。**
-
-\`\`\`javascript
-// ✅ 純函式 — 同樣的輸入永遠回傳同樣的結果
-function add(a, b) {
-  return a + b;
-}
-add(3, 5); // 永遠是 8，今天是 8，明天也是 8
-
-// ❌ 不純 — 結果取決於外部狀態
-let bonus = 10;
-function addWithBonus(a, b) {
-  return a + b + bonus; // bonus 可能被別人改掉
-}
-addWithBonus(3, 5); // 現在是 18
-bonus = 50;
-addWithBonus(3, 5); // 變成 58 了！同樣的輸入，不同的結果
-\`\`\`
-
-**規則 2：不產生副作用（Side Effect）。**
-
-副作用 = 修改外面的東西、存資料庫、發 API 請求、印東西到螢幕上、改傳進來的參數...
-
-\`\`\`javascript
-// ✅ 純函式 — 只算東西，不做別的
-function classifyRisk(days) {
-  if (days < 7) return 'critical';
-  if (days < 14) return 'warning';
-  return 'safe';
-}
-
-// ❌ 不純 — 修改了外部變數
-let totalCritical = 0;
-function classifyAndCount(days) {
-  if (days < 7) {
-    totalCritical++; // 副作用！改了外面的東西
-    return 'critical';
-  }
-  return 'safe';
-}
-
-// ❌ 不純 — 修改了傳入的陣列
-function addItem(arr, item) {
-  arr.push(item); // 修改了原陣列！呼叫者的陣列被改了
-  return arr;
-}
-
-// ✅ 改成純函式 — 回傳新陣列
-function addItemPure(arr, item) {
-  return [...arr, item]; // 不改原陣列，回傳新的
-}
-\`\`\`
-
-### 常見的副作用陷阱
-
-| 副作用類型 | 例子 | 為什麼不純 |
-|-----------|------|-----------|
-| 修改外部變數 | \`counter++\` | 函式外面的值被改了 |
-| 修改輸入參數 | \`arr.push(x)\`、\`obj.name = 'new'\` | 呼叫者的資料被改了 |
-| 呼叫 API | \`fetch('/api/data')\` | 結果取決於網路和伺服器狀態 |
-| 讀取時間 | \`Date.now()\`、\`new Date()\` | 每次呼叫結果不同 |
-| 隨機數 | \`Math.random()\` | 每次呼叫結果不同 |
-| 印出東西 | \`console.log()\` | 嚴格說也是副作用 |
-| 讀寫檔案 | \`fs.readFile()\` | 外部資源 |
-
-### 為什麼純函式重要？
-
-| 好處 | 說明 |
-|------|------|
-| 好測試 | 不需要準備環境，直接 input → output |
-| 好理解 | 看函式簽名就知道它做什麼 |
-| 好組合 | 小純函式可以像積木一樣拼成大函式 |
-| 不怕並行 | 不修改共享狀態，不會有競爭條件 |
-| 好快取 | 同樣的輸入一定同樣的輸出，可以存結果 |
-
-### 真實專案：calculator.js
-
-打開 \`src/domains/inventory/calculator.js\`，開頭就寫了：
-
-> *所有函數都是 Pure Functions：給定相同的輸入就會產生相同的輸出，沒有任何副作用。*
-
-這整個檔案裡的函式：
-- 不存取資料庫
-- 不呼叫 API
-- 不修改全域變數
-- 不讀取 \`Date.now()\` 或 \`Math.random()\`
-
-所以它們非常容易測試和維護。你改了一個公式，跑一下測試就知道有沒有壞掉。
-
-\`\`\`javascript
-// calculator.js 裡的 classifyRisk 就是典型的純函式
-function classifyRisk(days) {
-  if (days < RISK_THRESHOLDS.CRITICAL_DAYS) return 'critical';
-  if (days < RISK_THRESHOLDS.WARNING_DAYS) return 'warning';
-  return 'ok';
-}
-// RISK_THRESHOLDS 是常數，不會被修改，所以仍然是純函式
-\`\`\`
-
-### 進階：常數引用算不算不純？
-
-你可能會問：\`classifyRisk\` 讀了外部的 \`RISK_THRESHOLDS\`，算不算不純？
-
-答案：如果那個外部值是**不會改變的常數**（用 \`const\` 宣告、永遠不被修改），那它在語意上等同於直接寫死在函式裡，仍然算純函式。真正的問題是**可變的**外部狀態。
-
-> **練習（對應挑戰 1）：** 判斷以下哪些是純函式：
-> 1. \`(a, b) => a + b\`
-> 2. \`(arr) => { arr.push(1); return arr; }\`
-> 3. \`(x) => Math.random() * x\`
-> 4. \`(items) => items.filter(i => i > 0)\`
->
-> 提示：\`push\` 會修改原陣列，\`filter\` 會回傳新陣列。
-
-> **練習（對應挑戰 2）：** 把一個依賴外部變數的函式改成純函式——讓外部依賴變成參數：
-> \`\`\`javascript
-> // 不純的版本
-> let taxRate = 0.05;
-> function calculateTax(price) {
->   return price * taxRate; // 依賴外部 taxRate
-> }
->
-> // 改成純函式：
-> function calculateTax(price, taxRate) {
->   return price * taxRate; // taxRate 從參數傳入
-> }
-> \`\`\`
+> **目標：** 學完後你能在面試中正確選擇指標、解讀數據、辨別指標之間的關係，並針對不同角色設計 dashboard
+> **適用角色：** Product Analyst、Business Analyst、Data Analyst、Product Manager
+> **預計學習時間：** 約 3-4 天
 
 ---
 
-## 2-2：輸入驗證（Input Validation）
+## 2-1：KPI 基礎概念
 
-### 為什麼要驗證？
+### 什麼是 KPI？
 
-JavaScript 是一個「寬容到危險」的語言。很多錯誤不會報錯，只會給你一個荒謬的結果：
+KPI（Key Performance Indicator）是「關鍵績效指標」——用一個數字來回答「我們做得好不好？」
 
-\`\`\`javascript
-function divide(a, b) {
-  return a / b;
-}
+但注意重點在 **Key**。一家公司有幾百個可以追蹤的指標，但 KPI 通常只有 3-5 個。如果什麼都是 KPI，那就什麼都不是 KPI。
 
-divide(10, 0);       // Infinity（不是你想要的）
-divide(10, "hello"); // NaN（壞掉的數字，但不報錯！）
-divide(null, 5);     // 0（null 被轉成 0）
-divide(undefined, 5); // NaN
-divide("10", "2");   // 5（字串居然可以除？JavaScript 幫你轉了）
+**KPI 的三個條件：**
+
+| 條件 | 說明 | 反例 |
+|------|------|------|
+| Measurable（可量化）| 能用數字表達 | 「使用者體驗好」不算，「NPS > 50」才算 |
+| Actionable（可行動）| 團隊能影響它 | 「GDP 成長率」PM 無法控制 |
+| Aligned（對齊目標）| 跟公司/團隊目標直接相關 | 追蹤 page views 但目標是轉換率 |
+
+---
+
+### Leading vs Lagging Metrics
+
+這是面試高頻考點。兩者的差別：
+
+**Lagging Metrics（滯後指標）**
+- 反映「已經發生的結果」
+- 確認你做得好不好
+- 例子：營收、客戶流失率、NPS、季度成交額
+
+**Leading Metrics（領先指標）**
+- 預測「未來可能的結果」
+- 讓你在問題發生前採取行動
+- 例子：Sales pipeline 數量、Activation rate、Feature adoption、Trial-to-paid conversion
+
+**用一個比喻理解：**
+
+> Lagging metric 像是「體重計上的數字」——你已經胖了才看到。
+> Leading metric 像是「每天攝取的卡路里」——你可以在體重增加之前就調整。
+
+**實戰案例：SaaS 公司**
+
+\`\`\`
+目標：降低客戶流失率（Churn Rate）← 這是 lagging metric
+
+Leading metrics 可以用：
+├── 產品使用頻率（usage frequency）
+│   → 用越少的客戶越可能流失
+├── Support ticket 數量
+│   → 問題多的客戶容易不滿
+├── Feature adoption rate
+│   → 只用基本功能的客戶替代性高
+└── 合約到期前 90 天的 NPS
+    → 低 NPS 預示不續約
 \`\`\`
 
-程式不報錯但結果是錯的——這是最危險的情況。想像你的庫存計算結果是 NaN，然後它被存到資料庫裡。等你發現問題的時候，可能已經過了三天。
+**面試技巧：** 當面試官問你「怎麼衡量 X 的成功？」，如果你能同時給出 leading 和 lagging metrics，會比只給一個指標更有深度。
 
-**原則：寧可報錯也不要給錯的結果。**
+---
 
-### typeof 和 isNaN 的搭配使用
+### Guardrail Metrics（護欄指標）
 
-\`\`\`javascript
-typeof 42         // 'number'
-typeof 'hello'    // 'string'
-typeof true       // 'boolean'
-typeof undefined  // 'undefined'
-typeof null       // 'object'（歷史遺留的 bug！）
-typeof NaN        // 'number'（NaN 的 typeof 居然是 number！）
-typeof []         // 'object'
-typeof {}         // 'object'
+Guardrail 是「不能惡化的底線」。你追求 primary metric 的改善，但不能以犧牲 guardrail 為代價。
 
-isNaN(NaN)        // true
-isNaN(42)         // false
-isNaN('hello')    // true（會先嘗試轉換成數字）
+**為什麼需要 guardrail？**
 
-Number.isNaN(NaN)     // true（更嚴格，推薦）
-Number.isNaN('hello') // false（不會自動轉換）
+因為幾乎任何指標都可以被「作弊」：
+- 想提升 DAU？→ 狂發 push notification → 使用者體驗變差
+- 想提升轉換率？→ 免運費 + 大折扣 → 吸引薅羊毛的人，AOV 暴跌
+- 想降低 cycle time？→ 跳過品質檢查 → 錯誤率飆升
+
+**Guardrail 的設定原則：**
+
+1. **跟 primary metric 可能衝突的指標**：速度 vs 品質、成長 vs 單位經濟
+2. **使用者體驗指標**：NPS、投訴率、退貨率
+3. **長期健康指標**：Retention、LTV、品牌信任度
+
+**面試中的標準回答格式：**
+
+> 「我會把 [X] 作為 primary metric，同時設 [Y] 和 [Z] 作為 guardrail，確保我們不會為了短期 [X] 的提升而傷害 [Y] 和 [Z]。」
+
+---
+
+## 2-2：Product & User Metrics
+
+### DAU / MAU / WAU 與 Stickiness Ratio
+
+**基本定義：**
+
+| 指標 | 全名 | 定義 |
+|------|------|------|
+| DAU | Daily Active Users | 一天內有活躍行為的不重複使用者數 |
+| WAU | Weekly Active Users | 一週內有活躍行為的不重複使用者數 |
+| MAU | Monthly Active Users | 一個月內有活躍行為的不重複使用者數 |
+
+**關鍵問題：「Active」怎麼定義？**
+
+這是面試中常被追問的細節。「Active」不一定是「打開 app」：
+
+- 社交 app：發送或接收訊息（不只是打開）
+- 電商：瀏覽商品或下單（不只是登入）
+- SaaS 工具：執行核心操作（如建立報表、編輯文件）
+
+**Stickiness Ratio = DAU / MAU**
+
+衡量「使用者有多常回來用」。
+
+\`\`\`
+DAU/MAU = 50%  → 平均每個月活躍用戶有一半的天數在用
+DAU/MAU = 10%  → 每月大約用 3 天
+DAU/MAU = 3%   → 每月大約用 1 天
 \`\`\`
 
-所以檢查一個值「是不是有效的數字」需要**兩個條件一起**：
+**不同品類的 benchmark 完全不同：**
 
-\`\`\`javascript
-// typeof !== 'number' → 排除字串、布林、null、undefined 等
-// isNaN(x) → 排除 NaN（NaN 的 typeof 是 'number' 但它不是有效的數字）
-function isValidNumber(x) {
-  return typeof x === 'number' && !isNaN(x);
-}
+| 品類 | 典型 DAU/MAU | 原因 |
+|------|-------------|------|
+| 社交/通訊 | 50-65% | 天天聊天是正常的 |
+| 工作工具（Slack、Notion）| 25-40% | 工作日才用 |
+| 電商 | 5-15% | 不會天天買東西 |
+| 理財/銀行 | 3-10% | 偶爾查餘額 |
+| 旅遊 | 1-5% | 出發前才密集使用 |
 
-isValidNumber(42);        // true
-isValidNumber(0);         // true
-isValidNumber(-3.14);     // true
-isValidNumber(NaN);       // false
-isValidNumber('42');      // false
-isValidNumber(undefined); // false
+**面試陷阱：** 面試官可能給你一個 DAU/MAU = 8% 的理財 app，然後問「這個指標好不好？」答案不是「不好」，而是「要看 category benchmark」。
+
+---
+
+### Retention 與 Cohort Analysis
+
+**Retention（留存率）** 回答的問題是：「新來的使用者，過一段時間後還有多少人在用？」
+
+**常見的 retention 指標：**
+
+- **Day 1 Retention**：第一天來的人，第二天還有多少回來？（通常 30-50% 算好）
+- **Day 7 Retention**：一週後還有多少人？（通常 15-25%）
+- **Day 30 Retention**：一個月後？（通常 5-15%）
+
+**Cohort Analysis（同期群分析）**
+
+Cohort 就是「同一時期加入的一群人」。為什麼要分 cohort？因為整體 retention 可能被混淆。
+
+\`\`\`
+例子：整體 Day 7 Retention 是 20%
+
+但按 cohort 拆：
+├── 1 月加入的 cohort：Day 7 = 25%
+├── 2 月加入的 cohort：Day 7 = 22%
+├── 3 月加入的 cohort：Day 7 = 18%
+└── 4 月加入的 cohort：Day 7 = 12%
+
+趨勢在惡化！如果只看整體 20%，你會以為很穩定。
 \`\`\`
 
-### 真實專案：calculator.js 的驗證策略
+**經典 Retention Curve 形狀：**
 
-\`\`\`javascript
-// calculator.js 這樣做驗證
-// 1. 檢查型別 + NaN
-if (typeof currentStock !== 'number' || isNaN(currentStock)) {
-  throw new Error('currentStock must be a valid number');
-}
+\`\`\`
+好的 retention curve：
+100% ──╲
+        ╲
+         ╲___________  ← 趨於平穩（找到了核心使用者）
+              ↑
+         inflection point
 
-// 2. 檢查業務邏輯範圍
-if (dailyDemand < 0) {
-  throw new Error('dailyDemand cannot be negative');
-}
+壞的 retention curve：
+100% ──╲
+        ╲
+         ╲
+          ╲
+           ╲________  → 0%  ← 所有人最終都離開了
 \`\`\`
 
-注意它用了 \`throw new Error(...)\`——直接丟出錯誤，程式中斷。這是因為型別錯誤是**程式設計錯誤**，不是使用者的錯，應該在開發階段就被發現。
+---
 
-### 驗證結果的兩種風格
+### Feature Adoption Metrics
 
-| 風格 | 做法 | 適合場景 |
+衡量一個新功能有沒有被成功採用，用 **Adoption Funnel**：
+
+\`\`\`
+Exposed（看到入口）
+  ↓ Discovery Rate
+Clicked（點擊進入）
+  ↓ Activation Rate
+Completed（完成首次使用）
+  ↓ Retention Rate
+Retained（持續回來使用）
+\`\`\`
+
+**分析重點：找最大的 drop-off**
+
+如果 Exposed → Clicked 很低：功能太隱蔽，使用者找不到
+如果 Clicked → Completed 很低：首次使用體驗有 friction，流程太複雜
+如果 Completed → Retained 很低：功能沒有持續價值，用一次就夠了
+
+**面試中常見的問法：**
+- 「你怎麼評估一個功能是否成功？」
+- 「這個功能上線兩週，你會看什麼數據？」
+
+標準答案就是畫出 adoption funnel，找 bottleneck。
+
+---
+
+### Correlation vs Causation（相關性 vs 因果關係）
+
+這是 PA/DA 面試最重要的概念之一。
+
+**經典陷阱：**
+
+> 「使用 Feature X 的用戶，retention 比沒使用的高 30%。」
+> → 結論：Feature X 提升了 retention？
+
+**不一定！** 有三種可能：
+
+1. **X 導致 Y**：Feature X 真的讓人留下來
+2. **Y 導致 X**：本來就會留下來的 power user 更願意嘗試新功能
+3. **Z 同時導致 X 和 Y**：例如某個行銷活動同時帶來了高品質用戶（留存高）和功能曝光（adoption 高）
+
+**怎麼驗證因果？**
+
+| 方法 | 說明 | 適用場景 |
 |------|------|---------|
-| throw Error | 丟出錯誤，程式中斷 | 程式設計錯誤（傳錯型別） |
-| 回傳錯誤物件 | \`{ error: '...', result: null }\` | 可預期的失敗（除以零、查無資料） |
-| 預設值 | \`safetyStock = 0\` | 可以合理猜測的參數 |
-| 靜默修正 | \`if (x < 0) x = 0\` | 不影響正確性的修正 |
+| A/B Test（隨機分配）| 隨機讓一部分人看到功能、一部分不看到 | 最可靠，但需要足夠流量 |
+| PSM（Propensity Score Matching）| 找特徵相似但行為不同的使用者比較 | 無法做 A/B test 時 |
+| Natural Experiment | 利用自然發生的隨機事件 | 事後分析 |
+| Diff-in-Diff | 比較實驗組和對照組在介入前後的差異 | 政策或功能的大規模上線 |
 
-在你的挑戰裡，\`safeDivide\` 就是用「回傳錯誤物件」的風格：
+**面試技巧：** 每次看到 observational data（非實驗數據）的「A 比 B 好」，第一反應要問「有沒有 selection bias？」
 
-\`\`\`javascript
-// 回傳物件而不是 throw，讓呼叫者可以優雅地處理錯誤
-function safeDivide(a, b) {
-  if (typeof a !== 'number' || isNaN(a) || typeof b !== 'number' || isNaN(b)) {
-    return { error: 'invalid input', result: null };
-  }
-  if (b === 0) {
-    return { error: 'division by zero', result: null };
-  }
-  return { error: null, result: a / b };
-}
+---
 
-// 使用時：
-const r = safeDivide(10, 0);
-if (r.error) {
-  console.log('出錯了：' + r.error);
-} else {
-  console.log('結果：' + r.result);
-}
+## 2-3：Business & Operations Metrics
+
+### Cycle Time（週期時間）
+
+從流程開始到完成所花的時間。
+
+**為什麼 cycle time 重要？**
+- 客戶等待時間 → 滿意度
+- 資金週轉速度 → 現金流
+- 發現問題到修復的速度 → 風險控制
+
+**分析方法：分解每一步**
+
+\`\`\`
+訂單處理流程 cycle time 分析：
+
+步驟              平均時間    目標    差距
+下單→付款確認      0.5 hr     1 hr    -
+付款→撿貨          4 hr       2 hr    +2 hr
+撿貨→品質檢查      1 hr       1 hr    -
+品質檢查→包裝      6 hr       1 hr    +5 hr  ← bottleneck！
+包裝→出貨          1.5 hr     2 hr    -
+
+總計               13 hr      7 hr    +6 hr
 \`\`\`
 
-### 常見錯誤
+**找到 bottleneck 後，下一步是問 why：**
+- 是人手不夠？（capacity issue）
+- 是排隊等待？（queue issue）
+- 是重工太多？（quality issue）
+- 是流程設計不合理？（process issue）
 
-\`\`\`javascript
-// ❌ 只檢查 typeof，漏掉 NaN
-if (typeof x !== 'number') throw new Error('not a number');
-// NaN 會通過這個檢查！
+---
 
-// ❌ 只檢查 isNaN，漏掉非數字型別
-if (isNaN(x)) throw new Error('not a number');
-// isNaN('hello') 是 true，但 isNaN(null) 是 false！
-// null 被自動轉成 0，所以 isNaN(null) === false
+### Throughput（吞吐量）與 Completion Rate（完成率）
 
-// ✅ 兩個條件都要
-if (typeof x !== 'number' || isNaN(x)) throw new Error('not a number');
+**Throughput** = 單位時間內完成的數量
+
+\`\`\`
+例：倉庫每天處理 500 筆訂單
+例：客服團隊每小時回覆 30 張 ticket
+例：工程團隊每個 sprint 完成 45 個 story points
 \`\`\`
 
-> **練習（對應挑戰 1）：** 寫 \`calculateDiscount(price, rate)\`，驗證 price 是正數、rate 在 0-1 之間。
+**Completion Rate** = 成功完成的比例
+
+\`\`\`
+例：訂單完成率 = 成功送達的訂單 / 總訂單 = 94%
+例：表單提交完成率 = 送出表單的人 / 開始填寫的人 = 68%
+\`\`\`
+
+**Throughput 和 Cycle Time 的關係（Little's Law）：**
+
+> **WIP = Throughput × Cycle Time**
 >
-> **練習（對應挑戰 2）：** 寫 \`safeDivide(a, b)\`，回傳 \`{ error, result }\` 物件而不是 throw。
+> WIP（Work in Progress）= 同時進行中的工作量
+
+如果 cycle time 變長但 throughput 不變，代表 WIP 在增加（積壓變多）。
 
 ---
 
-## 2-3：邊界情況（Edge Cases）
+### SLA（Service Level Agreement）與 Error Rate
 
-### 什麼是邊界情況？
-
-「不尋常但有可能發生」的輸入。正常情況只是冰山一角——水面下藏著各種奇怪的輸入。
-
-想像你寫了一個計算庫存天數的函式。正常情況下，庫存 500、日需求 50，答案是 10 天。但現實世界會丟給你各種驚喜：
+**SLA** 是你對客戶/內部的服務承諾。
 
 \`\`\`
-正常情況：
-  calculateDays(500, 50) → 10 天 ✅
-
-邊界情況：
-  calculateDays(0, 50)    → 0 天（庫存是零）
-  calculateDays(-10, 50)  → ？（負庫存？退貨太多？）
-  calculateDays(500, 0)   → ？（沒有需求？除以零！）
-  calculateDays(500, -5)  → ？（負需求？客戶在退貨？）
-  calculateDays(NaN, 50)  → ？（壞掉的輸入）
-  calculateDays(50, 50)   → 1 天（剛好用完，明天就斷貨）
-  calculateDays(Infinity, 50) → ？（無限庫存？系統錯誤？）
+SLA 範例（IT Support）：
+├── P1（系統故障）：1 小時內回應，4 小時內解決
+├── P2（功能異常）：4 小時內回應，24 小時內解決
+└── P3（一般問題）：24 小時內回應，72 小時內解決
 \`\`\`
 
-### 邊界情況清單（通用）
+**SLA 分析的關鍵思維：Priority × 達成率**
 
-| 類型 | 例子 | 你應該做什麼 |
-|------|------|-------------|
-| 零 | \`0\`, \`""\`, \`[]\` | 除以零？空陣列跑 reduce？ |
-| 負數 | \`-1\`, \`-0.5\` | 業務上有意義嗎？ |
-| 極大值 | \`Infinity\`, \`Number.MAX_SAFE_INTEGER\` | 會溢出嗎？ |
-| 空值 | \`null\`, \`undefined\` | 忘了傳參數？ |
-| 錯誤型別 | \`"abc"\`, \`true\`, \`{}\` | 型別檢查 |
-| 邊界值 | 剛好等於門檻 | \`<\` vs \`<=\`，差一個bug |
-| 特殊浮點數 | \`0.1 + 0.2 !== 0.3\` | 浮點數精度問題 |
+不是所有 SLA miss 都一樣嚴重：
+- P3 miss 10% → 45 張 ticket 晚了，影響有限
+- P1 miss 27% → 4 張系統故障超時未解決，可能全公司停擺
 
-### 真實專案：calculator.js 怎麼處理
+**Error Rate（錯誤率）**
 
-\`\`\`javascript
-// 負庫存 → 當作 0，已經沒貨了
-if (currentStock < 0) return { days: 0, status: 'critical' };
-
-// 庫存低於安全水位 → 也是 0
-if (currentStock < safetyStock) return { days: 0, status: 'critical' };
-
-// 零或負需求 → 永遠不會用完
-if (dailyDemand <= 0) return { days: Infinity, status: 'ok' };
 \`\`\`
+Error Rate = 有錯誤的交易 / 總交易
 
-注意它的**處理順序**很重要：先處理負庫存，再處理安全水位，最後處理零需求。如果順序反了，可能會漏掉某些情況。
-
-### clamp 函式：一個經典的邊界處理範例
-
-\`clamp\` 把一個值限制在 min 和 max 之間。看起來簡單，但有一個陷阱：
-
-\`\`\`javascript
-// 基本版
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-clamp(15, 0, 10);  // 10（超過上限，壓回來）
-clamp(-5, 0, 10);  // 0（低於下限，拉上來）
-clamp(5, 0, 10);   // 5（在範圍內，不動）
-
-// 但是如果 min > max 呢？
-clamp(5, 10, 0);   // ？這個行為是未定義的！
+常見 benchmark：
+├── 金融交易：< 0.01%（非常嚴格）
+├── 電商訂單：< 2%
+├── 外送訂單：< 3%
+└── 客服回覆：< 5%
 \`\`\`
-
-健壯的版本應該處理 \`min > max\` 的情況：
-
-\`\`\`javascript
-function clamp(value, min, max) {
-  if (min > max) {
-    // 方法 1：交換
-    [min, max] = [max, min];
-    // 方法 2：丟錯誤
-    // throw new Error('min must be <= max');
-  }
-  return Math.max(min, Math.min(max, value));
-}
-\`\`\`
-
-### safeDivide：完整的邊界處理
-
-挑戰裡你會遇到的 \`safeDivide\` 要處理：
-
-\`\`\`javascript
-function safeDivide(a, b) {
-  // 邊界 1：型別檢查（NaN、字串、布林...）
-  if (typeof a !== 'number' || isNaN(a)) return { error: 'invalid input', result: null };
-  if (typeof b !== 'number' || isNaN(b)) return { error: 'invalid input', result: null };
-
-  // 邊界 2：除以零
-  if (b === 0) return { error: 'division by zero', result: null };
-
-  // 正常路徑
-  return { error: null, result: a / b };
-}
-\`\`\`
-
-### 用「列表法」系統性地找邊界
-
-寫任何函式之前，先列出一張表：
-
-| 輸入 | 預期結果 | 為什麼 |
-|------|---------|--------|
-| \`(100, 10, 0)\` | \`{ days: 10 }\` | 正常情況 |
-| \`(-5, 10, 0)\` | \`{ days: 0 }\` | 負庫存當作零 |
-| \`(100, 0, 0)\` | \`{ days: Infinity }\` | 沒有需求 |
-| \`(NaN, 10, 0)\` | \`{ error: "invalid" }\` | 無效輸入 |
-| \`(50, 10, 100)\` | \`{ days: 0 }\` | 安全庫存比現有庫存多 |
-
-這張表後面就是你的測試案例。
-
-> **練習（對應挑戰）：** 寫 \`robustStockDays(stock, demand, safety = 0)\`，處理所有上面列的邊界情況。
 
 ---
 
-## 2-4：函式組合（Function Composition）
+### Cost Per Transaction（單筆交易成本）
 
-### 小函式 → 大函式
+每完成一筆交易要花多少成本。
 
-函式組合的核心思想：**每個函式只做一件事，然後像積木一樣拼起來。**
+\`\`\`
+Cost Per Transaction = 總營運成本 / 總交易數
 
-\`\`\`javascript
-// 三個小函式，各做一件事
-function calculateDays(stock, demand) {
-  return demand <= 0 ? Infinity : stock / demand;
-}
+例：
+客服中心月成本 $50,000，處理 10,000 張 ticket
+→ Cost per ticket = $5
 
-function classifyRisk(days) {
-  if (days < 7) return 'critical';
-  if (days < 14) return 'warning';
-  return 'safe';
-}
-
-function formatResult(days, risk) {
-  return { daysRemaining: Math.round(days), risk };
-}
-
-// 一個大函式把它們串起來
-function assessItem(item) {
-  const days = calculateDays(item.currentStock, item.dailyDemand);
-  const risk = classifyRisk(days);
-  return formatResult(days, risk);
-}
+如果導入 chatbot 後：
+月成本 $55,000（多了 chatbot 費用），但處理 18,000 張 ticket
+→ Cost per ticket = $3.06（下降 39%）
 \`\`\`
 
-好處：
-- 每個小函式都可以**單獨測試**（不需要準備整個庫存物件）
-- 改一個算法**不影響**其他部分（改風險門檻只動 classifyRisk）
-- 讀起來像自然語言：「算天數、分級風險、格式化結果」
-
-### 管線模式（Pipeline）
-
-管線就是一連串的轉換，前一步的輸出是下一步的輸入。在 JavaScript 裡，陣列方法天然就是管線：
-
-\`\`\`javascript
-// 把多個轉換串在一起
-const result = inventory
-  .filter(item => item.dailyDemand > 0)              // 1. 過濾掉零需求
-  .map(item => ({                                      // 2. 計算天數
-    ...item,
-    daysRemaining: item.currentStock / item.dailyDemand,
-  }))
-  .map(item => ({                                      // 3. 分類風險
-    ...item,
-    risk: item.daysRemaining < 7 ? 'critical'
-        : item.daysRemaining < 14 ? 'warning'
-        : 'safe',
-  }))
-  .filter(item => item.risk !== 'safe')               // 4. 只要有風險的
-  .sort((a, b) => a.daysRemaining - b.daysRemaining); // 5. 按天數排序
-\`\`\`
-
-每一步都是一個純函式轉換，結果流向下一步。
-
-### 自己寫一個 pipe 函式
-
-pipe 是函式組合的通用工具——它接收多個函式，回傳一個新函式，依序執行：
-
-\`\`\`javascript
-function pipe(...fns) {
-  return function(input) {
-    let result = input;
-    for (const fn of fns) {
-      result = fn(result);
-    }
-    return result;
-  };
-}
-
-// 使用
-const double = x => x * 2;
-const addTen = x => x + 10;
-const toString = x => '結果：' + x;
-
-const transform = pipe(double, addTen, toString);
-transform(5); // '結果：20'  (5 → 10 → 20 → '結果：20')
-\`\`\`
-
-### 真實專案：calculator.js 的組合模式
-
-\`\`\`javascript
-// calculateInventoryRisk 就是把三個小函式組合起來
-export function calculateInventoryRisk(position) {
-  const { currentStock, safetyStock, dailyDemand, leadTimeDays, demandVolatility } = position;
-
-  // 第一層：算天數
-  const stockout = calculateDaysToStockout(currentStock, dailyDemand, safetyStock);
-  // 第二層：算機率
-  const probability = calculateStockoutProbability(stockout.days, leadTimeDays, demandVolatility);
-  // 第三層：算緊迫度
-  const urgency = calculateUrgencyScore(stockout.days);
-
-  return { daysToStockout: stockout.days, probability, urgencyScore: urgency };
-}
-\`\`\`
-
-每一層都可以單獨測試，改一個不影響其他。
-
-### processInventory：你的挑戰預覽
-
-挑戰會要求你寫一個 \`processInventory(items)\` 管線，包含 filter → map → map → sort。用上面學到的技巧：
-
-\`\`\`javascript
-function processInventory(items) {
-  return items
-    .filter(item => item.dailyDemand > 0)        // 過濾
-    .map(item => ({                                // 計算天數
-      ...item,
-      daysRemaining: item.currentStock / item.dailyDemand,
-    }))
-    .map(item => ({                                // 加上風險分級
-      ...item,
-      risk: item.daysRemaining < 7 ? 'critical'
-          : item.daysRemaining < 14 ? 'warning'
-          : 'safe',
-    }))
-    .sort((a, b) => a.daysRemaining - b.daysRemaining);
-}
-\`\`\`
-
-> **練習（對應挑戰）：** 自己寫 \`processInventory\`，處理空陣列和零需求的情況。
+**Cost per transaction 是 Ops 團隊的核心 KPI 之一**，直接影響 unit economics 和可擴展性。
 
 ---
 
-## 2-5：自動化測試
+## 2-4：Success Metrics 怎麼定
 
-### 為什麼要寫測試？
+### 為一個專案/功能定 Success Metric
 
-你改了一個函式，怎麼確定沒有把別的東西弄壞？答案：跑測試。
+面試常見問法：「如果你是這個專案的 PM/PA，你怎麼定義成功？」
 
-手動測試的問題：
-1. **慢** — 每次改完都要手動跑一遍
-2. **容易漏** — 你只測了正常情況，忘了測邊界
-3. **不可靠** — 你覺得「看起來對了」但其實漏了一個小數點
+**三步驟框架：**
 
-自動化測試的好處：一秒鐘跑完 100 個測試，每一個邊界情況都不會漏。
+\`\`\`
+Step 1：回到目標
+  → 這個專案/功能要解決什麼問題？
 
-### 從零開始寫一個 assertEqual
+Step 2：找到最直接的衡量方式
+  → 「問題被解決」用什麼數字來表達？
 
-不需要框架，最簡單的測試就是比較「實際值」和「期望值」：
-
-\`\`\`javascript
-function assertEqual(actual, expected) {
-  // 用 JSON.stringify 比較，這樣可以比較物件和陣列
-  return JSON.stringify(actual) === JSON.stringify(expected);
-}
-
-// 測試你的函式
-assertEqual(1 + 1, 2);              // true
-assertEqual('hello', 'hello');       // true
-assertEqual({a: 1}, {a: 1});         // true（物件也能比！）
-assertEqual([1, 2], [1, 2]);         // true
-assertEqual({a: 1}, {a: 2});         // false
+Step 3：加上 guardrail
+  → 達成目標的同時，什麼不能惡化？
 \`\`\`
 
-**為什麼要用 JSON.stringify？**
+**實戰案例：Sales Dashboard 專案**
 
-\`\`\`javascript
-// JavaScript 的物件比較是比「記憶體位置」，不是比「內容」
-{a: 1} === {a: 1}  // false！兩個不同的物件
-[1, 2] === [1, 2]  // false！
-
-// JSON.stringify 把物件變成字串，就可以比內容了
-JSON.stringify({a: 1}) === JSON.stringify({a: 1})  // true
-// '{"a":1}' === '{"a":1}'
 \`\`\`
+目標：讓業務團隊自助查報表，不再需要每週找 data team
 
-**JSON.stringify 的限制（要知道的坑）：**
+Step 1：問題是「data team 被太多 ad-hoc 請求佔據時間」
+Step 2：Success metric = ad-hoc 報表請求數量下降
+Step 3：Guardrail = 業務團隊的報表品質不能下降（避免看錯數據）
 
-\`\`\`javascript
-// 順序不同 → 結果不同
-JSON.stringify({a: 1, b: 2}) // '{"a":1,"b":2}'
-JSON.stringify({b: 2, a: 1}) // '{"b":2,"a":1}'  ← 不一樣！
-
-// undefined 會被忽略
-JSON.stringify({a: undefined}) // '{}'
-
-// NaN 和 Infinity 會變成 null
-JSON.stringify(NaN)       // 'null'
-JSON.stringify(Infinity)  // 'null'
+不好的 success metric：
+├── DAU → 衡量「有人用」，不是「解決問題」
+├── 業績提升 → 太間接，受太多因素影響
+└── 滿意度問卷 → 主觀，不直接
 \`\`\`
-
-對於大多數測試情境，JSON.stringify 夠用了。知道這些限制，碰到的時候不會困惑就好。
-
-### 進階：createTestSuite
-
-把多個測試包成一個套件，一次跑完：
-
-\`\`\`javascript
-function createTestSuite(name) {
-  const tests = [];
-
-  return {
-    // 新增一個測試
-    addTest(testName, fn) {
-      tests.push({ name: testName, fn });
-    },
-    // 跑所有測試
-    run() {
-      let passed = 0;
-      let failed = 0;
-      const results = [];
-
-      for (const test of tests) {
-        try {
-          const result = test.fn();
-          if (result) {
-            passed++;
-            results.push({ name: test.name, status: 'pass' });
-          } else {
-            failed++;
-            results.push({ name: test.name, status: 'fail' });
-          }
-        } catch (e) {
-          failed++;
-          results.push({ name: test.name, status: 'error', error: e.message });
-        }
-      }
-
-      return { name, passed, failed, total: tests.length, results };
-    },
-  };
-}
-
-// 使用
-const suite = createTestSuite('classifyRisk 測試');
-suite.addTest('3天 = critical', () => assertEqual(classifyRisk(3), 'critical'));
-suite.addTest('10天 = warning', () => assertEqual(classifyRisk(10), 'warning'));
-suite.addTest('20天 = safe', () => assertEqual(classifyRisk(20), 'safe'));
-suite.addTest('0天 = critical', () => assertEqual(classifyRisk(0), 'critical'));
-suite.addTest('7天 = warning', () => assertEqual(classifyRisk(7), 'warning')); // 邊界！
-suite.addTest('14天 = safe', () => assertEqual(classifyRisk(14), 'safe'));     // 邊界！
-
-const report = suite.run();
-// { name: 'classifyRisk 測試', passed: 6, failed: 0, total: 6, results: [...] }
-\`\`\`
-
-### 測試案例怎麼想？五大類型
-
-| 類型 | 說明 | 例子 |
-|------|------|------|
-| 正常路徑 | 最常見的使用情況 | \`classifyRisk(3)\` → critical |
-| 邊界值 | 剛好在門檻上 | \`classifyRisk(7)\` → 7 是 critical 還是 warning？ |
-| 邊界情況 | 零、負數、空值 | \`classifyRisk(0)\`、\`classifyRisk(-1)\` |
-| 錯誤情況 | 應該報錯的輸入 | \`calculateDiscount(-10, 0.5)\` 應該 throw |
-| 組合情況 | 多個參數的特殊組合 | \`robustStockDays(50, 10, 100)\` 安全庫存 > 現有庫存 |
-
-### 真實專案：calculator.test.js
-
-\`\`\`javascript
-// 專案裡的測試格式（Jest 框架）
-describe('calculateDaysToStockout', () => {
-  it('正常情況', () => {
-    expect(calculateDaysToStockout(100, 10)).toEqual({
-      days: 10, status: 'warning'
-    });
-  });
-
-  it('零需求', () => {
-    expect(calculateDaysToStockout(100, 0)).toEqual({
-      days: Infinity, status: 'ok'
-    });
-  });
-
-  it('負庫存', () => {
-    expect(calculateDaysToStockout(-5, 10)).toEqual({
-      days: 0, status: 'critical'
-    });
-  });
-});
-\`\`\`
-
-你的挑戰裡會自己寫 \`assertEqual\`，它就是 \`expect(...).toEqual(...)\` 的簡化版。
-
-> **練習（對應挑戰）：** 實作 \`assertEqual(actual, expected)\`，用 JSON.stringify 比較，回傳 true/false。然後用它測試 \`add(a, b)\`。
 
 ---
 
-## 2-6（Boss）：BOM 遞迴展開
+### Primary Metric vs Proxy Metric
 
-### 什麼是 BOM？
-
-BOM = Bill of Materials = 物料清單。它描述「一個成品需要哪些零件，每個零件又需要哪些子零件」。
-
-\`\`\`
-腳踏車 (1台)
-├── 車架 (1個)
-│   ├── 鋼管 (3根)
-│   └── 焊接件 (6個)
-├── 前輪 (1個)
-│   ├── 輪圈 (1個)
-│   └── 輪胎 (1個)
-└── 後輪 (1個)
-    ├── 輪圈 (1個)
-    └── 輪胎 (1個)
-\`\`\`
-
-**BOM Explosion** = 把這棵樹攤平，算出每個零件總共需要多少。
-
-一台腳踏車需要：鋼管 3 根、焊接件 6 個、輪圈 2 個、輪胎 2 個。
-
-### 回顧遞迴三要素
-
-1. **終止條件（Base Case）** — 什麼時候停下來？沒有子件的時候。
-2. **縮小問題** — 每次遞迴都要往下一層。
-3. **安全機制** — 最大深度、循環偵測。
-
-先複習簡單的遞迴——階乘：
-
-\`\`\`javascript
-function factorial(n) {
-  if (n <= 1) return 1;        // 終止條件
-  return n * factorial(n - 1); // 遞迴：問題縮小
-}
-// factorial(5) → 5 * factorial(4) → 5 * 4 * factorial(3) → ... → 120
-\`\`\`
-
-BOM 展開也是遞迴：「腳踏車需要什麼？」→ 看子件 → 每個子件再問「它需要什麼？」→ 直到沒有子件。
-
-### 資料結構：bomTable
-
-\`\`\`javascript
-// bomTable 是一個陣列，每一行是「父件 → 子件」的關係
-const bomTable = [
-  { parent: 'bike',  child: 'frame', qtyPer: 1 },
-  { parent: 'bike',  child: 'wheel', qtyPer: 2 },
-  { parent: 'frame', child: 'tube',  qtyPer: 3 },
-  { parent: 'wheel', child: 'rim',   qtyPer: 1 },
-  { parent: 'wheel', child: 'tire',  qtyPer: 1 },
-];
-
-// 1 台 bike → 1 個 frame + 2 個 wheel
-// 1 個 frame → 3 根 tube
-// 1 個 wheel → 1 個 rim + 1 個 tire
-//
-// 展開 1 台 bike：
-//   tube: 1 * 1 * 3 = 3
-//   rim:  1 * 2 * 1 = 2
-//   tire: 1 * 2 * 1 = 2
-\`\`\`
-
-### 基本實作思路
-
-\`\`\`javascript
-function explodeBOM(item, qty, bomTable, depth = 0, visited = new Set()) {
-  const result = new Map();
-
-  // 1. 安全機制：最大深度
-  if (depth > 10) throw new Error('max depth');
-
-  // 2. 安全機制：循環偵測
-  if (visited.has(item)) throw new Error('circular');
-  visited.add(item);
-
-  // 3. 找子件
-  const children = bomTable.filter(row => row.parent === item);
-
-  // 4. 終止條件：沒有子件 → 這就是最底層的原料
-  if (children.length === 0) {
-    result.set(item, qty);
-    return result;
-  }
-
-  // 5. 遞迴展開每個子件
-  for (const child of children) {
-    const childQty = qty * child.qtyPer;
-    const sub = explodeBOM(
-      child.child,
-      childQty,
-      bomTable,
-      depth + 1,
-      new Set(visited)  // 重要：每個分支用自己的副本！
-    );
-
-    // 合併結果
-    for (const [material, amount] of sub) {
-      result.set(material, (result.get(material) || 0) + amount);
-    }
-  }
-
-  return result;
-}
-\`\`\`
-
-### 關鍵概念 1：為什麼 \`new Set(visited)\` 而不是直接用 \`visited\`？
-
-因為 BOM 是一棵**樹**，不是一條線。同一個零件可以出現在不同的分支裡。
+**Primary Metric** = 直接衡量目標是否達成
+**Proxy Metric** = 間接相關的替代指標
 
 \`\`\`
-腳踏車
-├── 前輪
-│   └── 輪圈 ← 這裡用到輪圈
-└── 後輪
-    └── 輪圈 ← 這裡也用到，不是循環！
+例子 1：
+目標：提升客戶忠誠度
+Primary：Retention Rate / Repeat Purchase Rate
+Proxy：NPS、CSAT
+
+例子 2：
+目標：提升產品使用者的工作效率
+Primary：完成核心任務的時間（task completion time）
+Proxy：DAU、session 時長
+
+例子 3：
+目標：降低客服成本
+Primary：Cost per ticket
+Proxy：Chatbot 解決率、First contact resolution rate
 \`\`\`
 
-如果共享同一個 \`visited\` Set，前輪展開時加了「輪圈」，後輪展開時就會誤判為循環。**每個分支要用自己的副本**，只追蹤「從根到目前節點」的路徑。
+**什麼時候用 proxy？**
+- Primary metric 太慢（如 LTV 要等 12 個月才能算）
+- Primary metric 不好量測（如「使用者信任度」）
+- Primary metric 受太多外部因素干擾
 
-真正的循環是：A 需要 B，B 需要 C，C 又需要 A。這時候路徑上 A 出現了兩次。
-
-### 關鍵概念 2：報廢率（Scrap Rate）
-
-在真實製造業裡，零件有報廢率。比如 5% 的螺絲在組裝時會壞掉，所以需求量要乘以 \`(1 + scrap_rate)\`：
-
-\`\`\`javascript
-// bomCalculator.js 的做法
-const needed = quantity * child.qty_per * (1 + (child.scrap_rate || 0));
-// 如果需要 100 個螺絲，報廢率 5%，實際要準備 105 個
-\`\`\`
-
-### 關鍵概念 3：Map 的使用
-
-用 \`Map\` 來合併結果：同一個零件可能出現在多個地方（前輪的輪圈 + 後輪的輪圈），需求量要累加。
-
-\`\`\`javascript
-// Map 基本操作
-const m = new Map();
-m.set('tube', 3);          // 設定
-m.get('tube');              // 3
-m.has('tube');              // true
-m.get('bolt') || 0;        // 0（不存在時用預設值）
-
-// 累加技巧
-m.set('tube', (m.get('tube') || 0) + 3); // tube 變成 6
-\`\`\`
-
-### 真實專案：bomCalculator.js 的完整版
-
-\`\`\`javascript
-const MAX_BOM_DEPTH = 50;
-
-function explodeBOM(parentMaterial, quantity, bomIndex, opts = {}) {
-  const visited = opts._visited || new Set();
-  const depth = opts._depth || 0;
-
-  // 安全機制 1：最大深度
-  if (depth > MAX_BOM_DEPTH) {
-    return { error: 'MAX_DEPTH_EXCEEDED', materials: [] };
-  }
-  // 安全機制 2：循環偵測
-  if (visited.has(parentMaterial)) {
-    return { error: 'CIRCULAR_REFERENCE', materials: [] };
-  }
-  visited.add(parentMaterial);
-
-  const children = bomIndex[parentMaterial] || [];
-  let results = [];
-  for (const child of children) {
-    const needed = quantity * child.qty_per * (1 + (child.scrap_rate || 0));
-    results.push({ material: child.child_material, quantity: needed, depth });
-
-    const sub = explodeBOM(child.child_material, needed, bomIndex, {
-      _visited: new Set(visited), // 每個分支用自己的 visited 副本
-      _depth: depth + 1,
-    });
-    if (sub.error) return sub;
-    results = results.concat(sub.materials);
-  }
-  return { error: null, materials: results };
-}
-\`\`\`
-
-注意專案版本和挑戰版本的差異：
-- 專案用 \`bomIndex\`（物件，key 是父件名稱），挑戰用 \`bomTable\`（陣列，用 filter 找子件）
-- 專案回傳 \`{ error, materials }\`，挑戰回傳 \`Map\`
-- 專案包含 scrap_rate，挑戰簡化版可能不含
-
-### 手動追蹤：explodeBOM('bike', 1, bomTable)
-
-\`\`\`
-第 1 層：item='bike', qty=1
-  子件：frame(x1), wheel(x2)
-
-  → explodeBOM('frame', 1)
-      子件：tube(x3)
-      → explodeBOM('tube', 3)
-          沒有子件 → 回傳 Map { tube: 3 }
-      ← 結果：Map { tube: 3 }
-
-  → explodeBOM('wheel', 2)
-      子件：rim(x1), tire(x1)
-      → explodeBOM('rim', 2)
-          沒有子件 → 回傳 Map { rim: 2 }
-      → explodeBOM('tire', 2)
-          沒有子件 → 回傳 Map { tire: 2 }
-      ← 結果：Map { rim: 2, tire: 2 }
-
-最終結果：Map { tube: 3, rim: 2, tire: 2 }
-\`\`\`
-
-### 常見錯誤
-
-| 錯誤 | 後果 | 修正 |
-|------|------|------|
-| 忘記 \`new Set(visited)\` | 不同分支的同名零件被誤判為循環 | 每個遞迴分支都複製 Set |
-| 忘記深度檢查 | 資料有循環時無限遞迴，瀏覽器當掉 | \`if (depth > MAX) throw\` |
-| 合併 Map 時覆蓋而不是累加 | 輪圈只算到 1 個而不是 2 個 | 用 \`(m.get(k) || 0) + amount\` |
-| 把中間件也計入結果 | frame 和 wheel 被算進去，但它們不是原料 | 只在沒有子件時才 \`result.set\` |
-
-> **Boss 挑戰：** 自己實作 \`explodeBOM(item, qty, bomTable)\`，回傳 Map，要能正確處理多層 BOM、循環偵測、深度限制。
+**面試技巧：** 如果你用 proxy metric，要能解釋「為什麼這個 proxy 跟 primary 有高相關性」。不要理所當然地假設。
 
 ---
 
-## 附錄：World 2 概念速查表
+### 指標衝突時怎麼辦？
 
-| 概念 | 核心重點 | 對應挑戰 |
-|------|---------|---------|
-| 純函式 | 同輸入同輸出 + 無副作用 | 2-1：判斷純函式、改成純函式 |
-| 輸入驗證 | \`typeof\` + \`isNaN\` 雙重檢查 | 2-2：validateInput、safeDivide |
-| 邊界情況 | 零、負、NaN、Infinity、型別錯誤 | 2-3：robustStockDays |
-| 函式組合 | 小函式串成管線 | 2-4：processInventory 管線 |
-| 自動化測試 | assertEqual + JSON.stringify | 2-5：assertEqual、createTestSuite |
-| BOM 遞迴 | 終止條件 + 縮小問題 + 安全機制 | 2-6：explodeBOM + 循環偵測 |
+當兩個指標互相矛盾，用 **Primary + Guardrail 框架**：
+
+\`\`\`
+情境：外送平台
+
+指標 A：訂單完成時間（越快越好）
+指標 B：訂單正確率（越高越好）
+
+為了搶快送餐 → 送錯餐
+為了確保正確 → 要更多時間
+
+解法：
+Primary = 訂單完成時間（優化方向）
+Guardrail = 訂單正確率 ≥ 98%（不能低於這個底線）
+\`\`\`
+
+**面試中的萬用回答：**
+
+> 「這兩個指標衝突的時候，我會選 [更難恢復的那個] 作為 guardrail，[更容易優化的那個] 作為 primary。因為一旦 [guardrail] 惡化，修復成本很高。」
+
+---
+
+## 2-5：不同角色看不同指標
+
+### 每個角色的「指標世界觀」
+
+不同角色因為負責不同的事，看重完全不同的指標。
+
+**CEO / CFO（管營收與策略）**
+
+\`\`\`
+核心指標：
+├── Revenue / MRR / ARR（我們賺多少？）
+├── Growth Rate（成長多快？）
+├── CAC / LTV / LTV:CAC ratio（單位經濟健不健康？）
+├── Gross Margin（毛利率多少？）
+└── Burn Rate / Runway（錢還能燒多久？）
+
+決策場景：
+「要不要進入新市場？」→ 看 TAM、CAC、LTV
+「要不要漲價？」→ 看 price elasticity、churn rate
+「要不要融資？」→ 看 burn rate、runway
+\`\`\`
+
+**Product Manager（管產品與使用者）**
+
+\`\`\`
+核心指標：
+├── DAU / MAU / Stickiness（使用者活躍嗎？）
+├── Retention（使用者留下來嗎？）
+├── Feature Adoption（新功能有人用嗎？）
+├── Activation Rate（新用戶有成功啟用嗎？）
+└── NPS / CSAT（使用者滿意嗎？）
+
+決策場景：
+「這個功能要不要做？」→ 看 user research + 預期對 retention 的影響
+「功能做完了，成功嗎？」→ 看 adoption funnel + retention impact
+\`\`\`
+
+**Customer Success Manager（管客戶關係與續約）**
+
+\`\`\`
+核心指標：
+├── Customer Health Score（哪個客戶有風險？）
+├── NPS / CSAT（客戶感受如何？）
+├── Churn Rate / Renewal Rate（客戶有在續約嗎？）
+├── Expansion Revenue（既有客戶有在加購嗎？）
+└── Time to Value（客戶多快開始得到價值？）
+
+決策場景：
+「這週要主動聯繫哪些客戶？」→ 看 health score 最低的
+「這個客戶會不會續約？」→ 看 usage trend + NPS + support tickets
+\`\`\`
+
+**Operations Manager（管營運效率）**
+
+\`\`\`
+核心指標：
+├── Cycle Time（流程要多久？）
+├── Throughput（每天處理多少？）
+├── SLA 達成率（有沒有達到服務承諾？）
+├── Error Rate（錯誤率多少？）
+└── Cost per Transaction（每筆交易成本？）
+
+決策場景：
+「要不要加人？」→ 看 throughput 是否能跟上需求成長
+「流程要不要改？」→ 看 cycle time 和 bottleneck 分析
+\`\`\`
+
+---
+
+### Dashboard 設計原則
+
+設計 dashboard 的核心問題不是「放什麼指標」，而是：
+
+\`\`\`
+1. Audience → 誰在看？
+2. Decision → 他需要做什麼決策？
+3. Metrics  → 他需要什麼資訊來做這個決策？
+\`\`\`
+
+**常見錯誤：**
+
+| 錯誤 | 為什麼不好 |
+|------|-----------|
+| 一個 dashboard 給所有人看 | 不同人需要不同層級的資訊，CEO 不需要看每個 feature 的 adoption |
+| 放太多指標（>10 個）| 資訊過載，反而什麼都看不出來 |
+| 只放 lagging metrics | 看到問題的時候已經太晚了 |
+| 沒有 benchmark / 目標線 | 一個數字沒有比較對象就沒有意義 |
+
+**好的 dashboard 結構：**
+
+\`\`\`
+├── 1-2 個 headline metrics（一眼看到整體狀況）
+├── 3-5 個 supporting metrics（解釋 headline 為什麼好/壞）
+├── 趨勢圖（看方向，不只看數字）
+├── 目標線（跟 target 比較）
+└── 可以 drill down（點進去看細節）
+\`\`\`
+
+---
+
+## 2-6（Boss）：綜合指標分析
+
+### Marketplace 健康度分析
+
+Marketplace 是面試高頻場景（Uber、Airbnb、Shopee、外送平台...）。
+
+**Marketplace 的三個面向：**
+
+\`\`\`
+Supply Side（供給端）     Demand Side（需求端）     Platform（平台自身）
+├── 供應商數量             ├── 買家數量              ├── GMV
+├── 供應商 NPS             ├── 買家活躍度            ├── Take Rate
+├── 新供應商加入率         ├── 訂單頻率              ├── 訂單完成率
+├── 供應商流失率           ├── 搜尋轉換率            ├── 平均配對時間
+└── 供應品質/評分          └── 客戶 NPS              └── 毛利率
+\`\`\`
+
+**三個面向要一起看！** 只看 GMV 可能被誤導：
+
+\`\`\`
+場景：GMV 季增 15%，CEO 覺得不太對
+
+深入分析：
+├── Supply：供應商 -12.5%，NPS -14pts，新加入 -60% → 惡化
+├── Demand：採購商 +12.5% → 還行
+├── Platform：Take rate 8% → 12%，完成率 94% → 88% → 惡化
+
+結論：GMV 成長是靠 AOV 暴漲（少數大單），但供應端在崩解。
+根因：Take rate 漲太多，供應商不滿 → 流失 → 長期不可持續。
+\`\`\`
+
+---
+
+### 如何診斷「Headline Metric 好看但底層不健康」
+
+這是 PA/BA 面試的經典題型。面試官給你一個「看起來很好」的數據，考你能不能看出背後的問題。
+
+**診斷步驟：**
+
+\`\`\`
+Step 1：拆解 headline metric
+  → Revenue = Users × Orders per User × AOV
+  → GMV = Buyers × Orders × AOV
+  → 哪個部分在驅動成長？是健康的驅動因子嗎？
+
+Step 2：看 composition（組成）
+  → 成長是來自所有客戶，還是集中在少數大客戶？
+  → 新客戶 vs 舊客戶的貢獻比例？
+  → 如果拿掉 Top 5 客戶，數字還好看嗎？
+
+Step 3：看 leading indicators
+  → 雖然 lagging metric 好看，leading metrics 有沒有惡化的跡象？
+  → pipeline、activation、retention 趨勢如何？
+
+Step 4：看 guardrail metrics
+  → 有沒有「為了好看的 headline 犧牲了什麼」？
+  → Unit economics、satisfaction、quality 有沒有變差？
+\`\`\`
+
+**常見的「好看但不健康」模式：**
+
+| 模式 | Headline 看起來好 | 底層問題 |
+|------|------------------|---------|
+| 大客戶集中 | Revenue +20% | 前 3 大客戶貢獻 70% 營收，一個流失就崩盤 |
+| 促銷驅動 | 訂單量 +50% | AOV 暴跌、退貨率暴增、回購率極低 |
+| 新客掩蓋流失 | MAU 持平 | 新客不斷進來，但舊客不斷流失（leaky bucket） |
+| 犧牲供給端 | GMV +15% | Take rate 暴漲、供應商流失、平台長期不可持續 |
+| 短期行為 | Activation rate +30% | 降低 activation 標準、品質下降，後續 retention 很差 |
+
+---
+
+## Cheat Sheet：常見指標速查表
+
+### Growth & Revenue Metrics
+
+| 指標 | 公式 / 定義 | 適用場景 |
+|------|------------|---------|
+| MRR / ARR | Monthly / Annual Recurring Revenue | SaaS |
+| Revenue Growth Rate | (本期 - 上期) / 上期 | 所有公司 |
+| GMV | Gross Merchandise Value（平台總交易額）| Marketplace |
+| Take Rate | 平台抽成 / GMV | Marketplace |
+| ARPU | Revenue / Active Users | 所有產品 |
+
+### User & Product Metrics
+
+| 指標 | 公式 / 定義 | 適用場景 |
+|------|------------|---------|
+| DAU / MAU | Daily / Monthly Active Users | 所有產品 |
+| Stickiness | DAU / MAU | 產品黏性 |
+| Retention Rate | Day N 回來的人 / Day 0 的人 | 所有產品 |
+| Activation Rate | 完成核心動作的新用戶 / 總新用戶 | Onboarding |
+| Feature Adoption | 使用功能的人 / 有機會看到功能的人 | 功能評估 |
+| NPS | Promoters% - Detractors%（-100 到 +100）| 滿意度 |
+| CSAT | 滿意回覆數 / 總回覆數 | 單次互動滿意度 |
+
+### Unit Economics
+
+| 指標 | 公式 / 定義 | 適用場景 |
+|------|------------|---------|
+| CAC | Customer Acquisition Cost（獲客成本）| 成長策略 |
+| LTV | Lifetime Value（客戶終身價值）| 客戶策略 |
+| LTV:CAC Ratio | LTV / CAC（>3 通常算健康）| 商業模式驗證 |
+| Payback Period | CAC / Monthly Revenue per Customer | 現金流規劃 |
+| Gross Margin | (Revenue - COGS) / Revenue | 定價策略 |
+
+### Retention & Churn
+
+| 指標 | 公式 / 定義 | 適用場景 |
+|------|------------|---------|
+| Churn Rate | 流失客戶 / 期初客戶 | SaaS、訂閱制 |
+| Revenue Churn | 流失的 MRR / 期初 MRR | SaaS |
+| Net Revenue Retention | (期初 MRR + Expansion - Churn) / 期初 MRR | SaaS（>100% 代表舊客在加購）|
+| Cohort Retention | 特定 cohort 在 Day N 的留存 | 趨勢分析 |
+
+### Operations Metrics
+
+| 指標 | 公式 / 定義 | 適用場景 |
+|------|------------|---------|
+| Cycle Time | 流程開始到完成的時間 | 效率分析 |
+| Throughput | 單位時間完成的數量 | 產能分析 |
+| SLA 達成率 | 達標的 ticket / 總 ticket | IT、客服 |
+| Error Rate | 有錯誤的交易 / 總交易 | 品質控制 |
+| Cost per Transaction | 總成本 / 總交易數 | 營運效率 |
+| First Contact Resolution | 第一次接觸就解決的比例 | 客服 |
+
+### Marketplace Metrics
+
+| 指標 | 公式 / 定義 | 適用場景 |
+|------|------------|---------|
+| Liquidity | 成功配對 / 總需求 | 供需匹配效率 |
+| Time to Match | 從發需求到成功配對的時間 | 使用者體驗 |
+| Supply/Demand Ratio | 供給量 / 需求量 | 供需平衡 |
+| Repeat Rate | 回來再次交易的比例（供給端 + 需求端分開看）| 平台黏性 |
+
+---
+
+## 面試常見問題與回答框架
+
+**Q：你怎麼為 X 定 success metric？**
+> 1. 確認目標是什麼
+> 2. 找直接衡量目標的 primary metric
+> 3. 加上 guardrail metrics
+> 4. 區分 leading vs lagging
+
+**Q：這個指標好不好？**
+> 1. 跟什麼比？（benchmark、historical、target）
+> 2. 什麼 context？（品類、市場、季節）
+> 3. 趨勢是什麼？（改善中 vs 惡化中）
+
+**Q：如果兩個指標衝突怎麼辦？**
+> 1. 選一個做 primary（優化方向）
+> 2. 另一個做 guardrail（底線不能破）
+> 3. 解釋為什麼這樣選（通常更難修復的做 guardrail）
+
+**Q：你會設計什麼 dashboard？**
+> 1. 先問「給誰看？」
+> 2. 再問「他要做什麼決策？」
+> 3. 最後才選指標
 `;
+
+export default world2;

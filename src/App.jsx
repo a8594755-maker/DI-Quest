@@ -3,10 +3,11 @@ import Layout from './components/Layout'
 import DIQuest from './pages/DIQuest'
 import QuestMap from './pages/QuestMap'
 import QuestDetail from './pages/QuestDetail'
-import CodeArena from './pages/CodeArena'
+import CaseStudy from './pages/CaseStudy'
 import ProgressDashboard from './pages/ProgressDashboard'
 import NPCChat from './pages/NPCChat'
 import LessonView from './pages/LessonView'
+import ReviewQueue from './pages/ReviewQueue'
 
 function App() {
   return (
@@ -16,10 +17,11 @@ function App() {
           <Route index element={<QuestMap />} />
           <Route path="map" element={<QuestMap />} />
           <Route path="quest/:worldId/:questId" element={<QuestDetail />} />
-          <Route path="arena/:worldId/:questId/:challengeId?" element={<CodeArena />} />
+          <Route path="case/:worldId/:questId/:challengeId?" element={<CaseStudy />} />
           <Route path="lesson/:worldId" element={<LessonView />} />
           <Route path="progress" element={<ProgressDashboard />} />
           <Route path="chat" element={<NPCChat />} />
+          <Route path="review" element={<ReviewQueue />} />
         </Route>
         <Route index element={<Navigate to="/di-quest" replace />} />
       </Route>

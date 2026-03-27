@@ -1,15 +1,21 @@
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Lightbulb, Send, ChevronLeft, ChevronRight, BookOpen, CheckCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { getQuest, getChallenge, getWorld } from '../data/questData'
 import { getQuestSectionTitle, getQuestSectionId } from '../data/lessons/index'
 import { useQuest } from '../contexts/QuestContext'
+import { startChallenge, endChallenge } from '../utils/analyticsTracker'
 import DataTable from '../components/DataTable'
+import SimpleChart from '../components/SimpleChart'
 import MultipleChoice from '../components/MultipleChoice'
+import OpenEndedAnswer from '../components/OpenEndedAnswer'
+import CodeChallenge from '../components/CodeChallenge'
 
 function CaseStudy() {
   const { worldId, questId, challengeId = '1' } = useParams()
+  const [searchParams] = useSearchParams()
+  const isReview = searchParams.get('review') === '1'
   const navigate = useNavigate()
   const { dispatch, challengeStatus } = useQuest()
 
@@ -24,14 +30,15 @@ function CaseStudy() {
   const [submitted, setSubmitted] = useState(false)
   const [answerCorrect, setAnswerCorrect] = useState(false)
 
-  // Reset state when challenge changes
+  // Reset state when challenge changes + start timing
   useEffect(() => {
     if (challenge) {
       const saved = challengeStatus[`${questId}-${challengeId}`]
       setHintLevel(0)
       setAttempts(0)
-      setSubmitted(!!saved?.completed)
-      setAnswerCorrect(!!saved?.completed)
+      setSubmitted(isReview ? false : !!saved?.completed)
+      setAnswerCorrect(isReview ? false : !!saved?.completed)
+      startChallenge(questId, challengeId)
     }
   }, [questId, challengeId])
 
@@ -39,41 +46,55 @@ function CaseStudy() {
     setHintLevel(prev => Math.min(prev + 1, challenge?.hints?.length || 3))
   }
 
+  const completeChallenge = (score) => {
+    // 記錄作答時間
+    const durationMs = endChallenge(questId, challengeId)
+    if (durationMs > 0) {
+      dispatch({
+        type: 'RECORD_CHALLENGE_TIMING',
+        payload: { questId, challengeId: Number(challengeId), durationMs },
+      })
+    }
+
+    dispatch({
+      type: 'COMPLETE_CHALLENGE',
+      payload: {
+        questId,
+        challengeId: Number(challengeId),
+        score,
+        usedHints: hintLevel,
+        attempts: attempts + 1,
+        baseXp: quest?.isBoss ? 200 : 50,
+        isReview,
+      },
+    })
+
+    setSubmitted(true)
+
+    // Check if all challenges complete -> complete quest
+    if (quest) {
+      const allDone = quest.challenges.every((c) => {
+        if (c.id === Number(challengeId)) return true
+        return challengeStatus[`${questId}-${c.id}`]?.completed
+      })
+      if (allDone) {
+        dispatch({
+          type: 'COMPLETE_QUEST',
+          payload: { questId, score: 100, bonusXp: quest.isBoss ? 100 : 50 },
+        })
+      }
+    }
+  }
+
   const handleAnswer = (isCorrect) => {
     setAttempts(prev => prev + 1)
     setAnswerCorrect(isCorrect)
+    if (isCorrect) completeChallenge(100)
+  }
 
-    if (isCorrect) {
-      const score = 100
-
-      dispatch({
-        type: 'COMPLETE_CHALLENGE',
-        payload: {
-          questId,
-          challengeId: Number(challengeId),
-          score,
-          usedHints: hintLevel,
-          attempts: attempts + 1,
-          baseXp: quest?.isBoss ? 200 : 50,
-        },
-      })
-
-      setSubmitted(true)
-
-      // Check if all challenges complete -> complete quest
-      if (quest) {
-        const allDone = quest.challenges.every((c) => {
-          if (c.id === Number(challengeId)) return true
-          return challengeStatus[`${questId}-${c.id}`]?.completed
-        })
-        if (allDone) {
-          dispatch({
-            type: 'COMPLETE_QUEST',
-            payload: { questId, score: 100, bonusXp: quest.isBoss ? 100 : 50 },
-          })
-        }
-      }
-    }
+  const handleOpenEndedSubmit = (score) => {
+    setAnswerCorrect(score >= 60)
+    completeChallenge(score)
   }
 
   // Challenge navigation
@@ -158,6 +179,11 @@ function CaseStudy() {
               <p className="text-slate-300 leading-relaxed whitespace-pre-line mb-4">
                 {challenge.scenario.narrative}
               </p>
+              {challenge.scenario.chartConfig && (
+                <div className="mb-4">
+                  <SimpleChart config={{ ...challenge.scenario.chartConfig, data: challenge.scenario.data }} />
+                </div>
+              )}
               {challenge.scenario.data && (
                 <DataTable
                   data={challenge.scenario.data}
@@ -195,9 +221,31 @@ function CaseStudy() {
                 onAnswer={handleAnswer}
                 disabled={submitted}
               />
+            ) : challenge.type === 'open-ended' ? (
+              <OpenEndedAnswer
+                prompt={challenge.prompt}
+                evaluationCriteria={challenge.evaluationCriteria}
+                sampleAnswer={challenge.sampleAnswer}
+                scenario={challenge.scenario}
+                onSubmit={handleOpenEndedSubmit}
+                disabled={submitted}
+              />
+            ) : challenge.type === 'code' ? (
+              <CodeChallenge
+                question={challenge.question}
+                starterCode={challenge.starterCode || ''}
+                sampleSchema={challenge.sampleSchema}
+                expectedQuery={challenge.expectedQuery}
+                onAnswer={(isCorrect, code) => {
+                  setAttempts(prev => prev + 1)
+                  setAnswerCorrect(isCorrect)
+                  if (isCorrect) completeChallenge(100)
+                }}
+                disabled={submitted}
+              />
             ) : (
               <div className="text-slate-400 text-center py-12">
-                開放式問答模式（Phase 2）
+                此題型開發中
               </div>
             )}
 
