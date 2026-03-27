@@ -8,8 +8,14 @@ import { businessAnalysisWorlds } from './worlds/businessAnalysis'
 import { sqlWorlds } from './worlds/sql'
 import { sqlWorldsEn } from './worlds/sql_en'
 import { pythonWorlds } from './worlds/python'
+import { pythonWorldsEn } from './worlds/python_en'
 import { diProductWorlds } from './worlds/diProduct'
 import { diProductWorldsEn } from './worlds/diProduct_en'
+import { businessAnalysisWorldsEn } from './worlds/businessAnalysis_en'
+import { businessAnalysisAdvancedWorlds } from './worlds/businessAnalysisAdvanced'
+import { businessAnalysisAdvancedWorldsEn } from './worlds/businessAnalysisAdvanced_en'
+import { businessAnalysisExtraWorlds } from './worlds/businessAnalysisExtra'
+import { businessAnalysisExtraWorldsEn } from './worlds/businessAnalysisExtra_en'
 
 function forLang(zh, en) {
   return i18n.language === 'en' ? en : zh
@@ -17,10 +23,12 @@ function forLang(zh, en) {
 
 export function getWorlds() {
   return [
-    ...businessAnalysisWorlds,
+    ...forLang(businessAnalysisWorlds, businessAnalysisWorldsEn),
     ...forLang(sqlWorlds, sqlWorldsEn),
-    ...pythonWorlds,
+    ...forLang(pythonWorlds, pythonWorldsEn),
     ...forLang(diProductWorlds, diProductWorldsEn),
+    ...forLang(businessAnalysisAdvancedWorlds, businessAnalysisAdvancedWorldsEn),
+    ...forLang(businessAnalysisExtraWorlds, businessAnalysisExtraWorldsEn),
   ].sort((a, b) => a.id - b.id)
 }
 

@@ -24,7 +24,14 @@ import world23 from './world23'
 import world24 from './world24'
 import world25 from './world25'
 import world26 from './world26'
+import world1_en from './world1_en'
+import world2_en from './world2_en'
+import world3_en from './world3_en'
 import world4_en from './world4_en'
+import world5_en from './world5_en'
+import world6_en from './world6_en'
+import world7_en from './world7_en'
+import world8_en from './world8_en'
 import world23_en from './world23_en'
 import world24_en from './world24_en'
 import world25_en from './world25_en'
@@ -35,9 +42,41 @@ import world11_en from './world11_en'
 import world12_en from './world12_en'
 import world13_en from './world13_en'
 import world14_en from './world14_en'
+import world27 from './world27'
+import world28 from './world28'
+import world29 from './world29'
+import world30 from './world30'
+import world31 from './world31'
+import world32 from './world32'
+import world33 from './world33'
+import world34 from './world34'
+import world35 from './world35'
+import world36 from './world36'
+import world37 from './world37'
+import world38 from './world38'
 import world39 from './world39'
 import world40 from './world40'
 import world41 from './world41'
+import world15_en from './world15_en'
+import world16_en from './world16_en'
+import world17_en from './world17_en'
+import world18_en from './world18_en'
+import world19_en from './world19_en'
+import world20_en from './world20_en'
+import world21_en from './world21_en'
+import world22_en from './world22_en'
+import world27_en from './world27_en'
+import world28_en from './world28_en'
+import world29_en from './world29_en'
+import world30_en from './world30_en'
+import world31_en from './world31_en'
+import world32_en from './world32_en'
+import world33_en from './world33_en'
+import world34_en from './world34_en'
+import world35_en from './world35_en'
+import world36_en from './world36_en'
+import world37_en from './world37_en'
+import world38_en from './world38_en'
 import world39_en from './world39_en'
 import world40_en from './world40_en'
 import world41_en from './world41_en'
@@ -69,6 +108,18 @@ const lessons = {
   24: world24,
   25: world25,
   26: world26,
+  27: world27,
+  28: world28,
+  29: world29,
+  30: world30,
+  31: world31,
+  32: world32,
+  33: world33,
+  34: world34,
+  35: world35,
+  36: world36,
+  37: world37,
+  38: world38,
   39: world39,
   40: world40,
   41: world41,
@@ -77,17 +128,44 @@ const lessons = {
 import i18n from '../../i18n'
 
 const lessonsEn = {
+  1: world1_en,
+  2: world2_en,
+  3: world3_en,
   4: world4_en,
+  5: world5_en,
+  6: world6_en,
+  7: world7_en,
+  8: world8_en,
   9: world9_en,
   10: world10_en,
   11: world11_en,
   12: world12_en,
   13: world13_en,
   14: world14_en,
+  15: world15_en,
+  16: world16_en,
+  17: world17_en,
+  18: world18_en,
+  19: world19_en,
+  20: world20_en,
+  21: world21_en,
+  22: world22_en,
   23: world23_en,
   24: world24_en,
   25: world25_en,
   26: world26_en,
+  27: world27_en,
+  28: world28_en,
+  29: world29_en,
+  30: world30_en,
+  31: world31_en,
+  32: world32_en,
+  33: world33_en,
+  34: world34_en,
+  35: world35_en,
+  36: world36_en,
+  37: world37_en,
+  38: world38_en,
   39: world39_en,
   40: world40_en,
   41: world41_en,
@@ -280,6 +358,80 @@ const QUEST_SECTION_MAP = {
   '26-4': '26-4：SQL 與 Python 整合',
   '26-5': '26-5：權限、資料隔離與 Query Performance',
   '26-6': '26-6（Boss）：系統設計 SQL Case',
+  // ── BA 進階學習區（World 27-32）──
+  '27-1': '27-1：需求蒐集技術',
+  '27-2': '27-2：需求訪談技巧',
+  '27-3': '27-3：需求文件撰寫',
+  '27-4': '27-4：User Story 與 Acceptance Criteria',
+  '27-5': '27-5：需求優先級排序',
+  '27-6': '27-6（Boss）：完整需求分析',
+  '28-1': '28-1：利害關係人識別',
+  '28-2': '28-2：利害關係人分析矩陣',
+  '28-3': '28-3：溝通策略制定',
+  '28-4': '28-4：衝突管理',
+  '28-5': '28-5：向上管理',
+  '28-6': '28-6（Boss）：利害關係人管理計畫',
+  '29-1': '29-1：BRD 商業需求文件',
+  '29-2': '29-2：FRD 功能需求文件',
+  '29-3': '29-3：Use Case 撰寫',
+  '29-4': '29-4：流程圖與 Wireframe',
+  '29-5': '29-5：文件版本與變更管理',
+  '29-6': '29-6（Boss）：完整需求包',
+  '30-1': '30-1：Excel 資料整理',
+  '30-2': '30-2：Pivot Table 與資料透視',
+  '30-3': '30-3：常用函數實戰',
+  '30-4': '30-4：資料驗證與清理',
+  '30-5': '30-5：圖表設計與資料呈現',
+  '30-6': '30-6（Boss）：Excel 分析報告',
+  '31-1': '31-1：Dashboard 設計原則',
+  '31-2': '31-2：KPI 選擇與呈現',
+  '31-3': '31-3：資料視覺化最佳實踐',
+  '31-4': '31-4：BI 工具比較',
+  '31-5': '31-5：Self-Service BI',
+  '31-6': '31-6（Boss）：Dashboard 設計專案',
+  '32-1': '32-1：系統需求分析',
+  '32-2': '32-2：資料流程圖 DFD',
+  '32-3': '32-3：ERD 實體關係圖',
+  '32-4': '32-4：API 規格定義',
+  '32-5': '32-5：系統整合分析',
+  '32-6': '32-6（Boss）：系統分析文件',
+  // ── BA 額外學習區（World 33-38）──
+  '33-1': '33-1：Agile 核心觀念',
+  '33-2': '33-2：User Story 進階',
+  '33-3': '33-3：Backlog 管理',
+  '33-4': '33-4：Sprint 協作',
+  '33-5': '33-5：Agile Metrics',
+  '33-6': '33-6（Boss）：Agile BA 完整案例',
+  '34-1': '34-1：流程建模基礎',
+  '34-2': '34-2：As-Is 流程分析',
+  '34-3': '34-3：流程瓶頸識別',
+  '34-4': '34-4：To-Be 流程設計',
+  '34-5': '34-5：自動化機會評估',
+  '34-6': '34-6（Boss）：端到端流程改善',
+  '35-1': '35-1：UAT 規劃',
+  '35-2': '35-2：Test Case 設計',
+  '35-3': '35-3：缺陷管理',
+  '35-4': '35-4：Exit Criteria 設計',
+  '35-5': '35-5：Regression 與回歸測試',
+  '35-6': '35-6（Boss）：UAT 完整案例',
+  '36-1': '36-1：SWOT 分析',
+  '36-2': '36-2：Porter Five Forces',
+  '36-3': '36-3：PESTLE 分析',
+  '36-4': '36-4：Business Model Canvas',
+  '36-5': '36-5：Cost-Benefit Analysis',
+  '36-6': '36-6（Boss）：策略分析綜合案例',
+  '37-1': '37-1：BA 職涯路徑',
+  '37-2': '37-2：BA 面試準備',
+  '37-3': '37-3：BA Portfolio 作品集',
+  '37-4': '37-4：持續學習策略',
+  '37-5': '37-5：BA 認證指南',
+  '37-6': '37-6（Boss）：BA 職涯規劃案例',
+  '38-1': '38-1：需求引導工作坊',
+  '38-2': '38-2：跨部門需求整合',
+  '38-3': '38-3：數據驅動決策',
+  '38-4': '38-4：變更管理',
+  '38-5': '38-5：專案後回顧',
+  '38-6': '38-6（Boss）：BA 終極挑戰',
 }
 
 // 回傳顯示用的章節標題
