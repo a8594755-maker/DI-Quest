@@ -106,3 +106,25 @@
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
+
+/* ── Native iOS App Adjustments ──────────────── */
+.native-app {
+  /* Respect iOS safe areas */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.native-app .native-nav {
+  /* Extra top padding already handled by env(safe-area-inset-top) in class */
+}
+/* Hide keyboard shortcut hints in native app */
+.native-app [data-shortcut-hint] {
+  display: none;
+}
+/* Disable text selection on nav elements in native context */
+.native-app nav {
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Prevent overscroll bounce showing white background */
+.native-app {
+  overscroll-behavior: none;
+}

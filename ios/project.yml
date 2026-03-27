@@ -1,0 +1,39 @@
+name: DIQuest
+options:
+  bundleIdPrefix: com.diquest
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""  # Set your Apple Developer Team ID here
+
+targets:
+  DIQuest:
+    type: application
+    platform: iOS
+    sources:
+      - path: DIQuest
+        excludes:
+          - "**/*.plist"
+    info:
+      path: DIQuest/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.diquest.app
+        INFOPLIST_FILE: DIQuest/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"  # iPhone + iPad
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+          OTHER_SWIFT_FLAGS: "-DDEBUG"
+        Release:
+          SWIFT_OPTIMIZATION_LEVEL: "-O"
+    entitlements:
+      path: DIQuest/DIQuest.entitlements

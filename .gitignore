@@ -31,3 +31,13 @@ supabase/.branches
 
 # Local Netlify folder
 .netlify
+
+# iOS / Xcode
+ios/*.xcodeproj
+ios/*.xcworkspace
+ios/build/
+ios/DerivedData/
+ios/Pods/
+ios/.build/
+*.xcuserdata
+*.xcscmblueprint

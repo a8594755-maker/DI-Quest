@@ -4,6 +4,7 @@ import { Map, BarChart3, MessageCircle, Briefcase, RotateCcw, Search, Users, Log
 import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { useAuth } from '../contexts/AuthContext'
+import { isNativeApp } from '../utils/nativeApp'
 import SearchModal from './SearchModal'
 import ChatPanel from './ChatPanel'
 import LanguageSwitcher from './LanguageSwitcher'
@@ -16,6 +17,7 @@ function Layout() {
   const { t } = useTranslation(['common', 'auth', 'social'])
   const { levelInfo, getDueReviewCount, streakDays, checkedInToday, cloudSynced } = useQuest()
   const { isAuthenticated, isGuest, profile, signOut, needsProfileSetup } = useAuth()
+  const inNativeApp = isNativeApp()
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
@@ -109,9 +111,9 @@ function Layout() {
   const isContentPage = location.pathname.includes('/case') || location.pathname.includes('/lesson') || location.pathname.includes('/quest/')
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className={`h-screen flex flex-col overflow-hidden ${inNativeApp ? 'native-app' : ''}`}>
       {/* 導航欄 */}
-      <nav className="bg-brand-dark border-b border-slate-700 px-3 sm:px-6 py-3 sm:py-4 pt-[max(0.75rem,env(safe-area-inset-top))]" role="navigation" aria-label={t('nav.mainNav', 'Main navigation')}>
+      <nav className={`bg-brand-dark border-b border-slate-700 px-3 sm:px-6 py-3 sm:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] ${inNativeApp ? 'native-nav' : ''}`} role="navigation" aria-label={t('nav.mainNav', 'Main navigation')}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <NavLink to="/di-quest" className="flex items-center gap-2 sm:gap-3" aria-label="DI Quest Home">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center">
