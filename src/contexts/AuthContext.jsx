@@ -111,13 +111,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let initialSessionHandled = false
 
-    // Safety timeout: if loading takes more than 8 seconds, force it to stop
+    // Safety timeout: if loading takes more than 3 seconds, force it to stop
     const loadingTimeout = setTimeout(() => {
       setLoading(prev => {
         if (prev) console.warn('Auth loading timeout — forcing load complete')
         return false
       })
-    }, 8000)
+    }, 3000)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
