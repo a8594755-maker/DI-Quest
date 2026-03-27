@@ -1,0 +1,22 @@
+{
+  "branchSelect": {
+    "title": "DI Quest",
+    "subtitle": "選擇一條學習路線開始你的旅程",
+    "worldCount": "{{count}} 個世界"
+  },
+  "questMap": {
+    "backToBranch": "返回路線選擇",
+    "caseStudyMap": "Case Study 地圖",
+    "subtitle": "選擇一個主題開始你的面試準備之旅"
+  },
+  "questDetail": {
+    "notFound": "找不到這個關卡",
+    "readMaterial": "先讀教材",
+    "readMaterialDesc": "在開始練習之前，先閱讀 {{worldName}} 的學習內容",
+    "caseStudyQuestions": "Case Study 題目",
+    "questInDev": "這個關卡的題目還在開發中",
+    "questInDevHint": "你可以先閱讀教材學習相關概念",
+    "externalPractice": "推薦外部練習",
+    "externalPracticeHint": "點擊連結前往外部平台練習，搭配本章題目效果更好"
+  }
+}

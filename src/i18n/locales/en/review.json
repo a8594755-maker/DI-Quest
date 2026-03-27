@@ -1,0 +1,10 @@
+{
+  "title": "Review Queue",
+  "subtitle": "Based on your performance, the system automatically schedules questions for review.",
+  "empty": "No questions due for review!",
+  "emptyHint": "Keep completing new challenges, and the system will automatically schedule reviews for you.",
+  "totalDue": "<1>{{count}}</1> questions due for review",
+  "questionCount": "{{count}} questions",
+  "lastScore": "Last score: {{score}}",
+  "overdue": "Overdue by {{days}} days"
+}

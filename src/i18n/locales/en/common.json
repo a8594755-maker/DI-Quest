@@ -1,0 +1,62 @@
+{
+  "nav": {
+    "subtitle": "Case Study Interview Prep",
+    "search": "Search",
+    "searchPlaceholder": "Search worlds, quests, challenges...",
+    "searchHint": "Type keywords to search worlds, quests, or challenges",
+    "noResults": "No results found",
+    "close": "Close",
+    "openSearch": "Open search",
+    "devMode": "Dev Mode: Unlock all quests",
+    "devModeOn": "Dev Mode: All quests unlocked"
+  },
+  "float": {
+    "questMap": "Quest Map",
+    "progressDashboard": "Progress Dashboard",
+    "reviewQueue": "Review Queue",
+    "askXiaoDi": "Ask Xiao Di"
+  },
+  "difficulty": {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
+  },
+  "status": {
+    "completed": "Completed",
+    "inDev": "In Development",
+    "comingSoon": "Coming Soon"
+  },
+  "action": {
+    "backToMap": "Back to Map",
+    "startChallenge": "Start Challenge",
+    "readLesson": "Read Lesson",
+    "readFirst": "Read first",
+    "startReading": "Start Reading"
+  },
+  "lesson": {
+    "toc": "Contents",
+    "lessonSuffix": "Lesson",
+    "hideToc": "Hide Contents",
+    "showToc": "Show Contents",
+    "notFound": "Lesson not found for this world",
+    "scrollTop": "Back to top"
+  },
+  "branch": {
+    "business-analysis": {
+      "name": "Business Analysis Track",
+      "description": "From problem decomposition to complete Case Study interview prep"
+    },
+    "sql": {
+      "name": "SQL Track",
+      "description": "SQL query thinking and hands-on practice"
+    },
+    "python": {
+      "name": "Python Track",
+      "description": "Python basics, Pandas data processing, interview questions"
+    },
+    "di-product": {
+      "name": "DI Product Knowledge Track",
+      "description": "Decision Intelligence product architecture, deployment, quality & boundaries"
+    }
+  }
+}

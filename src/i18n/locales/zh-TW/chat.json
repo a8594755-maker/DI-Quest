@@ -1,0 +1,50 @@
+{
+  "panel": {
+    "xiaoDi": "小迪",
+    "history": "歷史對話",
+    "noHistory": "還沒有歷史對話",
+    "newChat": "新對話",
+    "delete": "刪除",
+    "close": "關閉",
+    "thinking": "思考中",
+    "askPlaceholder": "問小迪...",
+    "askSelectedPlaceholder": "想問什麼？",
+    "messageCount": "{{count}} 則訊息",
+    "aiError": "抱歉，AI 服務暫時無法連接。你可以問我特定概念（如：什麼是 funnel？什麼是 cohort？）",
+    "quickChallenge1": "這題在考什麼？",
+    "quickChallenge2": "給我一個提示",
+    "quickChallenge3": "解題思路",
+    "quickLesson1": "這章重點是什麼？",
+    "quickLesson2": "面試會怎麼考？",
+    "quickFunnel": "什麼是 funnel？",
+    "quickProgress": "我的進度"
+  },
+  "npc": {
+    "welcome": "嗨！我是小迪 🤖，你的面試練習教練。\n\n我可以：\n• 解釋 Case Study 概念（KPI、Funnel、Cohort、A/B Test...）\n• 查看你的練習進度\n• 給你面試準備建議\n\n有什麼想問的？",
+    "send": "發送",
+    "inputPlaceholder": "問小迪任何問題⋯（例如：什麼是 funnel analysis？）",
+    "npcDesc": "小迪可以解釋分析概念、查看進度、給面試準備建議",
+    "thinking": "小迪正在思考",
+    "quickExplain": "解釋概念",
+    "quickStuck": "我卡關了",
+    "quickAdvice": "面試建議",
+    "quickProgress": "查看進度",
+    "goToMap": "前往關卡地圖",
+    "aiError": "抱歉，我暫時無法連接 AI 服務 😅\n\n你可以試試問我特定的分析概念（如：什麼是 funnel？什麼是 cohort？），或查看你的練習進度！"
+  },
+  "time": {
+    "justNow": "剛剛",
+    "minutesAgo": "{{count}} 分鐘前",
+    "hoursAgo": "{{count}} 小時前",
+    "daysAgo": "{{count}} 天前"
+  },
+  "pageContext": {
+    "reading": "正在閱讀 {{name}} 的講義",
+    "doing": "正在做 {{worldEmoji}} {{questName}} — {{challengeName}}",
+    "viewing": "正在查看 {{questName}}",
+    "map": "正在關卡地圖",
+    "progress": "正在進度儀表板",
+    "review": "正在複習佇列",
+    "learning": "在學習"
+  }
+}

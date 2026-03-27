@@ -1,0 +1,62 @@
+{
+  "nav": {
+    "subtitle": "Case Study 面試練習",
+    "search": "搜尋",
+    "searchPlaceholder": "搜尋 worlds、quests、challenges...",
+    "searchHint": "輸入關鍵字搜尋 worlds、quests 或 challenges",
+    "noResults": "找不到相關結果",
+    "close": "關閉",
+    "openSearch": "開啟搜尋",
+    "devMode": "開發者模式：解鎖全部關卡",
+    "devModeOn": "開發者模式：全部關卡已解鎖"
+  },
+  "float": {
+    "questMap": "關卡地圖",
+    "progressDashboard": "進度儀表板",
+    "reviewQueue": "複習佇列",
+    "askXiaoDi": "問小迪"
+  },
+  "difficulty": {
+    "easy": "簡單",
+    "medium": "中等",
+    "hard": "困難"
+  },
+  "status": {
+    "completed": "已完成",
+    "inDev": "開發中",
+    "comingSoon": "Coming Soon"
+  },
+  "action": {
+    "backToMap": "返回地圖",
+    "startChallenge": "開始挑戰",
+    "readLesson": "閱讀教材",
+    "readFirst": "先讀再練",
+    "startReading": "開始閱讀"
+  },
+  "lesson": {
+    "toc": "目錄",
+    "lessonSuffix": "講義",
+    "hideToc": "隱藏目錄",
+    "showToc": "顯示目錄",
+    "notFound": "找不到這個世界的講義",
+    "scrollTop": "回到頂部"
+  },
+  "branch": {
+    "business-analysis": {
+      "name": "商業分析路線",
+      "description": "從問題拆解到完整商業 Case Study 面試準備"
+    },
+    "sql": {
+      "name": "SQL 路線",
+      "description": "SQL 查詢思維與實戰練習"
+    },
+    "python": {
+      "name": "Python 路線",
+      "description": "Python 基礎、Pandas 數據處理、面試題"
+    },
+    "di-product": {
+      "name": "DI 產品知識路線",
+      "description": "Decision Intelligence 產品架構、部署、品質與邊界"
+    }
+  }
+}

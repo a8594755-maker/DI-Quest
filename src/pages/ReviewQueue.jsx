@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
 import { RotateCcw, ChevronRight, Clock } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useTranslation, Trans } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { getDueReviews } from '../utils/spacedRepetition'
 import { getQuest, getChallenge, getWorld } from '../data/questData'
 
 function ReviewQueue() {
+  const { t } = useTranslation(['review', 'common'])
   const { reviewSchedule, challengeStatus } = useQuest()
   const today = new Date().toISOString().slice(0, 10)
   const dueReviews = getDueReviews(reviewSchedule, today)
@@ -37,10 +39,10 @@ function ReviewQueue() {
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
           <RotateCcw className="w-8 h-8 text-brand-primary" />
-          複習佇列
+          {t('review:title')}
         </h2>
         <p className="text-slate-400">
-          根據你的答題表現，系統會自動排定需要複習的題目。
+          {t('review:subtitle')}
         </p>
       </div>
 
@@ -51,17 +53,19 @@ function ReviewQueue() {
           className="card text-center py-16"
         >
           <p className="text-4xl mb-4">🎉</p>
-          <p className="text-white text-lg font-medium mb-2">目前沒有待複習的題目！</p>
-          <p className="text-slate-400 mb-6">繼續完成新的挑戰，系統會自動幫你排定複習時間。</p>
+          <p className="text-white text-lg font-medium mb-2">{t('review:empty')}</p>
+          <p className="text-slate-400 mb-6">{t('review:emptyHint')}</p>
           <Link to="/di-quest/map" className="btn-primary">
-            回到地圖
+            {t('common:action.backToMap')}
           </Link>
         </motion.div>
       ) : (
         <div className="space-y-6">
           <div className="card">
             <p className="text-white font-medium">
-              共 <span className="text-brand-primary">{dueReviews.length}</span> 題待複習
+              <Trans i18nKey="review:totalDue" values={{ count: dueReviews.length }}>
+                <span className="text-brand-primary" />
+              </Trans>
             </p>
           </div>
 
@@ -75,7 +79,7 @@ function ReviewQueue() {
               <h3 className="text-white font-medium mb-4 flex items-center gap-2">
                 <span>{world.emoji}</span>
                 {world.name}
-                <span className="text-slate-500 text-sm">({items.length} 題)</span>
+                <span className="text-slate-500 text-sm">({t('review:questionCount', { count: items.length })})</span>
               </h3>
               <div className="space-y-2">
                 {items.map((item) => (
@@ -90,12 +94,12 @@ function ReviewQueue() {
                       </p>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-slate-500 text-xs">
-                          上次得分：{item.lastScore}
+                          {t('review:lastScore', { score: item.lastScore })}
                         </span>
                         {item.daysSinceReview > 0 && (
                           <span className="text-slate-500 text-xs flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            逾期 {item.daysSinceReview} 天
+                            {t('review:overdue', { days: item.daysSinceReview })}
                           </span>
                         )}
                       </div>

@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 function BarChart({ data, labelKey, valueKey, maxValue, color = 'bg-brand-primary', unit = '' }) {
+  const { t } = useTranslation('progress')
   if (!data || data.length === 0) {
-    return <p className="text-slate-500 text-sm">尚無資料</p>
+    return <p className="text-slate-500 text-sm">{t('charts.noData')}</p>
   }
   const max = maxValue || Math.max(...data.map(d => d[valueKey]), 1)
 
@@ -27,6 +29,7 @@ function BarChart({ data, labelKey, valueKey, maxValue, color = 'bg-brand-primar
 }
 
 export function DailyActivityChart({ dailyStats }) {
+  const { t } = useTranslation('progress')
   const data = useMemo(() => {
     const days = []
     for (let i = 13; i >= 0; i--) {
@@ -43,13 +46,14 @@ export function DailyActivityChart({ dailyStats }) {
 
   return (
     <div className="card p-5">
-      <h4 className="text-white font-medium mb-4">每日完成題數（近 14 天）</h4>
-      <BarChart data={data} labelKey="label" valueKey="value" color="bg-brand-primary" unit=" 題" />
+      <h4 className="text-white font-medium mb-4">{t('charts.dailyActivity')}</h4>
+      <BarChart data={data} labelKey="label" valueKey="value" color="bg-brand-primary" unit={t('charts.dailyUnit')} />
     </div>
   )
 }
 
 export function XpTrendChart({ dailyStats }) {
+  const { t } = useTranslation('progress')
   const data = useMemo(() => {
     const days = []
     for (let i = 13; i >= 0; i--) {
@@ -66,15 +70,15 @@ export function XpTrendChart({ dailyStats }) {
 
   return (
     <div className="card p-5">
-      <h4 className="text-white font-medium mb-4">每日 XP 趨勢（近 14 天）</h4>
-      <BarChart data={data} labelKey="label" valueKey="value" color="bg-brand-secondary" unit=" XP" />
+      <h4 className="text-white font-medium mb-4">{t('charts.xpTrend')}</h4>
+      <BarChart data={data} labelKey="label" valueKey="value" color="bg-brand-secondary" unit={t('charts.xpUnit')} />
     </div>
   )
 }
 
 export function TimePerChallengeChart({ challengeTimings }) {
+  const { t } = useTranslation('progress')
   const data = useMemo(() => {
-    // 按 world 分組計算平均時間
     const worldTimes = {}
     Object.entries(challengeTimings).forEach(([key, timing]) => {
       const worldId = key.split('-')[0]
@@ -90,7 +94,7 @@ export function TimePerChallengeChart({ challengeTimings }) {
 
   return (
     <div className="card p-5">
-      <h4 className="text-white font-medium mb-4">平均答題時間（秒）</h4>
+      <h4 className="text-white font-medium mb-4">{t('charts.avgTimeTitle')}</h4>
       <BarChart data={data} labelKey="label" valueKey="value" color="bg-brand-accent" unit="s" />
     </div>
   )

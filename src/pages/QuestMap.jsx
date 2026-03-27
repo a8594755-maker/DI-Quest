@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link, useParams } from 'react-router-dom'
 import { Lock, CheckCircle, Circle, ArrowLeft } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { WORLDS } from '../data/questData'
 import { getBranch } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
 
 function QuestMap() {
+  const { t } = useTranslation(['quest', 'common'])
   const { branchId } = useParams()
   const branch = getBranch(branchId)
   const branchWorlds = branch
@@ -18,7 +20,6 @@ function QuestMap() {
 
   const getQuestStatus = (quest) => {
     if (questStatus[quest.id]?.completed) return 'completed'
-    // 有任何 challenge 完成就算 in-progress
     for (let i = 1; i <= (quest.challenges?.length || 0); i++) {
       if (challengeStatus[`${quest.id}-${i}`]?.completed) return 'in-progress'
     }
@@ -58,17 +59,23 @@ function QuestMap() {
     return { completed, total, pct: total > 0 ? Math.round((completed / total) * 100) : 0 }
   }
 
+  const getBranchName = () => {
+    if (!branch) return t('quest:questMap.caseStudyMap')
+    const translated = t(`common:branch.${branch.id}.name`, branch.name)
+    return `${branch.emoji} ${translated}`
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-8">
         <Link to="/di-quest" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-4">
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">返回路線選擇</span>
+          <span className="text-sm">{t('quest:questMap.backToBranch')}</span>
         </Link>
         <h2 className="text-3xl font-bold text-white mb-2">
-          {branch ? `${branch.emoji} ${branch.name}` : 'Case Study 地圖'}
+          {getBranchName()}
         </h2>
-        <p className="text-slate-400">選擇一個主題開始你的面試準備之旅</p>
+        <p className="text-slate-400">{t('quest:questMap.subtitle')}</p>
       </div>
 
       <div className="grid gap-4">
@@ -129,8 +136,8 @@ function QuestMap() {
                       <div className="w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center">
                         <span className="text-brand-primary text-sm">📖</span>
                       </div>
-                      <span className="flex-1 font-medium text-brand-primary">閱讀教材</span>
-                      <span className="text-slate-500 text-sm">先讀再練</span>
+                      <span className="flex-1 font-medium text-brand-primary">{t('common:action.readLesson')}</span>
+                      <span className="text-slate-500 text-sm">{t('common:action.readFirst')}</span>
                     </Link>
                     {world.quests.map((quest, index) => {
                       const status = getQuestStatus(quest)
@@ -159,7 +166,7 @@ function QuestMap() {
                           </span>
                           {!hasChallenges && status !== 'locked' && (
                             <span className="px-2 py-1 bg-slate-700/50 text-slate-500 text-xs rounded">
-                              開發中
+                              {t('common:status.inDev')}
                             </span>
                           )}
                           {quest.isBoss && (

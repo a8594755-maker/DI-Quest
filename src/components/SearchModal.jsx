@@ -1,15 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, X, Map, BookOpen, Target } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { WORLDS } from '../data/questData'
 
 function fuzzyMatch(query, text) {
   if (!query || !text) return { match: false, score: 0 }
   const q = query.toLowerCase()
   const t = text.toLowerCase()
-  // 完全包含
   if (t.includes(q)) return { match: true, score: 2 }
-  // 有序字元比對（支援中文縮寫）
   let qi = 0
   for (let ti = 0; ti < t.length && qi < q.length; ti++) {
     if (t[ti] === q[qi]) qi++
@@ -18,11 +17,11 @@ function fuzzyMatch(query, text) {
 }
 
 function SearchModal({ isOpen, onClose }) {
+  const { t } = useTranslation('common')
   const [query, setQuery] = useState('')
   const inputRef = useRef(null)
   const navigate = useNavigate()
 
-  // 建立搜尋索引
   const searchIndex = useMemo(() => {
     const items = []
     WORLDS.forEach(w => {
@@ -59,7 +58,6 @@ function SearchModal({ isOpen, onClose }) {
     return items
   }, [])
 
-  // 搜尋結果
   const results = useMemo(() => {
     if (!query.trim()) return []
     return searchIndex
@@ -72,7 +70,6 @@ function SearchModal({ isOpen, onClose }) {
       .slice(0, 20)
   }, [query, searchIndex])
 
-  // 按類型分組
   const grouped = useMemo(() => {
     const groups = { world: [], quest: [], challenge: [] }
     results.forEach(r => {
@@ -81,7 +78,6 @@ function SearchModal({ isOpen, onClose }) {
     return groups
   }, [results])
 
-  // 打開時自動 focus
   useEffect(() => {
     if (isOpen) {
       setQuery('')
@@ -89,7 +85,6 @@ function SearchModal({ isOpen, onClose }) {
     }
   }, [isOpen])
 
-  // ESC 關閉
   useEffect(() => {
     if (!isOpen) return
     const handleKey = (e) => {
@@ -119,7 +114,6 @@ function SearchModal({ isOpen, onClose }) {
         className="relative w-full max-w-2xl mx-4 h-fit max-h-[70vh] flex flex-col bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 搜尋輸入 */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-700">
           <Search className="w-5 h-5 text-slate-400 flex-shrink-0" />
           <input
@@ -127,7 +121,7 @@ function SearchModal({ isOpen, onClose }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜尋 worlds、quests、challenges..."
+            placeholder={t('nav.searchPlaceholder')}
             className="flex-1 bg-transparent text-white text-base outline-none placeholder-slate-500"
           />
           <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
@@ -135,15 +129,14 @@ function SearchModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* 搜尋結果 */}
         <div className="flex-1 overflow-y-auto p-2">
           {query.trim() && results.length === 0 && (
-            <p className="text-slate-500 text-sm text-center py-8">找不到相關結果</p>
+            <p className="text-slate-500 text-sm text-center py-8">{t('nav.noResults')}</p>
           )}
 
           {!query.trim() && (
             <p className="text-slate-500 text-sm text-center py-8">
-              輸入關鍵字搜尋 worlds、quests 或 challenges
+              {t('nav.searchHint')}
             </p>
           )}
 
@@ -175,13 +168,12 @@ function SearchModal({ isOpen, onClose }) {
           })}
         </div>
 
-        {/* 底部提示 */}
         <div className="border-t border-slate-700 px-4 py-2 flex items-center gap-4">
           <span className="text-slate-600 text-xs">
-            <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-400 text-[10px]">ESC</kbd> 關閉
+            <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-400 text-[10px]">ESC</kbd> {t('nav.close')}
           </span>
           <span className="text-slate-600 text-xs">
-            <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-400 text-[10px]">⌘K</kbd> 開啟搜尋
+            <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-400 text-[10px]">⌘K</kbd> {t('nav.openSearch')}
           </span>
         </div>
       </div>

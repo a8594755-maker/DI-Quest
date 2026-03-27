@@ -1,0 +1,22 @@
+{
+  "branchSelect": {
+    "title": "DI Quest",
+    "subtitle": "Choose a learning track to begin your journey",
+    "worldCount": "{{count}} worlds"
+  },
+  "questMap": {
+    "backToBranch": "Back to Track Selection",
+    "caseStudyMap": "Case Study Map",
+    "subtitle": "Choose a topic to start your interview prep journey"
+  },
+  "questDetail": {
+    "notFound": "Quest not found",
+    "readMaterial": "Read Material First",
+    "readMaterialDesc": "Before starting practice, read the learning content for {{worldName}}",
+    "caseStudyQuestions": "Case Study Questions",
+    "questInDev": "Questions for this quest are still in development",
+    "questInDevHint": "You can read the lesson material to learn related concepts first",
+    "externalPractice": "Recommended External Practice",
+    "externalPracticeHint": "Click links to practice on external platforms — pairs well with this chapter's questions"
+  }
+}

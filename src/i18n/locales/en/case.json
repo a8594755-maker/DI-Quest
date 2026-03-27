@@ -1,0 +1,47 @@
+{
+  "multipleChoice": {
+    "confirm": "Confirm Answer"
+  },
+  "codeChallenge": {
+    "initDb": "Initializing database...",
+    "runQuery": "Run Query",
+    "submit": "Submit Answer",
+    "resultCount": "Query results ({{count}} rows)",
+    "correct": "Correct! Your query results match the expected output perfectly.",
+    "sqlError": "SQL Error: {{error}}",
+    "incorrect": "Incorrect result, please try again.",
+    "viewExpected": "View expected result"
+  },
+  "openEnded": {
+    "criteria": "Evaluation Criteria:",
+    "placeholder": "Answer this question as you would in an interview...\n\nSuggested Case Answer Framework:\n1. Clarify the goal\n2. Define metrics\n3. Break down the process\n4. Segmentation / Root Cause\n5. Propose recommendations\n6. Validation approach",
+    "charCount": "{{count}} chars",
+    "minChars": "Recommended: at least 100 characters",
+    "evaluating": "AI Evaluating...",
+    "submitAi": "Submit for AI Evaluation",
+    "aiError": "AI evaluation service is temporarily unavailable. Please try again later.",
+    "retry": "Retry",
+    "yourAnswer": "Your answer:",
+    "aiCoachTitle": "AI Interview Coach Evaluation",
+    "hideSample": "Hide Sample Answer",
+    "showSample": "View Sample Answer"
+  },
+  "caseStudy": {
+    "notFound": "Question not found",
+    "prevQuestion": "Previous",
+    "nextQuestion": "Next",
+    "typeInDev": "This question type is in development",
+    "explanation": "Explanation",
+    "xiaoDi": "Xiao Di",
+    "correctAnswer": "Correct!",
+    "readyForNext": "Ready for the next question?",
+    "allComplete": "You've completed all questions in this quest!",
+    "defaultHint": "Read the scenario and data on the left carefully, then answer the question on the right. If stuck, click the hint button.",
+    "moreHints": "Need more hints? (-20 XP)",
+    "backToLesson": "Back to lesson",
+    "hintBtn": "Hint",
+    "difficultyBasic": "Basic",
+    "difficultyAdvanced": "Advanced",
+    "difficultyChallenge": "Challenge"
+  }
+}

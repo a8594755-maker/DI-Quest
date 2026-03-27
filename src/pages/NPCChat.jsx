@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User, Sparkles, BookOpen, HelpCircle, Map, BarChart3 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { WORLDS } from '../data/questData'
 import { Link } from 'react-router-dom'
@@ -97,7 +98,6 @@ function getProgressResponse(questStatus, challengeStatus, totalXp, levelInfo) {
     }
   }
 
-  // 找到目前進行中的世界
   let currentWorld = null
   for (const world of WORLDS) {
     const worldCompleted = world.quests.every(q => questStatus[q.id]?.completed)
@@ -118,7 +118,6 @@ function getProgressResponse(questStatus, challengeStatus, totalXp, levelInfo) {
 
 // ── 建議回答 ──────────────────────────────────────────────
 function getAdviceResponse(questStatus) {
-  // 找到目前世界
   let currentWorldIndex = 0
   for (let i = 0; i < WORLDS.length; i++) {
     const allDone = WORLDS[i].quests.every(q => questStatus[q.id]?.completed)
@@ -145,12 +144,13 @@ function getAdviceResponse(questStatus) {
 
 // ── 主元件 ────────────────────────────────────────────────
 function NPCChat() {
+  const { t } = useTranslation('chat')
   const { questStatus, challengeStatus, totalXp, levelInfo } = useQuest()
   const [messages, setMessages] = useState([
     {
       id: 1,
       role: 'assistant',
-      content: '嗨！我是小迪 🤖，你的面試練習教練。\n\n我可以：\n• 解釋 Case Study 概念（KPI、Funnel、Cohort、A/B Test...）\n• 查看你的練習進度\n• 給你面試準備建議\n\n有什麼想問的？',
+      content: t('npc.welcome'),
       suggestions: ['我的進度如何？', '有什麼建議？', '什麼是 funnel analysis？'],
     },
   ])
@@ -169,18 +169,15 @@ function NPCChat() {
   const generateResponse = (userInput) => {
     const lower = userInput.toLowerCase()
 
-    // 1. 進度查詢
-    if (lower.includes('進度') || lower.includes('等級') || lower.includes('xp') || lower.includes('做到哪')) {
+    if (lower.includes('進度') || lower.includes('等級') || lower.includes('xp') || lower.includes('做到哪') || lower.includes('progress')) {
       return getProgressResponse(questStatus, challengeStatus, totalXp, levelInfo)
     }
 
-    // 2. 建議
-    if (lower.includes('建議') || lower.includes('怎麼學') || lower.includes('下一步') || lower.includes('卡在')) {
+    if (lower.includes('建議') || lower.includes('怎麼學') || lower.includes('下一步') || lower.includes('卡在') || lower.includes('advice') || lower.includes('suggest')) {
       return getAdviceResponse(questStatus)
     }
 
-    // 3. 導航
-    if (lower.includes('回到地圖') || lower.includes('帶我去')) {
+    if (lower.includes('回到地圖') || lower.includes('帶我去') || lower.includes('go to map')) {
       return {
         content: '好的！點擊下方按鈕前往地圖，選擇你想去的世界。',
         suggestions: ['我的進度如何？', '有什麼建議？'],
@@ -188,29 +185,25 @@ function NPCChat() {
       }
     }
 
-    // 4. 講義位置
-    if (lower.includes('講義') || lower.includes('教材') || lower.includes('在哪')) {
+    if (lower.includes('講義') || lower.includes('教材') || lower.includes('在哪') || lower.includes('lesson') || lower.includes('material')) {
       return {
         content: '每個世界都有自己的講義！進入方式：\n\n1. 在地圖中展開任一世界\n2. 點擊最上方的「📖 閱讀講義」\n3. 或在關卡詳情頁點「開始閱讀」\n\n建議流程：**先讀講義 → 再做挑戰** 效果最好！',
         suggestions: ['帶我去地圖', '有什麼建議？', '我的進度如何？'],
       }
     }
 
-    // 5. 卡關幫助
-    if (lower.includes('卡關') || lower.includes('不會') || lower.includes('好難') || lower.includes('提示') || lower.includes('hint')) {
+    if (lower.includes('卡關') || lower.includes('不會') || lower.includes('好難') || lower.includes('提示') || lower.includes('hint') || lower.includes('stuck')) {
       return {
         content: '卡關很正常！這裡有幾個建議：\n\n1. **回去看講義** — 每個世界都有詳細教材\n2. **用提示系統** — 挑戰頁面右上角有「💡 提示」按鈕（最多 3 級提示）\n3. **想想框架** — 面試回答都有結構，先想大方向再補細節\n4. **問我概念** — 直接問我你不懂的分析概念\n\n別忘了：每個挑戰都是模擬真實面試情境，多練幾次就會越來越順！',
         suggestions: ['什麼是 funnel analysis？', '什麼是 cohort？', '我的進度如何？'],
       }
     }
 
-    // 6. 知識庫匹配
     const topic = findTopic(userInput)
     if (topic && KNOWLEDGE[topic]) {
       return KNOWLEDGE[topic]
     }
 
-    // 7. 打招呼
     if (lower.match(/^(嗨|你好|hi|hello|hey|哈囉)/)) {
       return {
         content: `嗨！我是小迪，你目前是 Lv.${levelInfo.level} ${levelInfo.title}，共 ${totalXp} XP。有什麼我可以幫忙的嗎？`,
@@ -218,7 +211,6 @@ function NPCChat() {
       }
     }
 
-    // 8. 稱讚自己
     if (lower.includes('厲害') || lower.includes('太強') || lower.includes('awesome')) {
       return {
         content: `你確實很厲害！已經拿到 ${totalXp} XP 了！繼續加油，距離下一級還有 ${levelInfo.xpForNext - levelInfo.currentXp} XP。\n\n每一關都是模擬真實面試情境，能通過這些挑戰代表你的分析思維越來越強了。`,
@@ -226,7 +218,6 @@ function NPCChat() {
       }
     }
 
-    // 9. 兜底 — 交給 DeepSeek AI
     return null
   }
 
@@ -245,11 +236,9 @@ function NPCChat() {
     setIsTyping(true)
 
     try {
-      // 先嘗試本地規則匹配
       const localResponse = generateResponse(messageText)
 
       if (localResponse) {
-        // 規則匹配成功，短暫延遲後顯示
         await new Promise(resolve => setTimeout(resolve, 500))
         setMessages(prev => [...prev, {
           id: prev.length + 1,
@@ -259,7 +248,6 @@ function NPCChat() {
           showMapLink: localResponse.showMapLink,
         }])
       } else {
-        // 規則沒匹配到，呼叫 DeepSeek API
         const aiMessages = [
           {
             role: 'system',
@@ -269,7 +257,6 @@ function NPCChat() {
 使用者目前等級：Lv.${levelInfo.level} ${levelInfo.title}，共 ${totalXp} XP。
 請保持回答在 300 字以內。`,
           },
-          // 帶入最近幾輪對話作為上下文
           ...messages.slice(-6).map(m => ({
             role: m.role === 'assistant' ? 'assistant' : 'user',
             content: m.content,
@@ -290,7 +277,7 @@ function NPCChat() {
       setMessages(prev => [...prev, {
         id: prev.length + 1,
         role: 'assistant',
-        content: '抱歉，我暫時無法連接 AI 服務 😅\n\n你可以試試問我特定的分析概念（如：什麼是 funnel？什麼是 cohort？），或查看你的練習進度！',
+        content: t('npc.aiError'),
         suggestions: ['什麼是 funnel？', '我的進度如何？', '有什麼建議？'],
       }])
     } finally {
@@ -303,15 +290,14 @@ function NPCChat() {
   }
 
   const quickActions = [
-    { icon: BookOpen, label: '解釋概念', action: () => handleSend('什麼是 funnel analysis？') },
-    { icon: BarChart3, label: '我卡關了', action: () => handleSend('我卡關了怎麼辦') },
-    { icon: HelpCircle, label: '面試建議', action: () => handleSend('有什麼建議？') },
-    { icon: Map, label: '查看進度', action: () => handleSend('我的進度如何？') },
+    { icon: BookOpen, label: t('npc.quickExplain'), action: () => handleSend('什麼是 funnel analysis？') },
+    { icon: BarChart3, label: t('npc.quickStuck'), action: () => handleSend('我卡關了怎麼辦') },
+    { icon: HelpCircle, label: t('npc.quickAdvice'), action: () => handleSend('有什麼建議？') },
+    { icon: Map, label: t('npc.quickProgress'), action: () => handleSend('我的進度如何？') },
   ]
 
   return (
     <div className="h-[calc(100vh-73px)] flex flex-col max-w-4xl mx-auto">
-      {/* 聊天訊息區 */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         <AnimatePresence>
           {messages.map((message) => (
@@ -322,7 +308,6 @@ function NPCChat() {
               exit={{ opacity: 0, y: -20 }}
               className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              {/* 頭像 */}
               <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                 message.role === 'user'
                   ? 'bg-brand-primary/20'
@@ -335,7 +320,6 @@ function NPCChat() {
                 )}
               </div>
 
-              {/* 訊息內容 */}
               <div className={`max-w-[80%] ${message.role === 'user' ? 'text-right' : ''}`}>
                 <div className={`inline-block px-4 py-3 rounded-2xl ${
                   message.role === 'user'
@@ -345,7 +329,6 @@ function NPCChat() {
                   <p className="text-left whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
                 </div>
 
-                {/* 地圖連結 */}
                 {message.showMapLink && (
                   <div className="mt-2">
                     <Link
@@ -353,12 +336,11 @@ function NPCChat() {
                       className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
                     >
                       <Map className="w-4 h-4" />
-                      前往關卡地圖
+                      {t('npc.goToMap')}
                     </Link>
                   </div>
                 )}
 
-                {/* 建議按鈕 */}
                 {message.suggestions && message.suggestions.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {message.suggestions.map((suggestion, index) => (
@@ -377,7 +359,6 @@ function NPCChat() {
           ))}
         </AnimatePresence>
 
-        {/* 輸入中指示器 */}
         {isTyping && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -388,7 +369,7 @@ function NPCChat() {
               <Bot className="w-5 h-5 text-brand-accent" />
             </div>
             <div className="bg-slate-800 px-4 py-3 rounded-2xl flex items-center gap-2">
-              <span className="text-slate-400">小迪正在思考</span>
+              <span className="text-slate-400">{t('npc.thinking')}</span>
               <div className="flex gap-1">
                 <motion.span
                   animate={{ opacity: [0, 1, 0] }}
@@ -413,7 +394,6 @@ function NPCChat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 快捷動作區 */}
       <div className="px-6 py-3 border-t border-slate-800">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {quickActions.map((action, index) => (
@@ -429,7 +409,6 @@ function NPCChat() {
         </div>
       </div>
 
-      {/* 輸入區 */}
       <div className="p-6 pt-0">
         <div className="flex gap-3">
           <div className="flex-1 relative">
@@ -438,7 +417,7 @@ function NPCChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="問小迪任何問題⋯（例如：什麼是 funnel analysis？）"
+              placeholder={t('npc.inputPlaceholder')}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors"
             />
             <Sparkles className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-accent" />
@@ -449,11 +428,11 @@ function NPCChat() {
             className="px-6 py-3 bg-brand-primary text-white rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Send className="w-4 h-4" />
-            發送
+            {t('npc.send')}
           </button>
         </div>
         <p className="text-xs text-slate-500 mt-2 text-center">
-          小迪可以解釋分析概念、查看進度、給面試準備建議
+          {t('npc.npcDesc')}
         </p>
       </div>
     </div>

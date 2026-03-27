@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { WORLDS, getWorld, getQuest, getChallenge } from '../data/questData'
 import { getWorldLesson } from '../data/lessons'
@@ -21,28 +22,15 @@ function loadChatHistory() {
 
 function saveChatHistory(sessions) {
   try {
-    // 只保留最近 30 筆
     localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(sessions.slice(0, 30)))
   } catch {}
 }
 
 function generateTitle(messages) {
   const firstUser = messages.find(m => m.role === 'user')
-  if (!firstUser) return '新對話'
+  if (!firstUser) return 'New Chat'
   const text = firstUser.content.slice(0, 40)
   return text.length < firstUser.content.length ? text + '...' : text
-}
-
-function getRelativeDate(ts) {
-  const diff = Date.now() - ts
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return '剛剛'
-  if (mins < 60) return `${mins} 分鐘前`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} 小時前`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days} 天前`
-  return new Date(ts).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })
 }
 
 // ── 知識庫 ──────────────────────────────────────────────────
@@ -77,12 +65,12 @@ function findTopic(input) {
 }
 
 // ── 取得頁面上下文 ──────────────────────────────────────────
-function getPageContext(pathname) {
+function usePageContext(pathname, t) {
   const parts = pathname.split('/')
   if (parts.includes('lesson')) {
     const worldId = parts[parts.indexOf('lesson') + 1]
     const world = getWorld(worldId)
-    return { type: 'lesson', worldId, world, description: `正在閱讀 ${world?.emoji || ''} ${world?.name || `World ${worldId}`} 的講義` }
+    return { type: 'lesson', worldId, world, description: t('chat:pageContext.reading', { name: `${world?.emoji || ''} ${world?.name || `World ${worldId}`}` }) }
   }
   if (parts.includes('case')) {
     const idx = parts.indexOf('case')
@@ -92,7 +80,7 @@ function getPageContext(pathname) {
     const world = getWorld(worldId)
     const quest = getQuest(questId)
     const challenge = getChallenge(questId, challengeId)
-    return { type: 'challenge', worldId, questId, challengeId, world, quest, challenge, description: `正在做 ${world?.emoji || ''} ${quest?.name || ''} — ${challenge?.name || ''}` }
+    return { type: 'challenge', worldId, questId, challengeId, world, quest, challenge, description: t('chat:pageContext.doing', { worldEmoji: world?.emoji || '', questName: quest?.name || '', challengeName: challenge?.name || '' }) }
   }
   if (parts.includes('quest')) {
     const idx = parts.indexOf('quest')
@@ -100,20 +88,40 @@ function getPageContext(pathname) {
     const questId = parts[idx + 2]
     const world = getWorld(worldId)
     const quest = getQuest(questId)
-    return { type: 'quest-detail', worldId, questId, world, quest, description: `正在查看 ${quest?.name || ''}` }
+    return { type: 'quest-detail', worldId, questId, world, quest, description: t('chat:pageContext.viewing', { questName: quest?.name || '' }) }
   }
-  if (parts.includes('map')) return { type: 'map', description: '正在關卡地圖' }
-  if (parts.includes('progress')) return { type: 'progress', description: '正在進度儀表板' }
-  if (parts.includes('review')) return { type: 'review', description: '正在複習佇列' }
+  if (parts.includes('map')) return { type: 'map', description: t('chat:pageContext.map') }
+  if (parts.includes('progress')) return { type: 'progress', description: t('chat:pageContext.progress') }
+  if (parts.includes('review')) return { type: 'review', description: t('chat:pageContext.review') }
   return { type: 'other', description: '' }
+}
+
+// ── 相對時間 ──────────────────────────────────────────────
+function useRelativeDate() {
+  const { t, i18n } = useTranslation('chat')
+  return (ts) => {
+    const diff = Date.now() - ts
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return t('time.justNow')
+    if (mins < 60) return t('time.minutesAgo', { count: mins })
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return t('time.hoursAgo', { count: hours })
+    const days = Math.floor(hours / 24)
+    if (days < 7) return t('time.daysAgo', { count: days })
+    return new Date(ts).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'zh-TW', { month: 'short', day: 'numeric' })
+  }
 }
 
 // ── 主元件 ──────────────────────────────────────────────────
 function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'sidebar' }) {
+  const { t } = useTranslation('chat')
   const { questStatus, challengeStatus, totalXp, levelInfo } = useQuest()
   const location = useLocation()
+  const getRelativeDate = useRelativeDate()
 
-  // 歷史對話（過濾掉沒有使用者訊息的空 session）
+  const pageContext = usePageContext(location.pathname, t)
+
+  // 歷史對話
   const [chatSessions, setChatSessions] = useState(() => {
     const all = loadChatHistory()
     const valid = all.filter(s => s.messages?.some(m => m.role === 'user'))
@@ -123,7 +131,6 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
   const [activeSessionId, setActiveSessionId] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
 
-  // 當前對話
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -131,22 +138,18 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
   const inputRef = useRef(null)
   const isComposingRef = useRef(false)
 
-  const pageContext = getPageContext(location.pathname)
-
-  // 開啟面板時：顯示歡迎訊息（不建立 session，等使用者發訊息才存）
   useEffect(() => {
     if (isOpen && !activeSessionId) {
       const welcomeMsg = {
         id: 1,
         role: 'assistant',
-        content: `嗨！我是小迪 🤖\n\n我知道你${pageContext.description || '在學習'}。\n\n你可以：\n• 選取頁面上的文字，問我相關問題\n• 直接問分析概念\n• 問我當前題目或講義的內容\n\n有什麼想問的？`,
+        content: `嗨！我是小迪 🤖\n\n我知道你${pageContext.description || t('pageContext.learning')}。\n\n你可以：\n• 選取頁面上的文字，問我相關問題\n• 直接問分析概念\n• 問我當前題目或講義的內容\n\n有什麼想問的？`,
       }
       setMessages([welcomeMsg])
       setShowHistory(false)
     }
   }, [isOpen])
 
-  // 選取文字時 focus 輸入框（文字顯示為引用區塊，不塞進 input）
   useEffect(() => {
     if (selectedText && isOpen) {
       setShowHistory(false)
@@ -159,13 +162,11 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
   }
   useEffect(() => { scrollToBottom() }, [messages])
 
-  // 持久化：有使用者訊息後才存到 localStorage
   useEffect(() => {
     const hasUserMsg = messages.some(m => m.role === 'user')
     if (!hasUserMsg) return
 
     if (!activeSessionId) {
-      // 第一次發訊息 → 建立新 session
       const newId = Date.now().toString()
       setActiveSessionId(newId)
       const newSession = {
@@ -181,7 +182,6 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
         return updated
       })
     } else {
-      // 更新既有 session
       setChatSessions(prev => {
         const updated = prev.map(s =>
           s.id === activeSessionId
@@ -198,7 +198,7 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
     const welcomeMsg = {
       id: 1,
       role: 'assistant',
-      content: `嗨！我是小迪 🤖\n\n我知道你${pageContext.description || '在學習'}。\n\n你可以：\n• 選取頁面上的文字，問我相關問題\n• 直接問分析概念\n• 問我當前題目或講義的內容\n\n有什麼想問的？`,
+      content: `嗨！我是小迪 🤖\n\n我知道你${pageContext.description || t('pageContext.learning')}。\n\n你可以：\n• 選取頁面上的文字，問我相關問題\n• 直接問分析概念\n• 問我當前題目或講義的內容\n\n有什麼想問的？`,
     }
     setActiveSessionId(null)
     setMessages([welcomeMsg])
@@ -231,7 +231,6 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
 
 使用者目前等級：Lv.${levelInfo.level} ${levelInfo.title}，共 ${totalXp} XP。`
 
-    // 取得當前頁面對應的講義內容
     const worldId = pageContext.worldId
     const lessonContent = worldId ? getWorldLesson(Number(worldId)) : null
 
@@ -276,7 +275,7 @@ ${lessonContent || '（無講義資料）'}
 
   const generateLocalResponse = (userInput) => {
     const lower = userInput.toLowerCase()
-    if (lower.includes('進度') || lower.includes('等級') || lower.includes('xp')) {
+    if (lower.includes('進度') || lower.includes('等級') || lower.includes('xp') || lower.includes('progress')) {
       const completedQuests = Object.values(questStatus).filter(q => q.completed).length
       const completedChallenges = Object.values(challengeStatus).filter(c => c.completed).length
       return `你的進度：Lv.${levelInfo.level} ${levelInfo.title}，${totalXp} XP\n完成關卡：${completedQuests}，完成挑戰：${completedChallenges}`
@@ -290,7 +289,6 @@ ${lessonContent || '（無講義資料）'}
     const messageText = text || input
     if (!messageText.trim()) return
 
-    // 如果有選取文字，附加為上下文（送給 AI 時帶入，顯示時只顯示使用者的問題）
     const contextPrefix = selectedText ? `關於「${selectedText.slice(0, 200)}」，` : ''
     const displayText = messageText
     const fullText = contextPrefix + messageText
@@ -319,7 +317,7 @@ ${lessonContent || '（無講義資料）'}
       console.error('Chat error:', err)
       setMessages(prev => [...prev, {
         id: Date.now() + 1, role: 'assistant',
-        content: '抱歉，AI 服務暫時無法連接。你可以問我特定概念（如：什麼是 funnel？什麼是 cohort？）',
+        content: t('panel.aiError'),
       }])
     } finally {
       setIsTyping(false)
@@ -330,7 +328,6 @@ ${lessonContent || '（無講義資料）'}
 
   const isOverlay = mode === 'overlay'
 
-  // ── 共用面板內容 ──
   const panelContent = (
     <>
       {/* 標題列 */}
@@ -340,7 +337,7 @@ ${lessonContent || '（無講義資料）'}
             <button onClick={() => setShowHistory(false)} className="p-1 text-slate-400 hover:text-white transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-white text-sm font-medium">歷史對話</span>
+            <span className="text-white text-sm font-medium">{t('panel.history')}</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 min-w-0">
@@ -348,7 +345,7 @@ ${lessonContent || '（無講義資料）'}
               <Bot className="w-4 h-4 text-brand-accent" />
             </div>
             <div className="min-w-0">
-              <span className="text-white text-sm font-medium">小迪</span>
+              <span className="text-white text-sm font-medium">{t('panel.xiaoDi')}</span>
               {pageContext.description && (
                 <p className="text-slate-500 text-[10px] leading-tight truncate">{pageContext.description}</p>
               )}
@@ -358,25 +355,24 @@ ${lessonContent || '（無講義資料）'}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           {!showHistory && (
             <>
-              <button onClick={() => setShowHistory(true)} className="p-1.5 text-slate-500 hover:text-white transition-colors rounded" title="歷史對話">
+              <button onClick={() => setShowHistory(true)} className="p-1.5 text-slate-500 hover:text-white transition-colors rounded" title={t('panel.history')}>
                 <Clock className="w-4 h-4" />
               </button>
-              <button onClick={startNewChat} className="p-1.5 text-slate-500 hover:text-white transition-colors rounded" title="新對話">
+              <button onClick={startNewChat} className="p-1.5 text-slate-500 hover:text-white transition-colors rounded" title={t('panel.newChat')}>
                 <Plus className="w-4 h-4" />
               </button>
             </>
           )}
-          <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white transition-colors rounded" title="關閉">
+          <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white transition-colors rounded" title={t('panel.close')}>
             <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {showHistory ? (
-        /* ── 歷史對話列表 ── */
         <div className="flex-1 overflow-y-auto">
           {chatSessions.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center py-12">還沒有歷史對話</p>
+            <p className="text-slate-500 text-sm text-center py-12">{t('panel.noHistory')}</p>
           ) : (
             <div className="py-1">
               {chatSessions.map(session => (
@@ -390,13 +386,13 @@ ${lessonContent || '（無講義資料）'}
                   <div className="min-w-0 flex-1">
                     <p className="text-white text-sm truncate">{session.title}</p>
                     <p className="text-slate-500 text-[11px]">
-                      {getRelativeDate(session.updatedAt)} · {session.messages.filter(m => m.role === 'user').length} 則訊息
+                      {getRelativeDate(session.updatedAt)} · {t('panel.messageCount', { count: session.messages.filter(m => m.role === 'user').length })}
                     </p>
                   </div>
                   <button
                     onClick={(e) => deleteSession(session.id, e)}
                     className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-                    title="刪除"
+                    title={t('panel.delete')}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -406,9 +402,7 @@ ${lessonContent || '（無講義資料）'}
           )}
         </div>
       ) : (
-        /* ── 對話區 ── */
         <>
-          {/* 訊息列表 */}
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
             <AnimatePresence>
               {messages.map((msg) => (
@@ -446,7 +440,7 @@ ${lessonContent || '（無講義資料）'}
                   <Bot className="w-3.5 h-3.5 text-brand-accent" />
                 </div>
                 <div className="bg-slate-800 px-3 py-2 rounded-xl flex items-center gap-1.5">
-                  <span className="text-slate-500 text-xs">思考中</span>
+                  <span className="text-slate-500 text-xs">{t('panel.thinking')}</span>
                   <div className="flex gap-0.5">
                     {[0, 0.2, 0.4].map((delay, i) => (
                       <motion.span key={i} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay }} className="w-1 h-1 bg-brand-accent rounded-full" />
@@ -458,30 +452,27 @@ ${lessonContent || '（無講義資料）'}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* 快捷建議 */}
           {messages.length <= 1 && (
             <div className="px-3 pb-2 flex flex-wrap gap-1.5">
               {pageContext.type === 'challenge' && (
                 <>
-                  <QuickBtn text="這題在考什麼？" onClick={handleSend} />
-                  <QuickBtn text="給我一個提示" onClick={handleSend} />
-                  <QuickBtn text="解題思路" onClick={handleSend} />
+                  <QuickBtn text={t('panel.quickChallenge1')} onClick={handleSend} />
+                  <QuickBtn text={t('panel.quickChallenge2')} onClick={handleSend} />
+                  <QuickBtn text={t('panel.quickChallenge3')} onClick={handleSend} />
                 </>
               )}
               {pageContext.type === 'lesson' && (
                 <>
-                  <QuickBtn text="這章重點是什麼？" onClick={handleSend} />
-                  <QuickBtn text="面試會怎麼考？" onClick={handleSend} />
+                  <QuickBtn text={t('panel.quickLesson1')} onClick={handleSend} />
+                  <QuickBtn text={t('panel.quickLesson2')} onClick={handleSend} />
                 </>
               )}
-              <QuickBtn text="什麼是 funnel？" onClick={handleSend} />
-              <QuickBtn text="我的進度" onClick={handleSend} />
+              <QuickBtn text={t('panel.quickFunnel')} onClick={handleSend} />
+              <QuickBtn text={t('panel.quickProgress')} onClick={handleSend} />
             </div>
           )}
 
-          {/* 輸入區 */}
           <div className="px-3 pb-3">
-            {/* 選取文字引用（ChatGPT 風格，顯示在輸入框上方） */}
             {selectedText && (
               <div className="mb-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 flex items-start gap-2">
                 <div className="w-0.5 self-stretch bg-brand-primary rounded-full flex-shrink-0" />
@@ -500,7 +491,6 @@ ${lessonContent || '（無講義資料）'}
                 value={input}
                 onChange={(e) => {
                   setInput(e.target.value)
-                  // 自動展開高度，最多 5 行
                   e.target.style.height = 'auto'
                   e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
                 }}
@@ -512,7 +502,7 @@ ${lessonContent || '（無講義資料）'}
                     handleSend()
                   }
                 }}
-                placeholder={selectedText ? '想問什麼？' : '問小迪...'}
+                placeholder={selectedText ? t('panel.askSelectedPlaceholder') : t('panel.askPlaceholder')}
                 className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors resize-none overflow-y-auto"
                 style={{ maxHeight: '120px' }}
               />
@@ -530,7 +520,6 @@ ${lessonContent || '（無講義資料）'}
     </>
   )
 
-  // ── 全螢幕覆蓋模式（主畫面：地圖/進度/複習） ──
   if (isOverlay) {
     return (
       <div className="fixed inset-0 z-[55] flex items-center justify-center" onClick={onClose}>
@@ -545,7 +534,6 @@ ${lessonContent || '（無講義資料）'}
     )
   }
 
-  // ── 側邊欄模式（講義/題目頁） ──
   return (
     <div className="flex flex-col bg-slate-900 border-l border-slate-700 flex-shrink-0 w-[380px] min-h-0 overflow-hidden">
       {panelContent}

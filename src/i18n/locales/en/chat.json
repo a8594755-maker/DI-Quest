@@ -1,0 +1,50 @@
+{
+  "panel": {
+    "xiaoDi": "Xiao Di",
+    "history": "Chat History",
+    "noHistory": "No chat history yet",
+    "newChat": "New Chat",
+    "delete": "Delete",
+    "close": "Close",
+    "thinking": "Thinking",
+    "askPlaceholder": "Ask Xiao Di...",
+    "askSelectedPlaceholder": "What would you like to ask?",
+    "messageCount": "{{count}} messages",
+    "aiError": "Sorry, AI service is temporarily unavailable. You can ask me specific concepts (e.g., What is funnel? What is cohort?)",
+    "quickChallenge1": "What is this question testing?",
+    "quickChallenge2": "Give me a hint",
+    "quickChallenge3": "Problem-solving approach",
+    "quickLesson1": "What are the key points?",
+    "quickLesson2": "How would this appear in interviews?",
+    "quickFunnel": "What is funnel?",
+    "quickProgress": "My progress"
+  },
+  "npc": {
+    "welcome": "Hi! I'm Xiao Di 🤖, your interview practice coach.\n\nI can:\n• Explain Case Study concepts (KPI, Funnel, Cohort, A/B Test...)\n• Check your practice progress\n• Give interview prep advice\n\nWhat would you like to know?",
+    "send": "Send",
+    "inputPlaceholder": "Ask Xiao Di anything... (e.g., What is funnel analysis?)",
+    "npcDesc": "Xiao Di can explain analysis concepts, check progress, and give interview prep advice",
+    "thinking": "Xiao Di is thinking",
+    "quickExplain": "Explain concept",
+    "quickStuck": "I'm stuck",
+    "quickAdvice": "Interview tips",
+    "quickProgress": "Check progress",
+    "goToMap": "Go to Quest Map",
+    "aiError": "Sorry, I can't connect to the AI service right now 😅\n\nYou can try asking me about specific analysis concepts (e.g., What is funnel? What is cohort?), or check your practice progress!"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} hr ago",
+    "daysAgo": "{{count}} days ago"
+  },
+  "pageContext": {
+    "reading": "Reading {{name}} lesson",
+    "doing": "Working on {{worldEmoji}} {{questName}} — {{challengeName}}",
+    "viewing": "Viewing {{questName}}",
+    "map": "On Quest Map",
+    "progress": "On Progress Dashboard",
+    "review": "On Review Queue",
+    "learning": "learning"
+  }
+}

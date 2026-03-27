@@ -1,0 +1,10 @@
+{
+  "title": "複習佇列",
+  "subtitle": "根據你的答題表現，系統會自動排定需要複習的題目。",
+  "empty": "目前沒有待複習的題目！",
+  "emptyHint": "繼續完成新的挑戰，系統會自動幫你排定複習時間。",
+  "totalDue": "共 <1>{{count}}</1> 題待複習",
+  "questionCount": "{{count}} 題",
+  "lastScore": "上次得分：{{score}}",
+  "overdue": "逾期 {{days}} 天"
+}

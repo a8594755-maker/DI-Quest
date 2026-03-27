@@ -1,0 +1,45 @@
+{
+  "dashboard": {
+    "title": "Progress Dashboard",
+    "subtitle": "Track your learning progress and achievements",
+    "needXp": "Need {{amount}} more XP to level up",
+    "questsCompleted": "Quests Completed",
+    "challengesPassed": "Challenges Passed",
+    "streakDays": "Study Streak",
+    "streakValue": "{{count}} days",
+    "totalXp": "Total XP",
+    "worldProgress": "World Progress",
+    "completedChallenges": "Completed Challenges",
+    "noChallenges": "No challenges completed yet",
+    "challengeLabel": "Quest {{questId}} - Challenge {{challengeId}}",
+    "achievements": "Achievements",
+    "analytics": "Learning Analytics",
+    "avgTime": "Avg. Answer Time",
+    "weeklyTime": "Weekly Study Time",
+    "weeklyMinutes": "{{count}} min",
+    "velocity": "Learning Speed",
+    "velocityValue": "{{count}} q/day"
+  },
+  "charts": {
+    "noData": "No data yet",
+    "dailyActivity": "Daily Completions (Last 14 Days)",
+    "dailyUnit": "",
+    "xpTrend": "Daily XP Trend (Last 14 Days)",
+    "xpUnit": " XP",
+    "avgTimeTitle": "Avg. Answer Time (seconds)"
+  },
+  "achievement": {
+    "first_case": "First Case Study",
+    "first_case_desc": "Complete your first challenge",
+    "streak_3": "3-Day Streak",
+    "streak_3_desc": "Study for 3 consecutive days",
+    "streak_7": "7-Day Streak",
+    "streak_7_desc": "Study for 7 consecutive days",
+    "world1_done": "Problem Decomposition Master",
+    "world1_done_desc": "Complete all quests in World 1",
+    "ten_challenges": "Case Study Pro",
+    "ten_challenges_desc": "Complete 10 challenges",
+    "boss_killer": "Boss Conqueror",
+    "boss_killer_desc": "Beat any Boss level"
+  }
+}

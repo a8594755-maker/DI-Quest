@@ -1,0 +1,47 @@
+{
+  "multipleChoice": {
+    "confirm": "確認答案"
+  },
+  "codeChallenge": {
+    "initDb": "正在初始化資料庫...",
+    "runQuery": "執行查詢",
+    "submit": "提交答案",
+    "resultCount": "查詢結果（{{count}} 筆）",
+    "correct": "正確！你的查詢結果與預期完全一致。",
+    "sqlError": "SQL 錯誤：{{error}}",
+    "incorrect": "結果不正確，請再試試。",
+    "viewExpected": "查看預期結果"
+  },
+  "openEnded": {
+    "criteria": "評分標準：",
+    "placeholder": "用你在面試中會講的方式回答這個問題...\n\n建議使用 Case Answer Framework：\n1. 確認目標\n2. 定義指標\n3. 拆解流程\n4. Segmentation / Root Cause\n5. 提出建議\n6. 驗證方式",
+    "charCount": "{{count}} 字",
+    "minChars": "建議至少寫 100 字以上",
+    "evaluating": "AI 評分中...",
+    "submitAi": "提交 AI 評分",
+    "aiError": "AI 評分服務暫時無法使用，請稍後再試。",
+    "retry": "重試",
+    "yourAnswer": "你的回答：",
+    "aiCoachTitle": "AI 面試教練評分",
+    "hideSample": "收起參考答案",
+    "showSample": "查看參考答案"
+  },
+  "caseStudy": {
+    "notFound": "找不到這個題目",
+    "prevQuestion": "上一題",
+    "nextQuestion": "下一題",
+    "typeInDev": "此題型開發中",
+    "explanation": "解析",
+    "xiaoDi": "小迪",
+    "correctAnswer": "答對了！",
+    "readyForNext": "準備好挑戰下一題了嗎？",
+    "allComplete": "你已經完成這個關卡的所有題目！",
+    "defaultHint": "仔細閱讀左邊的情境和數據，再回答右邊的問題。卡住的話可以按提示按鈕。",
+    "moreHints": "需要更多提示？(-20 XP)",
+    "backToLesson": "回去看教材",
+    "hintBtn": "提示",
+    "difficultyBasic": "基礎",
+    "difficultyAdvanced": "進階",
+    "difficultyChallenge": "挑戰"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "dashboard": {
+    "title": "進度儀表板",
+    "subtitle": "追蹤你的學習進度與成就",
+    "needXp": "還需要 {{amount}} XP 升級",
+    "questsCompleted": "完成關卡",
+    "challengesPassed": "通過挑戰",
+    "streakDays": "連續學習",
+    "streakValue": "{{count}} 天",
+    "totalXp": "總 XP",
+    "worldProgress": "世界進度",
+    "completedChallenges": "已完成的挑戰",
+    "noChallenges": "還沒有完成任何挑戰",
+    "challengeLabel": "Quest {{questId}} - 挑戰 {{challengeId}}",
+    "achievements": "成就",
+    "analytics": "學習分析",
+    "avgTime": "平均答題時間",
+    "weeklyTime": "本週學習時間",
+    "weeklyMinutes": "{{count}} 分鐘",
+    "velocity": "學習速度",
+    "velocityValue": "{{count}} 題/天"
+  },
+  "charts": {
+    "noData": "尚無資料",
+    "dailyActivity": "每日完成題數（近 14 天）",
+    "dailyUnit": " 題",
+    "xpTrend": "每日 XP 趨勢（近 14 天）",
+    "xpUnit": " XP",
+    "avgTimeTitle": "平均答題時間（秒）"
+  },
+  "achievement": {
+    "first_case": "第一個 Case Study",
+    "first_case_desc": "完成第一個挑戰",
+    "streak_3": "連續三天",
+    "streak_3_desc": "連續 3 天登入學習",
+    "streak_7": "連續七天",
+    "streak_7_desc": "連續 7 天登入學習",
+    "world1_done": "問題拆解大師",
+    "world1_done_desc": "完成 World 1 所有關卡",
+    "ten_challenges": "Case Study 達人",
+    "ten_challenges_desc": "完成 10 個挑戰",
+    "boss_killer": "Boss 征服者",
+    "boss_killer_desc": "通過任何 Boss 關"
+  }
+}

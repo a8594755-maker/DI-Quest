@@ -1,11 +1,13 @@
 import { motion } from 'framer-motion'
 import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap, BarChart3 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { WORLDS } from '../data/questData'
 import { BRANCHES } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
 import { DailyActivityChart, XpTrendChart, TimePerChallengeChart } from '../components/AnalyticsCharts'
 
 function ProgressDashboard() {
+  const { t } = useTranslation(['progress', 'common'])
   const { totalXp, levelInfo, questStatus, challengeStatus, streakDays, analytics, getAnalyticsSummary } = useQuest()
 
   const totalQuestsCompleted = Object.values(questStatus).filter(q => q.completed).length
@@ -13,9 +15,10 @@ function ProgressDashboard() {
 
   const branchProgress = BRANCHES.filter(b => b.worldIds.length > 0).map(branch => {
     const worlds = WORLDS.filter(w => branch.worldIds.includes(w.id))
+    const branchName = t(`common:branch.${branch.id}.name`, branch.name)
     return {
       branchId: branch.id,
-      branchName: `${branch.emoji} ${branch.name}`,
+      branchName: `${branch.emoji} ${branchName}`,
       worlds: worlds.map(w => {
         const completed = w.quests.filter(q => questStatus[q.id]?.completed).length
         return {
@@ -39,19 +42,19 @@ function ProgressDashboard() {
     .slice(0, 8)
 
   const ACHIEVEMENT_DEFS = [
-    { id: 'first_case', name: '第一個 Case Study', emoji: '🐣', desc: '完成第一個挑戰', check: () => totalChallengesCompleted >= 1 },
-    { id: 'streak_3', name: '連續三天', emoji: '🔥', desc: '連續 3 天登入學習', check: () => streakDays >= 3 },
-    { id: 'streak_7', name: '連續七天', emoji: '🔥', desc: '連續 7 天登入學習', check: () => streakDays >= 7 },
-    { id: 'world1_done', name: '問題拆解大師', emoji: '🏝️', desc: '完成 World 1 所有關卡', check: () => questStatus['1-6']?.completed },
-    { id: 'ten_challenges', name: 'Case Study 達人', emoji: '🧪', desc: '完成 10 個挑戰', check: () => totalChallengesCompleted >= 10 },
-    { id: 'boss_killer', name: 'Boss 征服者', emoji: '💎', desc: '通過任何 Boss 關', check: () => ['1-6','2-6','3-6','4-6','5-6','6-6','7-6','8-6'].some(id => questStatus[id]?.completed) },
+    { id: 'first_case', emoji: '🐣', check: () => totalChallengesCompleted >= 1 },
+    { id: 'streak_3', emoji: '🔥', check: () => streakDays >= 3 },
+    { id: 'streak_7', emoji: '🔥', check: () => streakDays >= 7 },
+    { id: 'world1_done', emoji: '🏝️', check: () => questStatus['1-6']?.completed },
+    { id: 'ten_challenges', emoji: '🧪', check: () => totalChallengesCompleted >= 10 },
+    { id: 'boss_killer', emoji: '💎', check: () => ['1-6','2-6','3-6','4-6','5-6','6-6','7-6','8-6'].some(id => questStatus[id]?.completed) },
   ]
 
   return (
     <div className="max-w-5xl mx-auto p-6">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">進度儀表板</h2>
-        <p className="text-slate-400">追蹤你的學習進度與成就</p>
+        <h2 className="text-3xl font-bold text-white mb-2">{t('progress:dashboard.title')}</h2>
+        <p className="text-slate-400">{t('progress:dashboard.subtitle')}</p>
       </div>
 
       {/* 等級與 XP 卡 */}
@@ -77,7 +80,7 @@ function ProgressDashboard() {
               <span className="text-slate-500 text-lg">/ {levelInfo.xpForNext} XP</span>
             </div>
             <p className="text-slate-400 text-sm">
-              還需要 {Math.max(0, levelInfo.xpForNext - totalXp)} XP 升級
+              {t('progress:dashboard.needXp', { amount: Math.max(0, levelInfo.xpForNext - totalXp) })}
             </p>
           </div>
         </div>
@@ -92,10 +95,10 @@ function ProgressDashboard() {
       {/* 統計卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[
-          { icon: Trophy, color: 'emerald', label: '完成關卡', value: totalQuestsCompleted },
-          { icon: Target, color: 'blue', label: '通過挑戰', value: totalChallengesCompleted },
-          { icon: Flame, color: 'orange', label: '連續學習', value: `${streakDays} 天` },
-          { icon: Zap, color: 'purple', label: '總 XP', value: totalXp },
+          { icon: Trophy, color: 'emerald', label: t('progress:dashboard.questsCompleted'), value: totalQuestsCompleted },
+          { icon: Target, color: 'blue', label: t('progress:dashboard.challengesPassed'), value: totalChallengesCompleted },
+          { icon: Flame, color: 'orange', label: t('progress:dashboard.streakDays'), value: t('progress:dashboard.streakValue', { count: streakDays }) },
+          { icon: Zap, color: 'purple', label: t('progress:dashboard.totalXp'), value: totalXp },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -125,7 +128,7 @@ function ProgressDashboard() {
         >
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-brand-primary" />
-            世界進度
+            {t('progress:dashboard.worldProgress')}
           </h3>
           <div className="space-y-6">
             {branchProgress.map((branch) => (
@@ -165,11 +168,11 @@ function ProgressDashboard() {
         >
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-brand-secondary" />
-            已完成的挑戰
+            {t('progress:dashboard.completedChallenges')}
           </h3>
           <div className="space-y-3">
             {recentActivity.length === 0 ? (
-              <p className="text-slate-500 text-sm text-center py-4">還沒有完成任何挑戰</p>
+              <p className="text-slate-500 text-sm text-center py-4">{t('progress:dashboard.noChallenges')}</p>
             ) : (
               recentActivity.map((a) => (
                 <div
@@ -178,7 +181,7 @@ function ProgressDashboard() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-brand-primary" />
-                    <span className="text-slate-300 text-sm">Quest {a.questId} - 挑戰 {a.challengeId}</span>
+                    <span className="text-slate-300 text-sm">{t('progress:dashboard.challengeLabel', { questId: a.questId, challengeId: a.challengeId })}</span>
                   </div>
                   <span className="text-brand-accent font-medium text-sm">+{a.earnedXp || 0} XP</span>
                 </div>
@@ -197,7 +200,7 @@ function ProgressDashboard() {
       >
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Award className="w-5 h-5 text-brand-accent" />
-          成就
+          {t('progress:dashboard.achievements')}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {ACHIEVEMENT_DEFS.map((ach) => {
@@ -213,10 +216,10 @@ function ProgressDashboard() {
               >
                 <p className="text-2xl mb-2">{ach.emoji}</p>
                 <p className={`font-medium text-sm ${unlocked ? 'text-white' : 'text-slate-400'}`}>
-                  {ach.name}
+                  {t(`progress:achievement.${ach.id}`)}
                 </p>
                 <p className={`text-xs mt-1 ${unlocked ? 'text-emerald-400' : 'text-slate-500'}`}>
-                  {ach.desc}
+                  {t(`progress:achievement.${ach.id}_desc`)}
                 </p>
               </div>
             )
@@ -233,13 +236,12 @@ function ProgressDashboard() {
       >
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-brand-primary" />
-          學習分析
+          {t('progress:dashboard.analytics')}
         </h3>
 
-        {/* 分析統計卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="card">
-            <p className="text-slate-400 text-sm mb-1">平均答題時間</p>
+            <p className="text-slate-400 text-sm mb-1">{t('progress:dashboard.avgTime')}</p>
             <p className="text-2xl font-bold text-white">
               {getAnalyticsSummary.avgChallengeTimeMs > 0
                 ? `${Math.round(getAnalyticsSummary.avgChallengeTimeMs / 1000)}s`
@@ -247,22 +249,21 @@ function ProgressDashboard() {
             </p>
           </div>
           <div className="card">
-            <p className="text-slate-400 text-sm mb-1">本週學習時間</p>
+            <p className="text-slate-400 text-sm mb-1">{t('progress:dashboard.weeklyTime')}</p>
             <p className="text-2xl font-bold text-white">
               {getAnalyticsSummary.weeklyTimeMs > 0
-                ? `${Math.round(getAnalyticsSummary.weeklyTimeMs / 60000)} 分鐘`
+                ? t('progress:dashboard.weeklyMinutes', { count: Math.round(getAnalyticsSummary.weeklyTimeMs / 60000) })
                 : '—'}
             </p>
           </div>
           <div className="card">
-            <p className="text-slate-400 text-sm mb-1">學習速度</p>
+            <p className="text-slate-400 text-sm mb-1">{t('progress:dashboard.velocity')}</p>
             <p className="text-2xl font-bold text-white">
-              {getAnalyticsSummary.velocityPerDay} 題/天
+              {t('progress:dashboard.velocityValue', { count: getAnalyticsSummary.velocityPerDay })}
             </p>
           </div>
         </div>
 
-        {/* 圖表 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <DailyActivityChart dailyStats={analytics.dailyStats} />
           <XpTrendChart dailyStats={analytics.dailyStats} />

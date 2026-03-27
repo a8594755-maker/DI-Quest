@@ -1,11 +1,14 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import { Map, BarChart3, MessageCircle, Briefcase, Unlock, RotateCcw, Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import SearchModal from './SearchModal'
 import ChatPanel from './ChatPanel'
+import LanguageSwitcher from './LanguageSwitcher'
 
 function Layout() {
+  const { t } = useTranslation('common')
   const { levelInfo, devMode, dispatch, getDueReviewCount } = useQuest()
   const [searchOpen, setSearchOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
@@ -29,12 +32,11 @@ function Layout() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // 監聽文字選取 — 選取後顯示「問小迪」浮動按鈕
+  // 監聯文字選取 — 選取後顯示「問小迪」浮動按鈕
   const [selectionPopup, setSelectionPopup] = useState(null)
 
   useEffect(() => {
     const handleMouseUp = () => {
-      // 只在講義和題目頁顯示「問小迪」浮動按鈕
       const path = window.location.pathname
       if (!path.includes('/lesson/') && !path.includes('/case/')) return
 
@@ -54,7 +56,6 @@ function Layout() {
     }
 
     const handleMouseDown = (e) => {
-      // 如果點到的不是 popup 按鈕，就清除
       if (!e.target.closest('[data-selection-popup]')) {
         setSelectionPopup(null)
       }
@@ -78,7 +79,6 @@ function Layout() {
 
   const location = useLocation()
   const isArena = location.pathname.includes('/case')
-  // 講義 / 題目 / quest 詳情 → 側邊欄推開；主畫面 → 全螢幕覆蓋
   const isContentPage = location.pathname.includes('/case') || location.pathname.includes('/lesson') || location.pathname.includes('/quest/')
 
   return (
@@ -92,7 +92,7 @@ function Layout() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">DI Quest</h1>
-              <p className="text-xs text-slate-400">Case Study 面試練習</p>
+              <p className="text-xs text-slate-400">{t('nav.subtitle')}</p>
             </div>
           </NavLink>
 
@@ -112,11 +112,13 @@ function Layout() {
             <button
               onClick={() => setSearchOpen(true)}
               className="ml-1 px-3 py-1 rounded text-xs bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-300 transition-colors flex items-center gap-1.5"
-              title="搜尋 (⌘K)"
+              title={`${t('nav.search')} (⌘K)`}
             >
               <Search className="w-3 h-3" />
               <span className="hidden sm:inline">⌘K</span>
             </button>
+            {/* 語言切換 */}
+            <LanguageSwitcher />
             {/* 開發者模式切換 */}
             <button
               onClick={() => dispatch({ type: 'TOGGLE_DEV_MODE' })}
@@ -125,7 +127,7 @@ function Layout() {
                   ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 hover:text-slate-300'
               }`}
-              title="開發者模式：解鎖全部關卡"
+              title={t('nav.devMode')}
             >
               <Unlock className="w-3 h-3 inline mr-1" />
               {devMode ? 'DEV ON' : 'DEV'}
@@ -137,7 +139,7 @@ function Layout() {
       {/* 開發者模式提示條 */}
       {devMode && (
         <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-1.5 text-center">
-          <span className="text-amber-400 text-xs font-mono">🔓 開發者模式：全部關卡已解鎖</span>
+          <span className="text-amber-400 text-xs font-mono">🔓 {t('nav.devModeOn')}</span>
         </div>
       )}
 
@@ -183,7 +185,7 @@ function Layout() {
           }}
         >
           <MessageCircle className="w-3 h-3" />
-          問小迪
+          {t('float.askXiaoDi')}
         </button>
       )}
 
@@ -201,7 +203,7 @@ function Layout() {
               isActive ? 'bg-brand-primary text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`
           }
-          title="關卡地圖"
+          title={t('float.questMap')}
         >
           <Map className="w-5 h-5" />
         </NavLink>
@@ -212,7 +214,7 @@ function Layout() {
               isActive ? 'bg-brand-secondary text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`
           }
-          title="進度儀表板"
+          title={t('float.progressDashboard')}
         >
           <BarChart3 className="w-5 h-5" />
         </NavLink>
@@ -223,7 +225,7 @@ function Layout() {
               isActive ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`
           }
-          title="複習佇列"
+          title={t('float.reviewQueue')}
         >
           <RotateCcw className="w-5 h-5" />
           {dueCount > 0 && (
@@ -237,7 +239,7 @@ function Layout() {
           className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
             chatOpen ? 'bg-brand-accent text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
           }`}
-          title="問小迪 (⌘J)"
+          title={`${t('float.askXiaoDi')} (⌘J)`}
         >
           <MessageCircle className="w-5 h-5" />
         </button>

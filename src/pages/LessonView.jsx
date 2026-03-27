@@ -1,6 +1,7 @@
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, BookOpen, ChevronUp } from 'lucide-react'
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getWorldLesson } from '../data/lessons'
@@ -8,6 +9,7 @@ import { WORLDS } from '../data/questData'
 import { getBranchForWorld } from '../data/branches'
 
 function LessonView() {
+  const { t } = useTranslation('common')
   const { worldId } = useParams()
   const branch = getBranchForWorld(worldId)
   const backPath = branch ? `/di-quest/branch/${branch.id}` : '/di-quest'
@@ -19,7 +21,6 @@ function LessonView() {
   const contentRef = useRef(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
 
-  // 從 markdown 提取目錄
   const toc = useMemo(() => {
     if (!lesson) return []
     const headings = []
@@ -33,11 +34,9 @@ function LessonView() {
     return headings
   }, [lesson])
 
-  // 從 hash 跳轉到對應章節
   useEffect(() => {
     if (!location.hash) return
     const id = decodeURIComponent(location.hash.slice(1))
-    // 等 markdown 渲染完再滾動
     const timer = setTimeout(() => {
       const el = contentRef.current?.querySelector(`#${CSS.escape(id)}`)
       if (el) {
@@ -48,7 +47,6 @@ function LessonView() {
     return () => clearTimeout(timer)
   }, [location.hash])
 
-  // 滾動追蹤
   useEffect(() => {
     const container = contentRef.current
     if (!container) return
@@ -84,8 +82,8 @@ function LessonView() {
   if (!lesson || !world) {
     return (
       <div className="max-w-4xl mx-auto p-6 text-center py-20">
-        <p className="text-slate-500 text-lg">找不到這個世界的講義</p>
-        <Link to={backPath} className="btn-primary inline-block mt-4">返回地圖</Link>
+        <p className="text-slate-500 text-lg">{t('lesson.notFound')}</p>
+        <Link to={backPath} className="btn-primary inline-block mt-4">{t('action.backToMap')}</Link>
       </div>
     )
   }
@@ -97,7 +95,7 @@ function LessonView() {
         <div className="w-72 h-full overflow-y-auto p-4">
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-700">
             <BookOpen className="w-4 h-4 text-brand-primary" />
-            <span className="text-white font-medium text-sm">目錄</span>
+            <span className="text-white font-medium text-sm">{t('lesson.toc')}</span>
           </div>
           <nav className="space-y-1">
             {toc.map((item) => (
@@ -121,7 +119,6 @@ function LessonView() {
 
       {/* 主要內容 */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* 頂部欄 */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700 bg-slate-900/50 flex-shrink-0">
           <div className="flex items-center gap-4">
             <Link to={backPath} className="text-slate-400 hover:text-white transition-colors">
@@ -129,7 +126,7 @@ function LessonView() {
             </Link>
             <div>
               <span className="text-2xl mr-2">{world.emoji}</span>
-              <span className="text-white font-medium">{world.name} — 講義</span>
+              <span className="text-white font-medium">{world.name} — {t('lesson.lessonSuffix')}</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -137,18 +134,17 @@ function LessonView() {
               onClick={() => setShowToc(!showToc)}
               className="px-3 py-1.5 text-slate-400 hover:text-white text-sm border border-slate-700 rounded transition-colors"
             >
-              {showToc ? '隱藏目錄' : '顯示目錄'}
+              {showToc ? t('lesson.hideToc') : t('lesson.showToc')}
             </button>
             <Link
               to={backPath}
               className="px-4 py-1.5 bg-brand-primary text-white text-sm rounded hover:bg-blue-600 transition-colors"
             >
-              開始挑戰
+              {t('action.startChallenge')}
             </Link>
           </div>
         </div>
 
-        {/* 文章內容 */}
         <div ref={contentRef} className="flex-1 overflow-y-auto">
           <article className="max-w-4xl mx-auto px-8 py-8 lesson-content">
             <ReactMarkdown
@@ -215,7 +211,6 @@ function LessonView() {
           </article>
         </div>
 
-        {/* 回到頂部 */}
         {showScrollTop && (
           <button
             onClick={scrollToTop}

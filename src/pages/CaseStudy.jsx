@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Lightbulb, Send, ChevronLeft, ChevronRight, BookOpen, CheckCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { getQuest, getChallenge, getWorld } from '../data/questData'
 import { getQuestSectionTitle, getQuestSectionId } from '../data/lessons/index'
 import { useQuest } from '../contexts/QuestContext'
@@ -13,6 +14,7 @@ import OpenEndedAnswer from '../components/OpenEndedAnswer'
 import CodeChallenge from '../components/CodeChallenge'
 
 function CaseStudy() {
+  const { t } = useTranslation(['case', 'common'])
   const { worldId, questId, challengeId = '1' } = useParams()
   const [searchParams] = useSearchParams()
   const isReview = searchParams.get('review') === '1'
@@ -30,7 +32,6 @@ function CaseStudy() {
   const [submitted, setSubmitted] = useState(false)
   const [answerCorrect, setAnswerCorrect] = useState(false)
 
-  // Reset state when challenge changes + start timing
   useEffect(() => {
     if (challenge) {
       const saved = challengeStatus[`${questId}-${challengeId}`]
@@ -47,7 +48,6 @@ function CaseStudy() {
   }
 
   const completeChallenge = (score) => {
-    // 記錄作答時間
     const durationMs = endChallenge(questId, challengeId)
     if (durationMs > 0) {
       dispatch({
@@ -71,7 +71,6 @@ function CaseStudy() {
 
     setSubmitted(true)
 
-    // Check if all challenges complete -> complete quest
     if (quest) {
       const allDone = quest.challenges.every((c) => {
         if (c.id === Number(challengeId)) return true
@@ -97,17 +96,22 @@ function CaseStudy() {
     completeChallenge(score)
   }
 
-  // Challenge navigation
   const currentIndex = quest ? quest.challenges.findIndex(c => c.id === Number(challengeId)) : -1
   const prevChallenge = quest?.challenges[currentIndex - 1]
   const nextChallenge = quest?.challenges[currentIndex + 1]
+
+  const getDifficultyLabel = (diff) => {
+    if (diff === 'easy') return t('case:caseStudy.difficultyBasic')
+    if (diff === 'medium') return t('case:caseStudy.difficultyAdvanced')
+    return t('case:caseStudy.difficultyChallenge')
+  }
 
   if (!challenge || !quest) {
     return (
       <div className="h-[calc(100vh-73px)] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-500 text-lg mb-4">找不到這個題目</p>
-          <Link to="/di-quest/map" className="btn-primary">返回地圖</Link>
+          <p className="text-slate-500 text-lg mb-4">{t('case:caseStudy.notFound')}</p>
+          <Link to="/di-quest/map" className="btn-primary">{t('common:action.backToMap')}</Link>
         </div>
       </div>
     )
@@ -134,7 +138,7 @@ function CaseStudy() {
                   challenge.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
                   'bg-red-500/20 text-red-400'
                 }`}>
-                  {challenge.difficulty === 'easy' ? '基礎' : challenge.difficulty === 'medium' ? '進階' : '挑戰'}
+                  {getDifficultyLabel(challenge.difficulty)}
                 </span>
               )}
             </h1>
@@ -155,7 +159,7 @@ function CaseStudy() {
               onClick={() => navigate(`/di-quest/case/${worldId}/${questId}/${prevChallenge.id}`)}
               className="flex items-center gap-1 px-3 py-2 text-slate-400 hover:text-white text-sm transition-colors"
             >
-              <ChevronLeft className="w-4 h-4" /> 上一題
+              <ChevronLeft className="w-4 h-4" /> {t('case:caseStudy.prevQuestion')}
             </button>
           )}
           {nextChallenge && (
@@ -163,7 +167,7 @@ function CaseStudy() {
               onClick={() => navigate(`/di-quest/case/${worldId}/${questId}/${nextChallenge.id}`)}
               className="flex items-center gap-1 px-3 py-2 text-slate-400 hover:text-white text-sm transition-colors"
             >
-              下一題 <ChevronRight className="w-4 h-4" />
+              {t('case:caseStudy.nextQuestion')} <ChevronRight className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -199,7 +203,6 @@ function CaseStudy() {
             </div>
           )}
 
-          {/* Framework tip */}
           {challenge.frameworkTip && (
             <div className="mt-4 p-3 bg-brand-accent/10 border border-brand-accent/30 rounded-lg">
               <p className="text-brand-accent text-sm">
@@ -245,11 +248,10 @@ function CaseStudy() {
               />
             ) : (
               <div className="text-slate-400 text-center py-12">
-                此題型開發中
+                {t('case:caseStudy.typeInDev')}
               </div>
             )}
 
-            {/* Explanation after correct answer */}
             {submitted && challenge.explanation && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -258,7 +260,7 @@ function CaseStudy() {
               >
                 <h4 className="text-emerald-400 font-medium mb-2 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
-                  解析
+                  {t('case:caseStudy.explanation')}
                 </h4>
                 <p className="text-slate-300 text-sm leading-relaxed">{challenge.explanation}</p>
               </motion.div>
@@ -271,13 +273,13 @@ function CaseStudy() {
       <div className="border-t border-slate-700 bg-slate-900 p-5 pr-16">
         <div className="flex items-start gap-4 max-w-full">
           <div className="w-12 h-12 rounded-full bg-brand-accent/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-brand-accent font-bold text-base">小迪</span>
+            <span className="text-brand-accent font-bold text-base">{t('case:caseStudy.xiaoDi')}</span>
           </div>
           <div className="flex-1 min-w-0">
             {submitted ? (
               <div className="text-emerald-400 font-medium text-base">
-                {answerCorrect ? '答對了！' : ''}
-                {nextChallenge ? ' 準備好挑戰下一題了嗎？' : ' 你已經完成這個關卡的所有題目！'}
+                {answerCorrect ? t('case:caseStudy.correctAnswer') : ''}
+                {nextChallenge ? ` ${t('case:caseStudy.readyForNext')}` : ` ${t('case:caseStudy.allComplete')}`}
               </div>
             ) : hintLevel > 0 && challenge.hints ? (
               <div>
@@ -287,7 +289,7 @@ function CaseStudy() {
                 <div className="flex items-center gap-3">
                   {hintLevel < (challenge.hints?.length || 3) && (
                     <button onClick={getHint} className="text-brand-accent text-sm hover:underline">
-                      需要更多提示？(-20 XP)
+                      {t('case:caseStudy.moreHints')}
                     </button>
                   )}
                   <Link
@@ -295,13 +297,13 @@ function CaseStudy() {
                     className="inline-flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 hover:underline"
                   >
                     <BookOpen className="w-4 h-4" />
-                    回去看教材
+                    {t('case:caseStudy.backToLesson')}
                   </Link>
                 </div>
               </div>
             ) : (
               <p className="text-slate-400 text-base">
-                仔細閱讀左邊的情境和數據，再回答右邊的問題。卡住的話可以按提示按鈕。
+                {t('case:caseStudy.defaultHint')}
               </p>
             )}
           </div>
@@ -312,14 +314,14 @@ function CaseStudy() {
               className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 text-brand-accent rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-50 text-sm"
             >
               <Lightbulb className="w-4 h-4" />
-              提示 {hintLevel > 0 ? `(${hintLevel}/${challenge.hints?.length || 3})` : ''}
+              {t('case:caseStudy.hintBtn')} {hintLevel > 0 ? `(${hintLevel}/${challenge.hints?.length || 3})` : ''}
             </button>
             {submitted && nextChallenge && (
               <button
                 onClick={() => navigate(`/di-quest/case/${worldId}/${questId}/${nextChallenge.id}`)}
                 className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
-                下一題 <ChevronRight className="w-4 h-4" />
+                {t('case:caseStudy.nextQuestion')} <ChevronRight className="w-4 h-4" />
               </button>
             )}
           </div>

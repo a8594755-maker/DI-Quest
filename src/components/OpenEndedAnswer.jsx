@@ -1,21 +1,13 @@
 import { useState } from 'react'
 import { Send, Loader2, CheckCircle, AlertCircle, BookOpen } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { chatWithDeepSeek } from '../utils/deepseek'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-/**
- * OpenEndedAnswer — 開放式問答 + AI 評分元件
- * Props:
- *   prompt: string (問題)
- *   evaluationCriteria: string[] (評分標準)
- *   sampleAnswer: string (參考答案)
- *   scenario: object (情境，用於 AI 評分 context)
- *   onSubmit: (score) => void
- *   disabled: boolean
- */
 function OpenEndedAnswer({ prompt, evaluationCriteria = [], sampleAnswer, scenario, onSubmit, disabled = false }) {
+  const { t } = useTranslation('case')
   const [answer, setAnswer] = useState('')
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [evaluation, setEvaluation] = useState(null)
@@ -68,14 +60,13 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
       const result = await chatWithDeepSeek(messages)
       setEvaluation(result)
 
-      // Extract score from response
       const scoreMatch = result.match(/分數[：:]\s*(\d+)/)
       const score = scoreMatch ? parseInt(scoreMatch[1]) : 70
 
       onSubmit?.(score)
     } catch (err) {
       console.error('AI evaluation error:', err)
-      setError('AI 評分服務暫時無法使用，請稍後再試。')
+      setError(t('openEnded.aiError'))
     } finally {
       setIsEvaluating(false)
     }
@@ -96,7 +87,7 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
 
       {evaluationCriteria.length > 0 && (
         <div className="mb-4 p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
-          <p className="text-slate-400 text-xs font-medium mb-2">評分標準：</p>
+          <p className="text-slate-400 text-xs font-medium mb-2">{t('openEnded.criteria')}</p>
           <ul className="space-y-1">
             {evaluationCriteria.map((c, i) => (
               <li key={i} className="text-slate-300 text-sm flex items-start gap-2">
@@ -114,13 +105,13 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
             disabled={disabled || isEvaluating}
-            placeholder="用你在面試中會講的方式回答這個問題...&#10;&#10;建議使用 Case Answer Framework：&#10;1. 確認目標&#10;2. 定義指標&#10;3. 拆解流程&#10;4. Segmentation / Root Cause&#10;5. 提出建議&#10;6. 驗證方式"
+            placeholder={t('openEnded.placeholder')}
             className="w-full h-48 px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors resize-y text-sm leading-relaxed disabled:opacity-50"
           />
 
           <div className="flex items-center justify-between mt-3">
             <span className="text-slate-500 text-xs">
-              {answer.length > 0 ? `${answer.length} 字` : '建議至少寫 100 字以上'}
+              {answer.length > 0 ? t('openEnded.charCount', { count: answer.length }) : t('openEnded.minChars')}
             </span>
             <button
               onClick={handleSubmit}
@@ -130,12 +121,12 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
               {isEvaluating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  AI 評分中...
+                  {t('openEnded.evaluating')}
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  提交 AI 評分
+                  {t('openEnded.submitAi')}
                 </>
               )}
             </button>
@@ -152,7 +143,7 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
               onClick={() => { setError(null); setIsEvaluating(false) }}
               className="text-red-300 text-xs underline mt-1"
             >
-              重試
+              {t('openEnded.retry')}
             </button>
           </div>
         </div>
@@ -164,13 +155,11 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
           animate={{ opacity: 1, y: 0 }}
           className="mt-4 space-y-4"
         >
-          {/* Your answer */}
           <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
-            <p className="text-slate-400 text-xs font-medium mb-2">你的回答：</p>
+            <p className="text-slate-400 text-xs font-medium mb-2">{t('openEnded.yourAnswer')}</p>
             <p className="text-slate-300 text-sm whitespace-pre-wrap">{answer}</p>
           </div>
 
-          {/* AI evaluation */}
           <div className={`p-4 border rounded-lg ${
             getScoreColor(evaluation).includes('emerald') ? 'bg-emerald-500/10 border-emerald-500/30' :
             getScoreColor(evaluation).includes('yellow') ? 'bg-yellow-500/10 border-yellow-500/30' :
@@ -178,14 +167,13 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
           }`}>
             <h4 className={`font-medium mb-3 flex items-center gap-2 ${getScoreColor(evaluation)}`}>
               <CheckCircle className="w-4 h-4" />
-              AI 面試教練評分
+              {t('openEnded.aiCoachTitle')}
             </h4>
             <div className="prose prose-sm prose-invert max-w-none text-slate-300">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{evaluation}</ReactMarkdown>
             </div>
           </div>
 
-          {/* Sample answer toggle */}
           {sampleAnswer && (
             <div>
               <button
@@ -193,7 +181,7 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
                 className="flex items-center gap-2 text-brand-primary text-sm hover:underline"
               >
                 <BookOpen className="w-4 h-4" />
-                {showSample ? '收起參考答案' : '查看參考答案'}
+                {showSample ? t('openEnded.hideSample') : t('openEnded.showSample')}
               </button>
               {showSample && (
                 <motion.div
