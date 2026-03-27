@@ -123,13 +123,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let initialSessionHandled = false
 
-    // Safety timeout: if loading takes more than 3 seconds, force it to stop
+    // Safety timeout: give more time when exchanging OAuth code
+    const hasAuthCode = window.location.search.includes('code=')
+    const timeoutMs = hasAuthCode ? 10000 : 3000
     const loadingTimeout = setTimeout(() => {
       setLoading(prev => {
         if (prev) console.warn('Auth loading timeout — forcing load complete')
         return false
       })
-    }, 3000)
+    }, timeoutMs)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
@@ -143,6 +145,10 @@ export function AuthProvider({ children }) {
           setUser(session.user)
           setIsGuest(false)
           await fetchProfile(session.user.id, session.user.user_metadata)
+          // Clean up OAuth code from URL to prevent stale code exchange on refresh
+          if (window.location.search.includes('code=')) {
+            window.history.replaceState({}, '', window.location.pathname)
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
