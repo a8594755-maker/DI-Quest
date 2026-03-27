@@ -97,6 +97,14 @@ export function AuthProvider({ children }) {
 
   // Listen to auth state changes
   useEffect(() => {
+    // Safety timeout: if loading takes more than 5 seconds, force it to stop
+    const loadingTimeout = setTimeout(() => {
+      setLoading(prev => {
+        if (prev) console.warn('Auth loading timeout — forcing load complete')
+        return false
+      })
+    }, 5000)
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
         if (session?.user) {
@@ -110,6 +118,7 @@ export function AuthProvider({ children }) {
       } catch (err) {
         console.error('Auth state change error:', err)
       } finally {
+        clearTimeout(loadingTimeout)
         setLoading(false)
       }
     })
@@ -128,11 +137,15 @@ export function AuthProvider({ children }) {
       } catch (err) {
         console.error('Get session error:', err)
       } finally {
+        clearTimeout(loadingTimeout)
         setLoading(false)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(loadingTimeout)
+      subscription.unsubscribe()
+    }
   }, [fetchProfile])
 
   const signUp = async ({ email, password, username, displayName }) => {

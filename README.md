@@ -60,6 +60,16 @@ npm run build
 npm run preview  # Preview production build locally
 ```
 
+### Lint & Test
+
+```bash
+npm run lint          # ESLint check
+npm run lint:fix      # Auto-fix lint issues
+npm run test          # Watch mode
+npm run test:unit     # Single run
+npm run test:coverage # With coverage report
+```
+
 ### Database
 
 Apply the migration to your Supabase project:
@@ -96,6 +106,15 @@ src/
 | Python | 15-22 | Syntax to Pandas pipelines with business-context code challenges |
 | DI Product | 9-14, 39-41 | Decision Intelligence platform architecture, deployment, quality |
 | Professional English | 48-53 | Project pitches, interview answers, workplace communication (zh-TW only) |
+
+## CI/CD
+
+GitHub Actions runs on every push/PR to `main`:
+1. **Lint** — ESLint with React hooks & refresh plugins
+2. **Test** — Vitest unit tests
+3. **Build** — Production build verification
+
+Deployment is handled automatically by **Netlify** on merge to `main`.
 
 ## License
 

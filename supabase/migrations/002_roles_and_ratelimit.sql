@@ -41,6 +41,8 @@ ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can read active promo codes"
   ON public.promo_codes FOR SELECT USING (active = true);
+CREATE POLICY "Authenticated users can update promo code usage"
+  ON public.promo_codes FOR UPDATE USING (active = true);
 
 -- Insert the promo code
 INSERT INTO public.promo_codes (code, role_grant) VALUES ('LOUIS2026', 'premium');

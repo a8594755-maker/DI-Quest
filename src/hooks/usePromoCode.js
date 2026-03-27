@@ -19,6 +19,7 @@ export function usePromoCode() {
         .eq('active', true)
         .maybeSingle()
 
+      if (promoError) throw promoError
       if (!promo) throw new Error('INVALID_CODE')
       if (promo.max_uses && promo.current_uses >= promo.max_uses) throw new Error('CODE_EXPIRED')
 
