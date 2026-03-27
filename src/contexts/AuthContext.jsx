@@ -121,40 +121,43 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
-      try {
-        if (event === 'TOKEN_REFRESHED' && session?.user) {
-          setUser(session.user)
-          return
-        }
-        if (event === 'SIGNED_OUT') {
-          setUser(null)
-          setProfile(null)
-          setIsGuest(false)
-          setLoading(false)
-          return
-        }
-        if (session?.user) {
-          setUser(session.user)
-          setIsGuest(false)
-          await fetchProfile(session.user.id, session.user.user_metadata, session.user)
-          // Clean up OAuth code from URL
-          if (window.location.search.includes('code=')) {
-            window.history.replaceState({}, '', window.location.pathname)
-          }
-        } else if (!session) {
-          setUser(null)
-          setProfile(null)
-          const wasGuest = localStorage.getItem('di-quest-guest')
-          if (wasGuest) setIsGuest(true)
-        }
-      } catch (err) {
-        if (err?.message?.includes('Lock')) return
-        console.error('Auth state change error:', err)
-      } finally {
-        if (mounted) setLoading(false)
+
+      if (event === 'TOKEN_REFRESHED' && session?.user) {
+        setUser(session.user)
+        return
       }
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setProfile(null)
+        setIsGuest(false)
+        setLoading(false)
+        return
+      }
+      if (session?.user) {
+        setUser(session.user)
+        setIsGuest(false)
+        // Defer async Supabase calls to avoid deadlock (auth-js #762)
+        setTimeout(() => {
+          fetchProfile(session.user.id, session.user.user_metadata, session.user)
+            .catch(err => console.error('Profile fetch error:', err))
+            .finally(() => {
+              if (mounted) setLoading(false)
+              // Clean up OAuth code from URL
+              if (window.location.search.includes('code=')) {
+                window.history.replaceState({}, '', window.location.pathname)
+              }
+            })
+        }, 0)
+        return
+      }
+      // No session
+      setUser(null)
+      setProfile(null)
+      const wasGuest = localStorage.getItem('di-quest-guest')
+      if (wasGuest) setIsGuest(true)
+      setLoading(false)
     })
 
     return () => {
