@@ -17,14 +17,24 @@ function ProfileSetupModal({ isOpen, onClose }) {
   const [promoMessage, setPromoMessage] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Extract Google metadata from various possible locations
+  const getGoogleMeta = () => {
+    const meta = user?.user_metadata || {}
+    const identityData = user?.identities?.find(i => i.provider === 'google')?.identity_data || {}
+    return {
+      full_name: meta.full_name || meta.name || identityData.full_name || identityData.name || '',
+      avatar_url: meta.avatar_url || meta.picture || identityData.avatar_url || identityData.picture || '',
+    }
+  }
+
   // Reset state when modal opens — pre-populate from Google metadata if profile has defaults
   useEffect(() => {
     if (isOpen && profile) {
-      const meta = user?.user_metadata || {}
+      const gMeta = getGoogleMeta()
       const profileName = profile.display_name
       // Use Google name if profile display_name is default or empty
       const effectiveName = (!profileName || profileName === 'Learner')
-        ? (meta.full_name || meta.name || '')
+        ? (gMeta.full_name || '')
         : profileName
       setDisplayName(effectiveName)
       setUsername(profile.username?.startsWith('user_') ? '' : (profile.username || ''))
@@ -116,9 +126,17 @@ function ProfileSetupModal({ isOpen, onClose }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-brand-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="w-8 h-8 text-brand-primary" />
-              </div>
+              {(() => {
+                const gMeta = getGoogleMeta()
+                const avatarUrl = profile?.avatar_url || gMeta.avatar_url
+                return avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-16 h-16 rounded-full mx-auto mb-4 border-2 border-brand-primary" />
+                ) : (
+                  <div className="w-16 h-16 bg-brand-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <User className="w-8 h-8 text-brand-primary" />
+                  </div>
+                )
+              })()}
               <h2 className="text-xl font-bold text-white mb-1">
                 {t('profile.setupTitle', 'Set Up Your Profile')}
               </h2>

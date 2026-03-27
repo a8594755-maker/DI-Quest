@@ -14,7 +14,7 @@ import UserAvatar from './UserAvatar'
 
 function Layout() {
   const { t } = useTranslation(['common', 'auth', 'social'])
-  const { levelInfo, getDueReviewCount, streakDays, checkedInToday } = useQuest()
+  const { levelInfo, getDueReviewCount, streakDays, checkedInToday, cloudSynced } = useQuest()
   const { isAuthenticated, isGuest, profile, signOut, needsProfileSetup } = useAuth()
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
@@ -32,13 +32,15 @@ function Layout() {
     }
   }, [isAuthenticated, needsProfileSetup])
 
-  // Show checkin modal on first visit if not checked in today
+  // Show checkin modal on first visit if not checked in today (wait for cloud sync)
   useEffect(() => {
+    // For authenticated users, wait until cloud data is loaded
+    if (isAuthenticated && !cloudSynced) return
     if (!checkedInToday && !needsProfileSetup) {
       const timer = setTimeout(() => setCheckinModalOpen(true), 800)
       return () => clearTimeout(timer)
     }
-  }, [needsProfileSetup])
+  }, [needsProfileSetup, checkedInToday, cloudSynced, isAuthenticated])
 
   // Cmd+K / Ctrl+K 搜尋快捷鍵
   // Cmd+J / Ctrl+J 開啟小迪

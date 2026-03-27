@@ -205,6 +205,7 @@ export function QuestProvider({ children }) {
   const { isAuthenticated, user, isGuest, profile } = useAuth()
   const saveTimerRef = useRef(null)
   const cloudLoadedRef = useRef(false)
+  const [cloudSynced, setCloudSynced] = useState(false)
 
   // 持久化 — localStorage (always for backup)
   useEffect(() => { saveState(state) }, [state])
@@ -235,6 +236,11 @@ export function QuestProvider({ children }) {
     saveTimerRef.current = setTimeout(() => saveToCloud(state), 2000)
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
   }, [state, isAuthenticated, saveToCloud])
+
+  // Mark cloud as synced for non-authenticated users
+  useEffect(() => {
+    if (!isAuthenticated) setCloudSynced(true)
+  }, [isAuthenticated])
 
   // Load from cloud on first auth
   useEffect(() => {
@@ -272,6 +278,7 @@ export function QuestProvider({ children }) {
           await saveToCloud(state)
         }
       } catch {}
+      setCloudSynced(true)
     }
     loadFromCloud()
   }, [isAuthenticated, user])
@@ -373,6 +380,7 @@ export function QuestProvider({ children }) {
     ...state,
     levelInfo,
     isPremium,
+    cloudSynced,
     dispatch,
     isQuestUnlocked,
     isWorldUnlocked,

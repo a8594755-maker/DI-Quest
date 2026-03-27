@@ -10,6 +10,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false)
 
+  // Extract Google metadata from various possible locations
+  const getGoogleMeta = (userMeta, user) => {
+    const meta = userMeta || {}
+    // Google data can be in user_metadata directly or in identities
+    const identityData = user?.identities?.find(i => i.provider === 'google')?.identity_data || {}
+    return {
+      full_name: meta.full_name || meta.name || identityData.full_name || identityData.name || '',
+      avatar_url: meta.avatar_url || meta.picture || identityData.avatar_url || identityData.picture || '',
+      email: meta.email || identityData.email || '',
+    }
+  }
+
   // Fetch profile from Supabase, auto-create if missing, auto-populate from Google metadata
   const fetchProfile = useCallback(async (userId, userMeta, retryCount = 0) => {
     const { data, error } = await supabase
@@ -30,10 +42,10 @@ export function AuthProvider({ children }) {
 
     // Profile doesn't exist — create it (user was created before migration)
     if (!data) {
-      const meta = userMeta || {}
+      const gMeta = getGoogleMeta(userMeta, user)
       const autoUsername = 'user_' + userId.substring(0, 8)
-      const displayName = meta.full_name || meta.name || 'Learner'
-      const avatarUrl = meta.avatar_url || null
+      const displayName = gMeta.full_name || 'Learner'
+      const avatarUrl = gMeta.avatar_url || null
 
       const { data: created } = await supabase
         .from('profiles')
@@ -58,15 +70,15 @@ export function AuthProvider({ children }) {
     }
 
     // Profile exists — check if we should update from Google metadata
-    const meta = userMeta || {}
+    const gMeta = getGoogleMeta(userMeta, user)
     const isDefaultProfile = data.display_name === 'Learner' || data.username?.startsWith('user_')
-    if (isDefaultProfile && (meta.full_name || meta.name || meta.avatar_url)) {
+    if (isDefaultProfile && (gMeta.full_name || gMeta.avatar_url)) {
       const updates = {}
-      if (data.display_name === 'Learner' && (meta.full_name || meta.name)) {
-        updates.display_name = meta.full_name || meta.name
+      if (data.display_name === 'Learner' && gMeta.full_name) {
+        updates.display_name = gMeta.full_name
       }
-      if (!data.avatar_url && meta.avatar_url) {
-        updates.avatar_url = meta.avatar_url
+      if (!data.avatar_url && gMeta.avatar_url) {
+        updates.avatar_url = gMeta.avatar_url
       }
       if (Object.keys(updates).length > 0) {
         const { data: updated } = await supabase
