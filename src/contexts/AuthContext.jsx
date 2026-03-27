@@ -11,10 +11,10 @@ export function AuthProvider({ children }) {
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false)
 
   // Extract Google metadata from various possible locations
-  const getGoogleMeta = (userMeta, user) => {
+  const getGoogleMeta = (userMeta, authUser) => {
     const meta = userMeta || {}
     // Google data can be in user_metadata directly or in identities
-    const identityData = user?.identities?.find(i => i.provider === 'google')?.identity_data || {}
+    const identityData = authUser?.identities?.find(i => i.provider === 'google')?.identity_data || {}
     return {
       full_name: meta.full_name || meta.name || identityData.full_name || identityData.name || '',
       avatar_url: meta.avatar_url || meta.picture || identityData.avatar_url || identityData.picture || '',
@@ -23,26 +23,25 @@ export function AuthProvider({ children }) {
   }
 
   // Fetch profile from Supabase, auto-create if missing, auto-populate from Google metadata
-  const fetchProfile = useCallback(async (userId, userMeta, retryCount = 0) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (error) {
+  const fetchProfile = useCallback(async (userId, userMeta, sessionUser) => {
+    let data, error
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const result = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+      data = result.data
+      error = result.error
+      if (!error) break
       console.error('Error fetching profile:', error)
-      // Retry once after a short delay (auth token may still be settling)
-      if (retryCount < 1) {
-        await new Promise(r => setTimeout(r, 1000))
-        return fetchProfile(userId, userMeta, retryCount + 1)
-      }
-      return null
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1000))
     }
+    if (error) return null
 
     // Profile doesn't exist — create it (user was created before migration)
     if (!data) {
-      const gMeta = getGoogleMeta(userMeta, user)
+      const gMeta = getGoogleMeta(userMeta, sessionUser)
       const autoUsername = 'user_' + userId.substring(0, 8)
       const displayName = gMeta.full_name || 'Learner'
       const avatarUrl = gMeta.avatar_url || null
@@ -70,7 +69,7 @@ export function AuthProvider({ children }) {
     }
 
     // Profile exists — check if we should update from Google metadata
-    const gMeta = getGoogleMeta(userMeta, user)
+    const gMeta = getGoogleMeta(userMeta, sessionUser)
     const isDefaultProfile = data.display_name === 'Learner' || data.username?.startsWith('user_')
     if (isDefaultProfile && (gMeta.full_name || gMeta.avatar_url)) {
       const updates = {}
@@ -133,7 +132,7 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         setUser(session.user)
         setIsGuest(false)
-        await fetchProfile(session.user.id, session.user.user_metadata)
+        await fetchProfile(session.user.id, session.user.user_metadata, session.user)
       } else {
         setUser(null)
         setProfile(null)
