@@ -96,6 +96,14 @@ import world58 from './world58'
 import world59 from './world59'
 import world60 from './world60'
 import world61 from './world61'
+import world54_en from './world54_en'
+import world55_en from './world55_en'
+import world56_en from './world56_en'
+import world57_en from './world57_en'
+import world58_en from './world58_en'
+import world59_en from './world59_en'
+import world60_en from './world60_en'
+import world61_en from './world61_en'
 
 const lessons = {
   1: world1,
@@ -207,14 +215,14 @@ const lessonsEn = {
   51: world51,
   52: world52,
   53: world53,
-  54: world54,
-  55: world55,
-  56: world56,
-  57: world57,
-  58: world58,
-  59: world59,
-  60: world60,
-  61: world61,
+  54: world54_en,
+  55: world55_en,
+  56: world56_en,
+  57: world57_en,
+  58: world58_en,
+  59: world59_en,
+  60: world60_en,
+  61: world61_en,
 }
 
 export function getWorldLesson(worldId) {
