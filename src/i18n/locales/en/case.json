@@ -10,7 +10,10 @@
     "correct": "Correct! Your query results match the expected output perfectly.",
     "sqlError": "SQL Error: {{error}}",
     "incorrect": "Incorrect result, please try again.",
-    "viewExpected": "View expected result"
+    "viewExpected": "View expected result",
+    "reset": "Reset",
+    "dbNotReady": "Database not initialized yet",
+    "unknownError": "An unknown error occurred"
   },
   "openEnded": {
     "criteria": "Evaluation Criteria:",

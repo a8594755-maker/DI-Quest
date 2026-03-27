@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Play, Send, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Play, Send, CheckCircle, XCircle, Loader2, RotateCcw } from 'lucide-react'
 import Editor from '@monaco-editor/react'
 import { useTranslation } from 'react-i18next'
 import DataTable from './DataTable'
@@ -29,11 +29,15 @@ function CodeChallenge({ question, starterCode, sampleSchema, expectedQuery, onA
           setQueryError(null)
           setLoading(false)
           break
-        case 'ERROR':
-          setQueryError(e.data.message)
+        case 'ERROR': {
+          const errMsg = e.data.code === 'DB_NOT_READY'
+            ? t('codeChallenge.dbNotReady')
+            : e.data.message || t('codeChallenge.unknownError')
+          setQueryError(errMsg)
           setQueryResult(null)
           setLoading(false)
           break
+        }
         case 'VALIDATION':
           setValidationResult(e.data)
           setLoading(false)
@@ -58,6 +62,13 @@ function CodeChallenge({ question, starterCode, sampleSchema, expectedQuery, onA
     setValidationResult(null)
     workerRef.current.postMessage({ type: 'RUN_SQL', payload: { sql: userCode } })
   }, [dbReady, userCode])
+
+  const handleReset = useCallback(() => {
+    setUserCode(starterCode || '')
+    setQueryResult(null)
+    setQueryError(null)
+    setValidationResult(null)
+  }, [starterCode])
 
   const handleSubmit = useCallback(() => {
     if (!dbReady || !workerRef.current) return
@@ -125,6 +136,14 @@ function CodeChallenge({ question, starterCode, sampleSchema, expectedQuery, onA
         >
           <Send className="w-4 h-4" />
           {t('codeChallenge.submit')}
+        </button>
+        <button
+          onClick={handleReset}
+          disabled={loading || disabled}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-50 text-sm ml-auto"
+        >
+          <RotateCcw className="w-4 h-4" />
+          {t('codeChallenge.reset')}
         </button>
       </div>
 

@@ -10,7 +10,10 @@
     "correct": "正確！你的查詢結果與預期完全一致。",
     "sqlError": "SQL 錯誤：{{error}}",
     "incorrect": "結果不正確，請再試試。",
-    "viewExpected": "查看預期結果"
+    "viewExpected": "查看預期結果",
+    "reset": "重置",
+    "dbNotReady": "資料庫尚未初始化",
+    "unknownError": "發生未知錯誤"
   },
   "openEnded": {
     "criteria": "評分標準：",

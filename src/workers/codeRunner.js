@@ -31,15 +31,10 @@ self.onmessage = async function (e) {
 
       case 'RUN_SQL': {
         if (!db) {
-          self.postMessage({ type: 'ERROR', message: '資料庫尚未初始化' })
+          self.postMessage({ type: 'ERROR', code: 'DB_NOT_READY' })
           return
         }
-        const timeoutId = setTimeout(() => {
-          self.postMessage({ type: 'ERROR', message: '查詢超時（5 秒）' })
-        }, 5000)
-
         const results = db.exec(payload.sql)
-        clearTimeout(timeoutId)
 
         if (results.length === 0) {
           self.postMessage({ type: 'RESULT', columns: [], rows: [] })
@@ -52,7 +47,7 @@ self.onmessage = async function (e) {
 
       case 'VALIDATE': {
         if (!db) {
-          self.postMessage({ type: 'ERROR', message: '資料庫尚未初始化' })
+          self.postMessage({ type: 'ERROR', code: 'DB_NOT_READY' })
           return
         }
         // 執行使用者查詢
@@ -81,7 +76,7 @@ self.onmessage = async function (e) {
       }
 
       default:
-        self.postMessage({ type: 'ERROR', message: `未知的訊息類型: ${type}` })
+        self.postMessage({ type: 'ERROR', code: 'UNKNOWN_TYPE', message: type })
     }
   } catch (err) {
     self.postMessage({ type: 'ERROR', message: err.message })
