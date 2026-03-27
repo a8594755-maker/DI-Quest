@@ -9,7 +9,7 @@ export const BRANCHES = [
     emoji: '🎯',
     description: '從問題拆解到完整商業 Case Study 面試準備',
     color: 'from-blue-500 to-indigo-500',
-    worldIds: [1, 2, 3, 5, 6, 7, 8, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+    worldIds: [1, 2, 3, 5, 6, 7, 8, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 42],
   },
   {
     id: 'sql',
@@ -35,7 +35,25 @@ export const BRANCHES = [
     color: 'from-purple-500 to-pink-500',
     worldIds: [9, 10, 11, 12, 13, 14, 39, 40, 41],
   },
+  {
+    id: 'professional-english',
+    name: '職場英文路線',
+    emoji: '🌐',
+    description: '從專案介紹到面試對答，練出職場即戰力英文',
+    color: 'from-sky-500 to-teal-500',
+    worldIds: [48, 49, 50, 51, 52, 53],
+    zhOnly: true,
+  },
 ]
+
+import i18n from '../i18n'
+
+export function getVisibleBranches() {
+  if (i18n.language === 'en') {
+    return BRANCHES.filter(b => !b.zhOnly)
+  }
+  return BRANCHES
+}
 
 export function getBranch(branchId) {
   return BRANCHES.find(b => b.id === branchId) || null

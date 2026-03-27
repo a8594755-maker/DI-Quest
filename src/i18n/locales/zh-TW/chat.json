@@ -25,7 +25,10 @@
     "systemPromptLesson": "\n\n使用者正在閱讀 {{worldName}} 的講義。\n根據以下講義內容回答使用者的問題。引用講義中的具體概念、框架、範例來回答。\n\n===== 講義內容 =====\n{{lessonContent}}\n===== 講義結束 =====",
     "systemPromptChallenge": "\n\n使用者正在做題：\n世界：{{worldName}}\n關卡：{{questName}}\n題目：{{challengeName}}\n題型：{{challengeType}}\n難度：{{difficulty}}\n情境：{{scenarioTitle}} — {{scenarioNarrative}}\n問題：{{question}}\n選項：{{options}}\n\n不要直接給答案！引導使用者思考，給提示和思路方向。如果使用者明確要求解答或已經回答完，才可以詳細解釋。\n\n以下是這個世界的完整講義，用來提供背景知識和理論依據：\n\n===== 講義內容 =====\n{{lessonContent}}\n===== 講義結束 =====",
     "systemPromptQuestDetail": "\n\n使用者正在查看關卡 {{questName}} 的詳情。\n\n以下是這個世界的講義，可供參考：\n\n===== 講義內容 =====\n{{lessonContent}}\n===== 講義結束 =====",
-    "noLessonData": "（無講義資料）"
+    "noLessonData": "（無講義資料）",
+    "guestBlocked": "請登入後才能使用 AI 助手。",
+    "rateLimited": "今日已達上限（{{limit}} 次/天）。升級 Premium 可無限使用！",
+    "rateLimitedPlaceholder": "今日額度已用完"
   },
   "npc": {
     "welcome": "嗨！我是小迪 🤖，你的面試練習教練。\n\n我可以：\n• 解釋 Case Study 概念（KPI、Funnel、Cohort、A/B Test...）\n• 查看你的練習進度\n• 給你面試準備建議\n\n有什麼想問的？",

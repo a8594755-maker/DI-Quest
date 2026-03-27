@@ -17,7 +17,18 @@
     "lastActive": "Last active",
     "online": "Online",
     "today": "Today",
-    "daysAgo": "{{count}} days ago"
+    "daysAgo": "{{count}} days ago",
+    "alreadyFriends": "You are already friends!",
+    "inviteAccepted": "Friend request sent!",
+    "requestAlreadySent": "Request already sent!",
+    "inviteError": "Could not send request",
+    "linkCopied": "Copied!",
+    "inviteLink": "Invite Link",
+    "myUsername": "My Username",
+    "copyUsername": "Copy username",
+    "shareInvite": "Share your invite link",
+    "searchHint": "Search by username or display name",
+    "orShareLink": "Or share your invite link to add friends"
   },
   "leaderboard": {
     "title": "Weekly Leaderboard",

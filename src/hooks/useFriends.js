@@ -71,10 +71,29 @@ export function useFriends() {
     const { data } = await supabase
       .from('profiles')
       .select('id, username, display_name, avatar_url, total_xp, streak_days')
-      .ilike('username', `%${query}%`)
+      .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
       .neq('id', user?.id)
       .limit(10)
     return data || []
+  }
+
+  // Find user by exact username (for invite links)
+  const findByUsername = async (username) => {
+    if (!username) return null
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, total_xp, streak_days')
+      .eq('username', username.toLowerCase())
+      .single()
+    return data
+  }
+
+  // Generate invite link for current user
+  const getInviteLink = () => {
+    if (!user) return null
+    const profile = friends // we need the profile from auth context
+    const base = window.location.origin
+    return `${base}/di-quest/friends?invite=${encodeURIComponent(user.id)}`
   }
 
   const sendFriendRequest = async (addresseeId) => {
@@ -118,6 +137,8 @@ export function useFriends() {
     pendingRequests,
     loading,
     searchUsers,
+    findByUsername,
+    getInviteLink,
     sendFriendRequest,
     acceptRequest,
     declineRequest,

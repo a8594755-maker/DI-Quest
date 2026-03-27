@@ -25,7 +25,10 @@
     "systemPromptLesson": "\n\nThe user is reading the {{worldName}} lesson.\nAnswer the user's questions based on the lesson content below. Reference specific concepts, frameworks, and examples from the lesson.\n\n===== Lesson Content =====\n{{lessonContent}}\n===== End of Lesson =====",
     "systemPromptChallenge": "\n\nThe user is working on a challenge:\nWorld: {{worldName}}\nQuest: {{questName}}\nChallenge: {{challengeName}}\nType: {{challengeType}}\nDifficulty: {{difficulty}}\nScenario: {{scenarioTitle}} — {{scenarioNarrative}}\nQuestion: {{question}}\nOptions: {{options}}\n\nDo NOT give the answer directly! Guide the user to think, give hints and direction. Only explain in detail if the user explicitly asks for the answer or has already answered.\n\nHere is the full lesson for this world, for background knowledge:\n\n===== Lesson Content =====\n{{lessonContent}}\n===== End of Lesson =====",
     "systemPromptQuestDetail": "\n\nThe user is viewing quest {{questName}} details.\n\nHere is the lesson for this world, for reference:\n\n===== Lesson Content =====\n{{lessonContent}}\n===== End of Lesson =====",
-    "noLessonData": "(No lesson data available)"
+    "noLessonData": "(No lesson data available)",
+    "guestBlocked": "Please sign in to use the AI assistant.",
+    "rateLimited": "You've reached today's limit ({{limit}} calls/day). Upgrade to Premium for unlimited access!",
+    "rateLimitedPlaceholder": "Daily limit reached"
   },
   "npc": {
     "welcome": "Hi! I'm Dash 🤖, your interview practice coach.\n\nI can:\n• Explain Case Study concepts (KPI, Funnel, Cohort, A/B Test...)\n• Check your practice progress\n• Give interview prep advice\n\nWhat would you like to know?",

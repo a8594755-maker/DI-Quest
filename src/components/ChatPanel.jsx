@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Bot, User, X, Plus, Clock, ChevronLeft, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Send, Bot, User, X, Plus, Clock, ChevronLeft, Trash2, ThumbsUp, ThumbsDown, Lock, Crown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
+import { useAuth } from '../contexts/AuthContext'
+import { useApiUsage } from '../hooks/useApiUsage'
 import { WORLDS, getWorld, getQuest, getChallenge } from '../data/questData'
 import { getWorldLesson } from '../data/lessons'
 import { chatWithDeepSeek } from '../utils/deepseek'
@@ -108,6 +110,8 @@ function useRelativeDate() {
 function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'sidebar' }) {
   const { t } = useTranslation('chat')
   const { questStatus, challengeStatus, totalXp, levelInfo } = useQuest()
+  const { isAuthenticated, isGuest } = useAuth()
+  const { remaining, dailyLimit, canUseApi, isPremium, incrementUsage } = useApiUsage()
   const location = useLocation()
   const getRelativeDate = useRelativeDate()
 
@@ -285,6 +289,25 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
         await new Promise(r => setTimeout(r, 400))
         setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: localReply }])
       } else {
+        // Check rate limit for non-premium users
+        if (!isAuthenticated) {
+          setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: t('panel.guestBlocked', 'Please sign in to use the AI assistant.') }])
+          setIsTyping(false)
+          return
+        }
+        if (!canUseApi) {
+          setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: t('panel.rateLimited', 'You have reached today\'s limit ({{limit}} calls/day). Upgrade to Premium for unlimited access!', { limit: dailyLimit }) }])
+          setIsTyping(false)
+          return
+        }
+        // Increment usage before calling
+        const allowed = await incrementUsage()
+        if (!allowed) {
+          setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: t('panel.rateLimited', 'You have reached today\'s limit ({{limit}} calls/day). Upgrade to Premium for unlimited access!', { limit: dailyLimit }) }])
+          setIsTyping(false)
+          return
+        }
+
         const aiMessages = [
           { role: 'system', content: buildSystemPrompt() },
           ...messages.slice(-8).map(m => ({ role: m.role, content: m.content })),
@@ -333,8 +356,17 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
           </div>
         )}
         <div className="flex items-center gap-0.5 flex-shrink-0">
-          {!showHistory && (
+          {!showHistory && isAuthenticated && (
             <>
+              {isPremium ? (
+                <span className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-amber-400 bg-amber-500/10 rounded-full mr-1">
+                  <Crown className="w-3 h-3" /> Premium
+                </span>
+              ) : (
+                <span className={`px-2 py-0.5 text-[10px] rounded-full mr-1 ${remaining <= 5 ? 'text-red-400 bg-red-500/10' : 'text-slate-400 bg-slate-800'}`}>
+                  {remaining}/{dailyLimit}
+                </span>
+              )}
               <button onClick={() => setShowHistory(true)} className="p-1.5 text-slate-500 hover:text-white transition-colors rounded" title={t('panel.history')}>
                 <Clock className="w-4 h-4" />
               </button>
@@ -476,47 +508,57 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
           )}
 
           <div className="px-3 pb-3">
-            {selectedText && (
-              <div className="mb-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 flex items-start gap-2">
-                <div className="w-0.5 self-stretch bg-brand-primary rounded-full flex-shrink-0" />
-                <p className="text-slate-300 text-xs leading-relaxed line-clamp-3 flex-1">
-                  {selectedText.slice(0, 200)}{selectedText.length > 200 ? '...' : ''}
-                </p>
-                <button onClick={onClearSelection} className="text-slate-500 hover:text-white flex-shrink-0 mt-0.5">
-                  <X className="w-3.5 h-3.5" />
-                </button>
+            {!isAuthenticated ? (
+              <div className="flex items-center gap-2 p-3 bg-slate-800/50 rounded-xl text-center">
+                <Lock className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                <p className="text-slate-400 text-xs">{t('panel.guestBlocked', 'Please sign in to use the AI assistant.')}</p>
               </div>
+            ) : (
+              <>
+                {selectedText && (
+                  <div className="mb-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 flex items-start gap-2">
+                    <div className="w-0.5 self-stretch bg-brand-primary rounded-full flex-shrink-0" />
+                    <p className="text-slate-300 text-xs leading-relaxed line-clamp-3 flex-1">
+                      {selectedText.slice(0, 200)}{selectedText.length > 200 ? '...' : ''}
+                    </p>
+                    <button onClick={onClearSelection} className="text-slate-500 hover:text-white flex-shrink-0 mt-0.5">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                <div className="flex gap-2 items-end">
+                  <textarea
+                    ref={inputRef}
+                    rows={1}
+                    value={input}
+                    onChange={(e) => {
+                      setInput(e.target.value)
+                      e.target.style.height = 'auto'
+                      e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                    }}
+                    onCompositionStart={() => { isComposingRef.current = true }}
+                    onCompositionEnd={() => { isComposingRef.current = false }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current) {
+                        e.preventDefault()
+                        handleSend()
+                      }
+                    }}
+                    placeholder={!canUseApi && !isPremium ? t('panel.rateLimitedPlaceholder', 'Daily limit reached') : selectedText ? t('panel.askSelectedPlaceholder') : t('panel.askPlaceholder')}
+                    className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors resize-none overflow-y-auto"
+                    style={{ maxHeight: '120px' }}
+                    disabled={!canUseApi && !isPremium}
+                  />
+                  <button
+                    onClick={() => handleSend()}
+                    disabled={!input.trim() || isTyping || (!canUseApi && !isPremium)}
+                    className="px-3 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
             )}
-            <div className="flex gap-2 items-end">
-              <textarea
-                ref={inputRef}
-                rows={1}
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value)
-                  e.target.style.height = 'auto'
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
-                }}
-                onCompositionStart={() => { isComposingRef.current = true }}
-                onCompositionEnd={() => { isComposingRef.current = false }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current) {
-                    e.preventDefault()
-                    handleSend()
-                  }
-                }}
-                placeholder={selectedText ? t('panel.askSelectedPlaceholder') : t('panel.askPlaceholder')}
-                className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors resize-none overflow-y-auto"
-                style={{ maxHeight: '120px' }}
-              />
-              <button
-                onClick={() => handleSend()}
-                disabled={!input.trim() || isTyping}
-                className="px-3 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
           </div>
         </>
       )}

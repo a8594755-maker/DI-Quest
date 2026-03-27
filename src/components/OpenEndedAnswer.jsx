@@ -3,11 +3,15 @@ import { Send, Loader2, CheckCircle, AlertCircle, BookOpen } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { chatWithDeepSeek } from '../utils/deepseek'
+import { useAuth } from '../contexts/AuthContext'
+import { useApiUsage } from '../hooks/useApiUsage'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 function OpenEndedAnswer({ prompt, evaluationCriteria = [], sampleAnswer, scenario, onSubmit, disabled = false }) {
   const { t } = useTranslation('case')
+  const { isAuthenticated } = useAuth()
+  const { canUseApi, isPremium, incrementUsage, remaining, dailyLimit } = useApiUsage()
   const [answer, setAnswer] = useState('')
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [evaluation, setEvaluation] = useState(null)
@@ -16,11 +20,17 @@ function OpenEndedAnswer({ prompt, evaluationCriteria = [], sampleAnswer, scenar
 
   const handleSubmit = async () => {
     if (!answer.trim() || isEvaluating || disabled) return
+    if (!isAuthenticated) { setError(t('openEnded.signInRequired', 'Please sign in to use AI evaluation.')); return }
+    if (!canUseApi && !isPremium) { setError(t('openEnded.rateLimited', 'Daily limit reached ({{limit}}/day).', { limit: dailyLimit })); return }
 
     setIsEvaluating(true)
     setError(null)
 
     try {
+      if (!isPremium) {
+        const allowed = await incrementUsage()
+        if (!allowed) { setError(t('openEnded.rateLimited', 'Daily limit reached ({{limit}}/day).', { limit: dailyLimit })); setIsEvaluating(false); return }
+      }
       const systemPrompt = `You are an interview evaluator for Product Analyst / Business Analyst / Business Engineer roles in the tech industry.
 
 You will evaluate a candidate's case study answer. Be constructive but honest.

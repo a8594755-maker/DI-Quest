@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap, BarChart3, Shield, Calendar } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { WORLDS } from '../data/questData'
-import { BRANCHES } from '../data/branches'
+import { getVisibleBranches } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
 import { DailyActivityChart, XpTrendChart, TimePerChallengeChart } from '../components/AnalyticsCharts'
 import AnimatedNumber from '../components/AnimatedNumber'
@@ -16,7 +16,7 @@ function ProgressDashboard() {
   const totalQuestsCompleted = Object.values(questStatus).filter(q => q.completed).length
   const totalChallengesCompleted = Object.values(challengeStatus).filter(c => c.completed).length
 
-  const branchProgress = BRANCHES.filter(b => b.worldIds.length > 0).map(branch => {
+  const branchProgress = getVisibleBranches().filter(b => b.worldIds.length > 0).map(branch => {
     const worlds = WORLDS.filter(w => branch.worldIds.includes(w.id))
     const branchName = t(`common:branch.${branch.id}.name`, branch.name)
     return {

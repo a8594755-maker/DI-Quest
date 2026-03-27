@@ -57,6 +57,10 @@
     "di-product": {
       "name": "DI Product Knowledge Track",
       "description": "Decision Intelligence product architecture, deployment, quality & boundaries"
+    },
+    "professional-english": {
+      "name": "Professional English Track",
+      "description": "From project presentations to interview conversations — practical workplace English"
     }
   }
 }

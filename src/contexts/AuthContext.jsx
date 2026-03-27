@@ -8,15 +8,77 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [isGuest, setIsGuest] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false)
 
-  // Fetch profile from Supabase
-  const fetchProfile = useCallback(async (userId) => {
-    const { data } = await supabase
+  // Fetch profile from Supabase, auto-create if missing, auto-populate from Google metadata
+  const fetchProfile = useCallback(async (userId, userMeta) => {
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
-    if (data) setProfile(data)
+      .maybeSingle()
+
+    // Profile doesn't exist — create it (user was created before migration)
+    if (!data) {
+      const meta = userMeta || {}
+      const autoUsername = 'user_' + userId.substring(0, 8)
+      const displayName = meta.full_name || meta.name || 'Learner'
+      const avatarUrl = meta.avatar_url || null
+
+      const { data: created } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          username: autoUsername,
+          display_name: displayName,
+          avatar_url: avatarUrl,
+        })
+        .select()
+        .single()
+
+      // Also create user_progress row
+      await supabase.from('user_progress').upsert({ user_id: userId, progress_data: {} })
+
+      if (created) {
+        setProfile(created)
+        setNeedsProfileSetup(true)
+        return created
+      }
+      return null
+    }
+
+    // Profile exists — check if we should update from Google metadata
+    const meta = userMeta || {}
+    const isDefaultProfile = data.display_name === 'Learner' || data.username?.startsWith('user_')
+    if (isDefaultProfile && (meta.full_name || meta.name || meta.avatar_url)) {
+      const updates = {}
+      if (data.display_name === 'Learner' && (meta.full_name || meta.name)) {
+        updates.display_name = meta.full_name || meta.name
+      }
+      if (!data.avatar_url && meta.avatar_url) {
+        updates.avatar_url = meta.avatar_url
+      }
+      if (Object.keys(updates).length > 0) {
+        const { data: updated } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', userId)
+          .select()
+          .single()
+        if (updated) {
+          setProfile(updated)
+          if (updated.username?.startsWith('user_')) {
+            setNeedsProfileSetup(true)
+          }
+          return updated
+        }
+      }
+    }
+    // Check if username needs setup
+    if (data.username?.startsWith('user_')) {
+      setNeedsProfileSetup(true)
+    }
+    setProfile(data)
     return data
   }, [])
 
@@ -36,29 +98,38 @@ export function AuthProvider({ children }) {
   // Listen to auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setUser(session.user)
-        setIsGuest(false)
-        await fetchProfile(session.user.id)
-      } else {
-        setUser(null)
-        setProfile(null)
+      try {
+        if (session?.user) {
+          setUser(session.user)
+          setIsGuest(false)
+          await fetchProfile(session.user.id, session.user.user_metadata)
+        } else {
+          setUser(null)
+          setProfile(null)
+        }
+      } catch (err) {
+        console.error('Auth state change error:', err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        setIsGuest(false)
-        fetchProfile(session.user.id)
-      } else {
-        // Check if was previously a guest
-        const wasGuest = localStorage.getItem('di-quest-guest')
-        if (wasGuest) setIsGuest(true)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      try {
+        if (session?.user) {
+          setUser(session.user)
+          setIsGuest(false)
+          await fetchProfile(session.user.id, session.user.user_metadata)
+        } else {
+          const wasGuest = localStorage.getItem('di-quest-guest')
+          if (wasGuest) setIsGuest(true)
+        }
+      } catch (err) {
+        console.error('Get session error:', err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
@@ -105,6 +176,39 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }
 
+  const completeProfileSetup = async ({ username, displayName }) => {
+    if (!user) return
+    const updates = { username: username.toLowerCase() }
+    if (displayName) updates.display_name = displayName
+
+    // Try update first, then upsert if needed
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id)
+      .select()
+      .single()
+
+    if (error) {
+      // If update failed (no row), try insert
+      if (error.code === 'PGRST116') {
+        const { data: inserted, error: insertError } = await supabase
+          .from('profiles')
+          .insert({ id: user.id, ...updates })
+          .select()
+          .single()
+        if (insertError) throw insertError
+        if (inserted) setProfile(inserted)
+        setNeedsProfileSetup(false)
+        return inserted
+      }
+      throw error
+    }
+    if (data) setProfile(data)
+    setNeedsProfileSetup(false)
+    return data
+  }
+
   const isAuthenticated = !!user
   const isLoggedInOrGuest = isAuthenticated || isGuest
 
@@ -116,11 +220,13 @@ export function AuthProvider({ children }) {
       isAuthenticated,
       isLoggedInOrGuest,
       loading,
+      needsProfileSetup,
       signUp,
       signIn,
       signInWithGoogle,
       signOut,
       continueAsGuest,
+      completeProfileSetup,
       fetchProfile,
       updateProfile,
     }}>

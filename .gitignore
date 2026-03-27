@@ -15,7 +15,19 @@ dist-ssr
 .DS_Store
 .vscode/*
 .idea
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# Internal handoff docs
+HANDOFF.md
+HANDOFF_TODO.md
 
 # Supabase temp
 supabase/.temp
 supabase/.branches
+
+# Local Netlify folder
+.netlify

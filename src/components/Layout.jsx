@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
-import { Map, BarChart3, MessageCircle, Briefcase, Unlock, RotateCcw, Search, Users, LogOut, LogIn, ChevronDown } from 'lucide-react'
+import { Map, BarChart3, MessageCircle, Briefcase, RotateCcw, Search, Users, LogOut, LogIn, ChevronDown, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -9,27 +9,36 @@ import ChatPanel from './ChatPanel'
 import LanguageSwitcher from './LanguageSwitcher'
 import StreakFlame from './StreakFlame'
 import DailyCheckinModal from './DailyCheckinModal'
+import ProfileSetupModal from './ProfileSetupModal'
 import UserAvatar from './UserAvatar'
 
 function Layout() {
   const { t } = useTranslation(['common', 'auth', 'social'])
-  const { levelInfo, devMode, dispatch, getDueReviewCount, streakDays, checkedInToday } = useQuest()
-  const { isAuthenticated, isGuest, profile, signOut } = useAuth()
+  const { levelInfo, getDueReviewCount, streakDays, checkedInToday } = useQuest()
+  const { isAuthenticated, isGuest, profile, signOut, needsProfileSetup } = useAuth()
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [checkinModalOpen, setCheckinModalOpen] = useState(false)
+  const [profileSetupOpen, setProfileSetupOpen] = useState(false)
   const dueCount = getDueReviewCount()
+
+  // Show profile setup modal for Google users without username
+  useEffect(() => {
+    if (isAuthenticated && needsProfileSetup) {
+      setProfileSetupOpen(true)
+    }
+  }, [isAuthenticated, needsProfileSetup])
 
   // Show checkin modal on first visit if not checked in today
   useEffect(() => {
-    if (!checkedInToday) {
+    if (!checkedInToday && !needsProfileSetup) {
       const timer = setTimeout(() => setCheckinModalOpen(true), 800)
       return () => clearTimeout(timer)
     }
-  }, [])
+  }, [needsProfileSetup])
 
   // Cmd+K / Ctrl+K 搜尋快捷鍵
   // Cmd+J / Ctrl+J 開啟小迪
@@ -144,20 +153,6 @@ function Layout() {
             </button>
             {/* 語言切換 */}
             <LanguageSwitcher />
-            {/* 開發者模式切換 */}
-            <button
-              onClick={() => dispatch({ type: 'TOGGLE_DEV_MODE' })}
-              className={`ml-1 sm:ml-2 px-2 sm:px-3 py-1 rounded text-xs font-mono transition-colors ${
-                devMode
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
-                  : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200 hover:bg-slate-700'
-              }`}
-              aria-label={t('nav.devMode')}
-              aria-pressed={devMode}
-            >
-              <Unlock className="w-3 h-3 inline sm:mr-1" />
-              <span className="hidden sm:inline">{devMode ? 'DEV ON' : 'DEV'}</span>
-            </button>
             {/* User profile menu */}
             <div className="relative">
               <button
@@ -187,6 +182,15 @@ function Layout() {
                       <div className="px-4 py-2 border-b border-slate-700">
                         <p className="text-slate-400 text-sm">{t('auth:profile.guest')}</p>
                       </div>
+                    )}
+                    {isAuthenticated && (
+                      <button
+                        onClick={() => { setProfileMenuOpen(false); setProfileSetupOpen(true) }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                      >
+                        <Settings className="w-4 h-4" />
+                        {t('auth:profile.editProfile', 'Edit Profile')}
+                      </button>
                     )}
                     <button
                       onClick={() => { setProfileMenuOpen(false); navigate('/di-quest/friends') }}
@@ -219,13 +223,6 @@ function Layout() {
           </div>
         </div>
       </nav>
-
-      {/* 開發者模式提示條 */}
-      {devMode && (
-        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-1.5 text-center" role="status">
-          <span className="text-amber-400 text-xs font-mono">🔓 {t('nav.devModeOn')}</span>
-        </div>
-      )}
 
       {/* 內容 + 小迪面板 flex 排版 */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -345,6 +342,9 @@ function Layout() {
 
       {/* 搜尋彈窗 */}
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      {/* 個人資料設定彈窗 */}
+      <ProfileSetupModal isOpen={profileSetupOpen} onClose={() => setProfileSetupOpen(false)} />
 
       {/* 每日簽到彈窗 */}
       <DailyCheckinModal isOpen={checkinModalOpen} onClose={() => setCheckinModalOpen(false)} />

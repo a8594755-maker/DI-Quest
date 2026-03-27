@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { BRANCHES } from '../data/branches'
+import { getVisibleBranches } from '../data/branches'
 import { WORLDS } from '../data/questData'
 import { useQuest } from '../contexts/QuestContext'
 
@@ -31,7 +31,7 @@ function BranchSelect() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {BRANCHES.map((branch, i) => {
+        {getVisibleBranches().map((branch, i) => {
           const progress = getBranchProgress(branch)
           const isComingSoon = branch.comingSoon
 

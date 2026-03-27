@@ -57,6 +57,7 @@ import world38 from './world38'
 import world39 from './world39'
 import world40 from './world40'
 import world41 from './world41'
+import world42 from './world42'
 import world15_en from './world15_en'
 import world16_en from './world16_en'
 import world17_en from './world17_en'
@@ -80,6 +81,13 @@ import world38_en from './world38_en'
 import world39_en from './world39_en'
 import world40_en from './world40_en'
 import world41_en from './world41_en'
+import world42_en from './world42_en'
+import world48 from './world48'
+import world49 from './world49'
+import world50 from './world50'
+import world51 from './world51'
+import world52 from './world52'
+import world53 from './world53'
 
 const lessons = {
   1: world1,
@@ -123,6 +131,13 @@ const lessons = {
   39: world39,
   40: world40,
   41: world41,
+  42: world42,
+  48: world48,
+  49: world49,
+  50: world50,
+  51: world51,
+  52: world52,
+  53: world53,
 }
 
 import i18n from '../../i18n'
@@ -169,6 +184,13 @@ const lessonsEn = {
   39: world39_en,
   40: world40_en,
   41: world41_en,
+  42: world42_en,
+  48: world48,
+  49: world49,
+  50: world50,
+  51: world51,
+  52: world52,
+  53: world53,
 }
 
 export function getWorldLesson(worldId) {
@@ -432,6 +454,45 @@ const QUEST_SECTION_MAP = {
   '38-4': '38-4：變更管理',
   '38-5': '38-5：專案後回顧',
   '38-6': '38-6（Boss）：BA 終極挑戰',
+  // ── Business Systems（World 42）──
+  '42-1': '42-1：ERP 概念與模組',
+  '42-2': '42-2：CRM 系統設計',
+  '42-3': '42-3：Workflow & Approval Systems',
+  '42-4': '42-4：Internal Tools Design',
+  '42-5': '42-5：System Adoption & Change Management',
+  '42-6': '42-6（Boss）：System Selection Case',
+  // ── 職場英文路線（World 48-53）──
+  '48-1': '48-1：Project Overview 句型',
+  '48-2': '48-2：技術架構描述',
+  '48-3': '48-3：數據與成果描述',
+  '48-4': '48-4：挑戰與 Trade-off',
+  '48-5': '48-5（Boss）：完整專案英文簡報',
+  '49-1': '49-1：Self Introduction',
+  '49-2': '49-2：Behavioral Questions / STAR',
+  '49-3': '49-3：Case Study 回答句型',
+  '49-4': '49-4：提問環節',
+  '49-5': '49-5（Boss）：模擬面試全流程',
+  '50-1': '50-1：Business 核心字彙',
+  '50-2': '50-2：Product 字彙',
+  '50-3': '50-3：Data/Analytics 字彙',
+  '50-4': '50-4：常見搭配與易混淆',
+  '50-5': '50-5：字彙情境應用',
+  '50-6': '50-6（Boss）：字彙綜合測驗',
+  '51-1': '51-1：解釋 Explain',
+  '51-2': '51-2：比較 Compare',
+  '51-3': '51-3：推薦 Recommend',
+  '51-4': '51-4：描述 Describe',
+  '51-5': '51-5（Boss）：情境口說綜合',
+  '52-1': '52-1：Job Description 閱讀',
+  '52-2': '52-2：README / 技術文件',
+  '52-3': '52-3：PRD / Spec 閱讀',
+  '52-4': '52-4：資料報告 / Dashboard',
+  '52-5': '52-5（Boss）：閱讀理解綜合',
+  '53-1': '53-1：Professional Email',
+  '53-2': '53-2：會議摘要',
+  '53-3': '53-3：履歷子彈點',
+  '53-4': '53-4：Slack / 工作溝通',
+  '53-5': '53-5（Boss）：寫作綜合',
 }
 
 // 回傳顯示用的章節標題

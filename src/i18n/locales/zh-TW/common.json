@@ -57,6 +57,10 @@
     "di-product": {
       "name": "DI 產品知識路線",
       "description": "Decision Intelligence 產品架構、部署、品質與邊界"
+    },
+    "professional-english": {
+      "name": "職場英文路線",
+      "description": "從專案介紹到面試對答，練出職場即戰力英文"
     }
   }
 }

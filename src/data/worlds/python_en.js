@@ -1,4 +1,25 @@
-export const pythonWorldsEn = [
+import { w15ExtraEn } from './_w15_extra_en.js'
+import { w16ExtraEn } from './_w16_extra_en.js'
+import { w17ExtraEn } from './_w17_extra_en.js'
+import { w18ExtraEn } from './_w18_extra_en.js'
+import { w19ExtraEn } from './_w19_extra_en.js'
+import { w20ExtraEn } from './_w20_extra_en.js'
+import { w21ExtraEn } from './_w21_extra_en.js'
+import { w22ExtraEn } from './_w22_extra_en.js'
+
+function mergeExtras(world, extras) {
+  for (const quest of world.quests) {
+    const extraChallenges = extras[quest.id]
+    if (extraChallenges) {
+      quest.challenges = [...quest.challenges, ...extraChallenges]
+    }
+  }
+  return world
+}
+
+const extrasByWorld = { 15: w15ExtraEn, 16: w16ExtraEn, 17: w17ExtraEn, 18: w18ExtraEn, 19: w19ExtraEn, 20: w20ExtraEn, 21: w21ExtraEn, 22: w22ExtraEn }
+
+const _pythonWorldsEn = [
   // ── World 15: Python Basic Syntax & Conditional Statements ─────────────────────
   {
     id: 15,
@@ -1741,3 +1762,9 @@ export const pythonWorldsEn = [
     ],
   },
 ]
+
+export const pythonWorldsEn = _pythonWorldsEn.map(world => {
+  const extras = extrasByWorld[world.id]
+  if (!extras) return world
+  return mergeExtras({ ...world, quests: world.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, extras)
+})

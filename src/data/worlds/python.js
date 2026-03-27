@@ -1,4 +1,26 @@
-export const pythonWorlds = [
+import { w15Extra } from './_w15_extra.js'
+import { w16Extra } from './_w16_extra.js'
+import { w17Extra } from './_w17_extra.js'
+import { w18Extra } from './_w18_extra.js'
+import { w19Extra } from './_w19_extra.js'
+import { w20Extra } from './_w20_extra.js'
+import { w21Extra } from './_w21_extra.js'
+import { w22Extra } from './_w22_extra.js'
+
+// Merge extra challenges into worlds (same pattern as sql.js)
+function mergeExtras(world, extras) {
+  for (const quest of world.quests) {
+    const extraChallenges = extras[quest.id]
+    if (extraChallenges) {
+      quest.challenges = [...quest.challenges, ...extraChallenges]
+    }
+  }
+  return world
+}
+
+const extrasByWorld = { 15: w15Extra, 16: w16Extra, 17: w17Extra, 18: w18Extra, 19: w19Extra, 20: w20Extra, 21: w21Extra, 22: w22Extra }
+
+const _pythonWorlds = [
   // ── World 15: Python 基本語法與條件判斷 ─────────────────────
   {
     id: 15,
@@ -1741,3 +1763,9 @@ export const pythonWorlds = [
     ],
   },
 ]
+
+export const pythonWorlds = _pythonWorlds.map(world => {
+  const extras = extrasByWorld[world.id]
+  if (!extras) return world
+  return mergeExtras({ ...world, quests: world.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, extras)
+})

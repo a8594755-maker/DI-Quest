@@ -199,7 +199,7 @@ function reducer(state, action) {
 
 export function QuestProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, null, loadState)
-  const { isAuthenticated, user, isGuest } = useAuth()
+  const { isAuthenticated, user, isGuest, profile } = useAuth()
   const saveTimerRef = useRef(null)
   const cloudLoadedRef = useRef(false)
 
@@ -210,7 +210,7 @@ export function QuestProvider({ children }) {
   const saveToCloud = useCallback(async (stateToSave) => {
     if (!isAuthenticated || !user) return
     try {
-      const { devMode, checkedInToday, ...progressData } = stateToSave
+      const { devMode, ...progressData } = stateToSave
       await supabase.from('user_progress').upsert({
         user_id: user.id,
         progress_data: progressData,
@@ -247,7 +247,20 @@ export function QuestProvider({ children }) {
           .single()
 
         if (data?.progress_data && Object.keys(data.progress_data).length > 0) {
-          dispatch({ type: 'SYNC_FROM_CLOUD', payload: data.progress_data })
+          // Check if user already checked in today via daily_checkins table
+          const today = new Date().toISOString().slice(0, 10)
+          const { data: checkinData } = await supabase
+            .from('daily_checkins')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('checkin_date', today)
+            .maybeSingle()
+
+          const payload = {
+            ...data.progress_data,
+            checkedInToday: data.progress_data.checkedInToday || !!checkinData,
+          }
+          dispatch({ type: 'SYNC_FROM_CLOUD', payload })
         } else {
           // First login: migrate localStorage data to cloud
           await saveToCloud(state)
@@ -270,10 +283,12 @@ export function QuestProvider({ children }) {
 
   const levelInfo = getLevelInfo(state.totalXp)
 
-  // 判斷關卡是否解鎖（開發者模式全部解鎖）
+  const isPremium = profile?.role === 'premium'
+
+  // 判斷關卡是否解鎖（Premium 用戶全部解鎖）
   // 解鎖邏輯基於 branch：每條路線的第一個 world 自動解鎖，路線間互不影響
   const isQuestUnlocked = (questId) => {
-    if (state.devMode) return true
+    if (state.devMode || isPremium) return true
     const [worldNum, questNum] = questId.split('-').map(Number)
 
     // 同一個 world 的前一關要完成
@@ -297,7 +312,7 @@ export function QuestProvider({ children }) {
   }
 
   const isWorldUnlocked = (worldId) => {
-    if (state.devMode) return true
+    if (state.devMode || isPremium) return true
     const branch = getBranchForWorld(worldId)
     if (!branch) return true
     const idx = branch.worldIds.indexOf(Number(worldId))
@@ -351,6 +366,7 @@ export function QuestProvider({ children }) {
   const value = {
     ...state,
     levelInfo,
+    isPremium,
     dispatch,
     isQuestUnlocked,
     isWorldUnlocked,

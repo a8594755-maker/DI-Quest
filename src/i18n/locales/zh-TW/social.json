@@ -17,7 +17,18 @@
     "lastActive": "最後活躍",
     "online": "在線上",
     "today": "今天",
-    "daysAgo": "{{count}} 天前"
+    "daysAgo": "{{count}} 天前",
+    "alreadyFriends": "你們已經是好友了！",
+    "inviteAccepted": "好友邀請已發送！",
+    "requestAlreadySent": "邀請已經發送過了！",
+    "inviteError": "無法發送邀請",
+    "linkCopied": "已複製！",
+    "inviteLink": "邀請連結",
+    "myUsername": "我的使用者名稱",
+    "copyUsername": "複製使用者名稱",
+    "shareInvite": "分享邀請連結給朋友",
+    "searchHint": "搜尋使用者名稱或顯示名稱",
+    "orShareLink": "或分享邀請連結來加好友"
   },
   "leaderboard": {
     "title": "每週排行榜",
