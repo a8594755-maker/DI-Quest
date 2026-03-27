@@ -1,0 +1,51 @@
+{
+  "friends": {
+    "title": "Friends",
+    "subtitle": "Learn together, motivate each other",
+    "list": "Friend List",
+    "pending": "Pending Requests",
+    "addFriend": "Add Friend",
+    "searchPlaceholder": "Search by username...",
+    "noFriends": "No friends yet. Invite your friends to learn together!",
+    "noPending": "No pending friend requests",
+    "noResults": "No matching users found",
+    "sendRequest": "Send Request",
+    "requestSent": "Request Sent",
+    "accept": "Accept",
+    "decline": "Decline",
+    "remove": "Remove Friend",
+    "lastActive": "Last active",
+    "online": "Online",
+    "today": "Today",
+    "daysAgo": "{{count}} days ago"
+  },
+  "leaderboard": {
+    "title": "Weekly Leaderboard",
+    "subtitle": "Friends XP ranking this week",
+    "weeklyXp": "Weekly XP",
+    "you": "You",
+    "noData": "Add friends to unlock the leaderboard!",
+    "rank": "Rank #{{rank}}"
+  },
+  "checkin": {
+    "title": "Daily Check-in",
+    "streakTitle": "Learning Streak",
+    "days": "days",
+    "checkInNow": "Check In",
+    "checked": "Checked In",
+    "bonusXp": "+{{xp}} XP check-in bonus",
+    "dailyGoal": "Daily Goal",
+    "dailyGoalDesc": "Earn {{remaining}} more XP today",
+    "dailyGoalDone": "Daily goal reached!",
+    "goalTarget": "{{current}} / {{target}} XP",
+    "streakFreeze": "Streak Freeze",
+    "streakFreezeDesc": "{{count}} remaining. Protects your streak for one missed day.",
+    "streakFreezeNone": "No streak freezes left",
+    "longestStreak": "Longest Streak",
+    "currentStreak": "Current Streak",
+    "totalCheckins": "Total Check-ins",
+    "dismiss": "Maybe Later",
+    "congrats": "Checked In!",
+    "keepGoing": "Keep it up!"
+  }
+}

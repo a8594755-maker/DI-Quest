@@ -1,8 +1,10 @@
-import { createContext, useContext, useReducer, useEffect, useMemo } from 'react'
+import { createContext, useContext, useReducer, useEffect, useMemo, useRef, useCallback } from 'react'
 import { getLevelInfo, calculateChallengeXp } from '../utils/xpCalculator'
 import { calculateNextReview, performanceToQuality } from '../utils/spacedRepetition'
 import { getBranchForWorld } from '../data/branches'
 import { getWorld } from '../data/questData'
+import { useAuth } from './AuthContext'
+import { supabase } from '../utils/supabase'
 
 const QuestContext = createContext(null)
 
@@ -14,7 +16,10 @@ const initialState = {
   challengeStatus: {}, // { "1-1-1": { completed: true, score: 100, usedHints: 0, code: "..." } }
   achievements: [],
   streakDays: 0,
+  longestStreak: 0,
+  streakFreezes: 1,
   lastActiveDate: null,
+  checkedInToday: false,
   devMode: false,
   // Learning Analytics
   analytics: {
@@ -111,9 +116,45 @@ function reducer(state, action) {
       const today = new Date().toISOString().slice(0, 10)
       if (state.lastActiveDate === today) return state
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-      const streakDays = state.lastActiveDate === yesterday ? state.streakDays + 1 : 1
-      return { ...state, streakDays, lastActiveDate: today }
+      let streakDays
+      let streakFreezes = state.streakFreezes ?? 1
+      if (state.lastActiveDate === yesterday) {
+        streakDays = state.streakDays + 1
+      } else if (state.lastActiveDate && state.lastActiveDate !== today) {
+        // Missed a day — check for streak freeze
+        if (streakFreezes > 0) {
+          streakDays = state.streakDays // Keep streak
+          streakFreezes = streakFreezes - 1
+        } else {
+          streakDays = 1 // Reset
+        }
+      } else {
+        streakDays = 1
+      }
+      const longestStreak = Math.max(state.longestStreak || 0, streakDays)
+      return { ...state, streakDays, longestStreak, streakFreezes, lastActiveDate: today }
     }
+
+    case 'DAILY_CHECKIN': {
+      const today = new Date().toISOString().slice(0, 10)
+      const bonus = action.payload?.bonusXp || 0
+      const todayStats = state.analytics.dailyStats[today] || { challengesCompleted: 0, xpEarned: 0, timeSpentMs: 0 }
+      return {
+        ...state,
+        totalXp: state.totalXp + bonus,
+        checkedInToday: true,
+        analytics: {
+          ...state.analytics,
+          dailyStats: {
+            ...state.analytics.dailyStats,
+            [today]: { ...todayStats, xpEarned: todayStats.xpEarned + bonus },
+          },
+        },
+      }
+    }
+
+    case 'SYNC_FROM_CLOUD':
+      return { ...initialState, ...action.payload, devMode: state.devMode }
 
     case 'TOGGLE_DEV_MODE':
       return { ...state, devMode: !state.devMode }
@@ -158,12 +199,74 @@ function reducer(state, action) {
 
 export function QuestProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, null, loadState)
+  const { isAuthenticated, user, isGuest } = useAuth()
+  const saveTimerRef = useRef(null)
+  const cloudLoadedRef = useRef(false)
 
-  // 持久化
+  // 持久化 — localStorage (always for backup)
   useEffect(() => { saveState(state) }, [state])
+
+  // Supabase cloud sync (debounced 2s save)
+  const saveToCloud = useCallback(async (stateToSave) => {
+    if (!isAuthenticated || !user) return
+    try {
+      const { devMode, checkedInToday, ...progressData } = stateToSave
+      await supabase.from('user_progress').upsert({
+        user_id: user.id,
+        progress_data: progressData,
+        updated_at: new Date().toISOString(),
+      })
+      // Also sync profile XP and streak
+      await supabase.from('profiles').update({
+        total_xp: stateToSave.totalXp,
+        streak_days: stateToSave.streakDays,
+        longest_streak: stateToSave.longestStreak || 0,
+        last_active_date: stateToSave.lastActiveDate,
+      }).eq('id', user.id)
+    } catch {}
+  }, [isAuthenticated, user])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => saveToCloud(state), 2000)
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
+  }, [state, isAuthenticated, saveToCloud])
+
+  // Load from cloud on first auth
+  useEffect(() => {
+    if (!isAuthenticated || !user || cloudLoadedRef.current) return
+    cloudLoadedRef.current = true
+
+    const loadFromCloud = async () => {
+      try {
+        const { data } = await supabase
+          .from('user_progress')
+          .select('progress_data')
+          .eq('user_id', user.id)
+          .single()
+
+        if (data?.progress_data && Object.keys(data.progress_data).length > 0) {
+          dispatch({ type: 'SYNC_FROM_CLOUD', payload: data.progress_data })
+        } else {
+          // First login: migrate localStorage data to cloud
+          await saveToCloud(state)
+        }
+      } catch {}
+    }
+    loadFromCloud()
+  }, [isAuthenticated, user])
 
   // 每次打開更新 streak
   useEffect(() => { dispatch({ type: 'UPDATE_STREAK' }) }, [])
+
+  // Reset checkedInToday at midnight
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    if (state.lastActiveDate !== today && state.checkedInToday) {
+      dispatch({ type: 'UPDATE_STREAK' })
+    }
+  }, [])
 
   const levelInfo = getLevelInfo(state.totalXp)
 

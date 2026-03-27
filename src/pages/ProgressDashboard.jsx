@@ -1,15 +1,17 @@
 import { motion } from 'framer-motion'
-import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap, BarChart3 } from 'lucide-react'
+import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap, BarChart3, Shield, Calendar } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { WORLDS } from '../data/questData'
 import { BRANCHES } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
 import { DailyActivityChart, XpTrendChart, TimePerChallengeChart } from '../components/AnalyticsCharts'
 import AnimatedNumber from '../components/AnimatedNumber'
+import StreakCalendar from '../components/StreakCalendar'
+import StreakFlame from '../components/StreakFlame'
 
 function ProgressDashboard() {
-  const { t } = useTranslation(['progress', 'common'])
-  const { totalXp, levelInfo, questStatus, challengeStatus, streakDays, analytics, getAnalyticsSummary } = useQuest()
+  const { t } = useTranslation(['progress', 'common', 'social'])
+  const { totalXp, levelInfo, questStatus, challengeStatus, streakDays, longestStreak, streakFreezes, analytics, getAnalyticsSummary } = useQuest()
 
   const totalQuestsCompleted = Object.values(questStatus).filter(q => q.completed).length
   const totalChallengesCompleted = Object.values(challengeStatus).filter(c => c.completed).length
@@ -191,6 +193,57 @@ function ProgressDashboard() {
           </div>
         </motion.div>
       </div>
+
+      {/* 連續學習 / Streak 區 */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="card mt-6"
+      >
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Flame className="w-5 h-5 text-orange-400" />
+          {t('social:checkin.streakTitle')}
+        </h3>
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Streak stats */}
+          <div className="flex-1">
+            <div className="flex items-center gap-6 mb-4">
+              <StreakFlame streakDays={streakDays} size="lg" showLabel />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-white">{streakDays}</p>
+                <p className="text-xs text-slate-400">{t('social:checkin.currentStreak')}</p>
+              </div>
+              <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-white">{longestStreak || streakDays}</p>
+                <p className="text-xs text-slate-400">{t('social:checkin.longestStreak')}</p>
+              </div>
+              <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <Shield className="w-4 h-4 text-cyan-400" />
+                  <p className="text-2xl font-bold text-white">{streakFreezes ?? 1}</p>
+                </div>
+                <p className="text-xs text-slate-400">{t('social:checkin.streakFreeze')}</p>
+              </div>
+            </div>
+          </div>
+          {/* Calendar */}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <span className="text-sm text-slate-400">{t('social:checkin.totalCheckins')}</span>
+            </div>
+            <StreakCalendar
+              checkinDates={Object.keys(analytics?.dailyStats || {}).filter(
+                d => (analytics.dailyStats[d]?.challengesCompleted > 0) || (analytics.dailyStats[d]?.xpEarned > 0)
+              )}
+              mode="month"
+            />
+          </div>
+        </div>
+      </motion.div>
 
       {/* 成就區 */}
       <motion.div

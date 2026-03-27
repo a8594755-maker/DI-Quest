@@ -1,19 +1,35 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
-import { Map, BarChart3, MessageCircle, Briefcase, Unlock, RotateCcw, Search } from 'lucide-react'
+import { Map, BarChart3, MessageCircle, Briefcase, Unlock, RotateCcw, Search, Users, LogOut, LogIn, ChevronDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
+import { useAuth } from '../contexts/AuthContext'
 import SearchModal from './SearchModal'
 import ChatPanel from './ChatPanel'
 import LanguageSwitcher from './LanguageSwitcher'
+import StreakFlame from './StreakFlame'
+import DailyCheckinModal from './DailyCheckinModal'
+import UserAvatar from './UserAvatar'
 
 function Layout() {
-  const { t } = useTranslation('common')
-  const { levelInfo, devMode, dispatch, getDueReviewCount } = useQuest()
+  const { t } = useTranslation(['common', 'auth', 'social'])
+  const { levelInfo, devMode, dispatch, getDueReviewCount, streakDays, checkedInToday } = useQuest()
+  const { isAuthenticated, isGuest, profile, signOut } = useAuth()
+  const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [selectedText, setSelectedText] = useState('')
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [checkinModalOpen, setCheckinModalOpen] = useState(false)
   const dueCount = getDueReviewCount()
+
+  // Show checkin modal on first visit if not checked in today
+  useEffect(() => {
+    if (!checkedInToday) {
+      const timer = setTimeout(() => setCheckinModalOpen(true), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   // Cmd+K / Ctrl+K 搜尋快捷鍵
   // Cmd+J / Ctrl+J 開啟小迪
@@ -109,6 +125,14 @@ function Layout() {
               />
             </div>
             <span className="text-slate-400 text-xs hidden md:inline">{levelInfo.currentXp} XP</span>
+            {/* Streak flame */}
+            <button
+              onClick={() => setCheckinModalOpen(true)}
+              className="flex items-center"
+              aria-label={t('social:checkin.title')}
+            >
+              <StreakFlame streakDays={streakDays} size="sm" />
+            </button>
             {/* 搜尋按鈕 */}
             <button
               onClick={() => setSearchOpen(true)}
@@ -134,6 +158,64 @@ function Layout() {
               <Unlock className="w-3 h-3 inline sm:mr-1" />
               <span className="hidden sm:inline">{devMode ? 'DEV ON' : 'DEV'}</span>
             </button>
+            {/* User profile menu */}
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="flex items-center gap-1.5 ml-1 sm:ml-2 px-1.5 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                {isAuthenticated && profile ? (
+                  <UserAvatar username={profile.username} displayName={profile.display_name} avatarUrl={profile.avatar_url} size="sm" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400">
+                    <Users className="w-4 h-4" />
+                  </div>
+                )}
+                <ChevronDown className="w-3 h-3 text-slate-500 hidden sm:block" />
+              </button>
+              {profileMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 py-2">
+                    {isAuthenticated && profile && (
+                      <div className="px-4 py-2 border-b border-slate-700">
+                        <p className="text-white text-sm font-medium truncate">{profile.display_name || profile.username}</p>
+                        <p className="text-slate-400 text-xs truncate">@{profile.username}</p>
+                      </div>
+                    )}
+                    {isGuest && (
+                      <div className="px-4 py-2 border-b border-slate-700">
+                        <p className="text-slate-400 text-sm">{t('auth:profile.guest')}</p>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { setProfileMenuOpen(false); navigate('/di-quest/friends') }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                    >
+                      <Users className="w-4 h-4" />
+                      {t('auth:profile.friends')}
+                    </button>
+                    {isAuthenticated ? (
+                      <button
+                        onClick={() => { setProfileMenuOpen(false); signOut(); navigate('/di-quest/login') }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-slate-700 flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        {t('auth:profile.signOut')}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setProfileMenuOpen(false); navigate('/di-quest/login') }}
+                        className="w-full px-4 py-2 text-left text-sm text-brand-primary hover:bg-slate-700 flex items-center gap-2"
+                      >
+                        <LogIn className="w-4 h-4" />
+                        {t('auth:profile.signIn')}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </nav>
@@ -238,6 +320,17 @@ function Layout() {
             </span>
           )}
         </NavLink>
+        <NavLink
+          to="/di-quest/friends"
+          className={({ isActive }) =>
+            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl ${
+              isActive ? 'bg-cyan-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`
+          }
+          aria-label={t('social:friends.title')}
+        >
+          <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+        </NavLink>
         <button
           onClick={() => setChatOpen(prev => !prev)}
           className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl ${
@@ -252,6 +345,9 @@ function Layout() {
 
       {/* 搜尋彈窗 */}
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      {/* 每日簽到彈窗 */}
+      <DailyCheckinModal isOpen={checkinModalOpen} onClose={() => setCheckinModalOpen(false)} />
 
     </div>
   )

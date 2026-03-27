@@ -1,0 +1,51 @@
+{
+  "friends": {
+    "title": "朋友",
+    "subtitle": "和朋友一起學習，互相激勵",
+    "list": "好友列表",
+    "pending": "待處理邀請",
+    "addFriend": "加好友",
+    "searchPlaceholder": "搜尋使用者名稱...",
+    "noFriends": "還沒有好友，快去邀請朋友一起學習吧！",
+    "noPending": "沒有待處理的好友邀請",
+    "noResults": "找不到符合的使用者",
+    "sendRequest": "發送邀請",
+    "requestSent": "已發送邀請",
+    "accept": "接受",
+    "decline": "拒絕",
+    "remove": "移除好友",
+    "lastActive": "最後活躍",
+    "online": "在線上",
+    "today": "今天",
+    "daysAgo": "{{count}} 天前"
+  },
+  "leaderboard": {
+    "title": "每週排行榜",
+    "subtitle": "本週好友 XP 排名",
+    "weeklyXp": "本週 XP",
+    "you": "你",
+    "noData": "邀請好友一起學習來解鎖排行榜！",
+    "rank": "第 {{rank}} 名"
+  },
+  "checkin": {
+    "title": "每日簽到",
+    "streakTitle": "連續學習",
+    "days": "天",
+    "checkInNow": "立即簽到",
+    "checked": "已簽到",
+    "bonusXp": "+{{xp}} XP 簽到獎勵",
+    "dailyGoal": "今日目標",
+    "dailyGoalDesc": "今天再賺 {{remaining}} XP",
+    "dailyGoalDone": "今日目標已達成！",
+    "goalTarget": "{{current}} / {{target}} XP",
+    "streakFreeze": "連續保護卡",
+    "streakFreezeDesc": "剩餘 {{count}} 張，可保護一天不中斷連續",
+    "streakFreezeNone": "沒有連續保護卡了",
+    "longestStreak": "最長連續",
+    "currentStreak": "目前連續",
+    "totalCheckins": "總簽到次數",
+    "dismiss": "稍後再說",
+    "congrats": "簽到成功！",
+    "keepGoing": "繼續保持！"
+  }
+}
