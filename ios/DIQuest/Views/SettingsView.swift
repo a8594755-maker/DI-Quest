@@ -2,9 +2,11 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authManager: AuthManager
     @StateObject private var cacheService = CacheService()
     @State private var biometricEnabled = UserDefaults.standard.bool(forKey: "biometricEnabled")
     @State private var showClearCacheAlert = false
+    @State private var showSignOutAlert = false
 
     var body: some View {
         NavigationStack {
@@ -20,7 +22,7 @@ struct SettingsView: View {
                     HStack {
                         Label("Build", systemImage: "hammer")
                         Spacer()
-                        Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
+                        Text(AppConfig.buildNumber)
                             .foregroundStyle(.secondary)
                     }
                 } header: {
@@ -59,7 +61,18 @@ struct SettingsView: View {
                 } header: {
                     Text("儲存空間")
                 } footer: {
-                    Text("清除快取後需要網路連線重新載入資料")
+                    Text("清除本地快取資料")
+                }
+
+                // MARK: - Account
+                Section {
+                    Button(role: .destructive) {
+                        showSignOutAlert = true
+                    } label: {
+                        Label("登出", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                } header: {
+                    Text("帳號")
                 }
             }
             .navigationTitle("設定")
@@ -76,6 +89,13 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("這會清除所有離線快取資料")
+            }
+            .alert("確定要登出？", isPresented: $showSignOutAlert) {
+                Button("取消", role: .cancel) {}
+                Button("登出", role: .destructive) {
+                    authManager.signOut()
+                    dismiss()
+                }
             }
             .task {
                 await cacheService.calculateCacheSize()

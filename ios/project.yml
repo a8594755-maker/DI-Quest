@@ -30,6 +30,7 @@ targets:
         UIStatusBarStyle: UIStatusBarStyleLightContent
         UIViewControllerBasedStatusBarAppearance: true
         ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
         NSFaceIDUsageDescription: 使用 Face ID 快速解鎖 DI Quest
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true

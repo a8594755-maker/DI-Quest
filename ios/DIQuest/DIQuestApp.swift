@@ -3,15 +3,23 @@ import SwiftUI
 @main
 struct DIQuestApp: App {
     @StateObject private var networkMonitor = NetworkMonitor()
+    @StateObject private var authManager = AuthManager()
     @Environment(\.scenePhase) private var scenePhase
     @State private var isLocked = false
 
     var body: some Scene {
         WindowGroup {
             ZStack {
-                WebAppView()
-                    .environmentObject(networkMonitor)
-                    .preferredColorScheme(.dark)
+                Group {
+                    if authManager.isAuthenticated {
+                        MainTabView()
+                    } else {
+                        LoginView()
+                    }
+                }
+                .environmentObject(networkMonitor)
+                .environmentObject(authManager)
+                .preferredColorScheme(.dark)
 
                 if isLocked {
                     BiometricLockView(isLocked: $isLocked)
@@ -33,13 +41,13 @@ struct BiometricLockView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.06, green: 0.09, blue: 0.16)
+            DIQuestTheme.background
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 48))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(DIQuestTheme.textTertiary)
 
                 Text("DI Quest")
                     .font(.title2.bold())
@@ -47,7 +55,7 @@ struct BiometricLockView: View {
 
                 Text("請驗證身分以繼續")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(DIQuestTheme.textTertiary)
 
                 Button(action: { unlock() }) {
                     Label(unlockLabel, systemImage: unlockIcon)
@@ -55,7 +63,7 @@ struct BiometricLockView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 32)
                         .padding(.vertical, 12)
-                        .background(Color(hex: "6366f1"))
+                        .background(DIQuestTheme.accent)
                         .clipShape(Capsule())
                 }
             }
