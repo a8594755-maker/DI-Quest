@@ -9,25 +9,10 @@ import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useApiUsage } from '../hooks/useApiUsage'
+import { useChatSync } from '../hooks/useChatSync'
 import { WORLDS, getWorld, getQuest, getChallenge } from '../data/questData'
 import { getWorldLesson } from '../data/lessons'
 import { chatWithDeepSeek } from '../utils/deepseek'
-
-// ── localStorage 聊天紀錄 ───────────────────────────────────
-const CHAT_STORAGE_KEY = 'di-quest-chat-history'
-
-function loadChatHistory() {
-  try {
-    const raw = localStorage.getItem(CHAT_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch { return [] }
-}
-
-function saveChatHistory(sessions) {
-  try {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(sessions.slice(0, 30)))
-  } catch {}
-}
 
 function generateTitle(messages) {
   const firstUser = messages.find(m => m.role === 'user')
@@ -118,13 +103,8 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
 
   const pageContext = usePageContext(location.pathname, t)
 
-  // 歷史對話
-  const [chatSessions, setChatSessions] = useState(() => {
-    const all = loadChatHistory()
-    const valid = all.filter(s => s.messages?.some(m => m.role === 'user'))
-    if (valid.length !== all.length) saveChatHistory(valid)
-    return valid
-  })
+  // 歷史對話 (cloud + localStorage sync)
+  const { sessions: chatSessions, updateSession: setChatSessions, deleteSession: cloudDeleteSession } = useChatSync()
   const [activeSessionId, setActiveSessionId] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
 
@@ -174,21 +154,15 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
         createdAt: Date.now(),
         updatedAt: Date.now(),
       }
-      setChatSessions(prev => {
-        const updated = [newSession, ...prev]
-        saveChatHistory(updated)
-        return updated
-      })
+      setChatSessions(prev => [newSession, ...prev])
     } else {
-      setChatSessions(prev => {
-        const updated = prev.map(s =>
+      setChatSessions(prev =>
+        prev.map(s =>
           s.id === activeSessionId
             ? { ...s, messages, title: generateTitle(messages), updatedAt: Date.now() }
             : s
         )
-        saveChatHistory(updated)
-        return updated
-      })
+      )
     }
   }, [messages])
 
@@ -211,11 +185,7 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
 
   function deleteSession(sessionId, e) {
     e.stopPropagation()
-    setChatSessions(prev => {
-      const updated = prev.filter(s => s.id !== sessionId)
-      saveChatHistory(updated)
-      return updated
-    })
+    cloudDeleteSession(sessionId)
     if (activeSessionId === sessionId) {
       setActiveSessionId(null)
       setMessages([])
