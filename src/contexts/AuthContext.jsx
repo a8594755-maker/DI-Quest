@@ -117,53 +117,12 @@ export function AuthProvider({ children }) {
   }, [user])
 
   // Listen to auth state changes
+  // Supabase handles PKCE code exchange automatically via detectSessionInUrl: true
   useEffect(() => {
-    let initialSessionHandled = false
-
-    // Safety timeout
-    const loadingTimeout = setTimeout(() => {
-      setLoading(prev => {
-        if (prev) console.warn('Auth loading timeout — forcing load complete')
-        return false
-      })
-    }, 10000)
-
-    const handleSession = async (session) => {
-      if (session?.user) {
-        setUser(session.user)
-        setIsGuest(false)
-        await fetchProfile(session.user.id, session.user.user_metadata, session.user)
-      } else {
-        setUser(null)
-        setProfile(null)
-        if (!initialSessionHandled) {
-          const wasGuest = localStorage.getItem('di-quest-guest')
-          if (wasGuest) setIsGuest(true)
-        }
-      }
-      initialSessionHandled = true
-      clearTimeout(loadingTimeout)
-      setLoading(false)
-    }
-
-    // If URL has OAuth code, exchange it explicitly first
-    const params = new URLSearchParams(window.location.search)
-    const code = params.get('code')
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-        if (error) {
-          console.error('Code exchange failed:', error.message)
-          // Fall back to existing session
-          supabase.auth.getSession().then(({ data: d }) => handleSession(d.session))
-        } else {
-          handleSession(data.session)
-        }
-        // Clean up URL
-        window.history.replaceState({}, '', window.location.pathname)
-      })
-    }
+    let mounted = true
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
       try {
         if (event === 'TOKEN_REFRESHED' && session?.user) {
           setUser(session.user)
@@ -173,26 +132,33 @@ export function AuthProvider({ children }) {
           setUser(null)
           setProfile(null)
           setIsGuest(false)
-          clearTimeout(loadingTimeout)
           setLoading(false)
           return
         }
-        // When exchanging OAuth code, skip onAuthStateChange — we handle it explicitly
-        if (code) return
-        await handleSession(session)
-      } catch (err) {
-        if (err?.message?.includes('Lock')) {
-          console.warn('Auth lock contention (safe to ignore):', err.message)
-          return
+        if (session?.user) {
+          setUser(session.user)
+          setIsGuest(false)
+          await fetchProfile(session.user.id, session.user.user_metadata, session.user)
+          // Clean up OAuth code from URL
+          if (window.location.search.includes('code=')) {
+            window.history.replaceState({}, '', window.location.pathname)
+          }
+        } else if (!session) {
+          setUser(null)
+          setProfile(null)
+          const wasGuest = localStorage.getItem('di-quest-guest')
+          if (wasGuest) setIsGuest(true)
         }
+      } catch (err) {
+        if (err?.message?.includes('Lock')) return
         console.error('Auth state change error:', err)
-        clearTimeout(loadingTimeout)
-        setLoading(false)
+      } finally {
+        if (mounted) setLoading(false)
       }
     })
 
     return () => {
-      clearTimeout(loadingTimeout)
+      mounted = false
       subscription.unsubscribe()
     }
   }, [fetchProfile])
