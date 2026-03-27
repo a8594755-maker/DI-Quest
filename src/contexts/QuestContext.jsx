@@ -249,23 +249,26 @@ export function QuestProvider({ children }) {
           .eq('user_id', user.id)
           .single()
 
-        if (data?.progress_data && Object.keys(data.progress_data).length > 0) {
-          // Check if user already checked in today via daily_checkins table
-          const today = new Date().toISOString().slice(0, 10)
-          const { data: checkinData } = await supabase
-            .from('daily_checkins')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('checkin_date', today)
-            .maybeSingle()
+        // Always check if user already checked in today via daily_checkins table
+        const today = new Date().toISOString().slice(0, 10)
+        const { data: checkinData } = await supabase
+          .from('daily_checkins')
+          .select('id, xp_earned')
+          .eq('user_id', user.id)
+          .eq('checkin_date', today)
+          .maybeSingle()
 
+        if (data?.progress_data && Object.keys(data.progress_data).length > 0) {
           const payload = {
             ...data.progress_data,
             checkedInToday: data.progress_data.checkedInToday || !!checkinData,
           }
           dispatch({ type: 'SYNC_FROM_CLOUD', payload })
         } else {
-          // First login: migrate localStorage data to cloud
+          // Cloud data empty — still sync checkin status, then save local to cloud
+          if (checkinData) {
+            dispatch({ type: 'SYNC_FROM_CLOUD', payload: { ...state, checkedInToday: true } })
+          }
           await saveToCloud(state)
         }
       } catch {}

@@ -7,7 +7,7 @@ import { usePromoCode } from '../hooks/usePromoCode'
 
 function ProfileSetupModal({ isOpen, onClose }) {
   const { t } = useTranslation('auth')
-  const { profile, completeProfileSetup } = useAuth()
+  const { user, profile, completeProfileSetup } = useAuth()
   const { redeemCode, loading: promoLoading } = usePromoCode()
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -17,13 +17,19 @@ function ProfileSetupModal({ isOpen, onClose }) {
   const [promoMessage, setPromoMessage] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // Reset state when modal opens
+  // Reset state when modal opens — pre-populate from Google metadata if profile has defaults
   useEffect(() => {
     if (isOpen && profile) {
-      setDisplayName(profile.display_name || '')
+      const meta = user?.user_metadata || {}
+      const profileName = profile.display_name
+      // Use Google name if profile display_name is default or empty
+      const effectiveName = (!profileName || profileName === 'Learner')
+        ? (meta.full_name || meta.name || '')
+        : profileName
+      setDisplayName(effectiveName)
       setUsername(profile.username?.startsWith('user_') ? '' : (profile.username || ''))
     }
-  }, [isOpen, profile])
+  }, [isOpen, profile, user])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
