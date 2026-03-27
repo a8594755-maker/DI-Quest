@@ -24,6 +24,11 @@ import world23 from './world23'
 import world24 from './world24'
 import world25 from './world25'
 import world26 from './world26'
+import world4_en from './world4_en'
+import world23_en from './world23_en'
+import world24_en from './world24_en'
+import world25_en from './world25_en'
+import world26_en from './world26_en'
 import world39 from './world39'
 import world40 from './world40'
 import world41 from './world41'
@@ -60,7 +65,20 @@ const lessons = {
   41: world41,
 }
 
+import i18n from '../../i18n'
+
+const lessonsEn = {
+  4: world4_en,
+  23: world23_en,
+  24: world24_en,
+  25: world25_en,
+  26: world26_en,
+}
+
 export function getWorldLesson(worldId) {
+  if (i18n.language === 'en' && lessonsEn[worldId]) {
+    return lessonsEn[worldId]
+  }
   return lessons[worldId] || null
 }
 

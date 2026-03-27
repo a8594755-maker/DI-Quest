@@ -17,7 +17,7 @@ function fuzzyMatch(query, text) {
 }
 
 function SearchModal({ isOpen, onClose }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [query, setQuery] = useState('')
   const inputRef = useRef(null)
   const navigate = useNavigate()
@@ -56,7 +56,7 @@ function SearchModal({ isOpen, onClose }) {
       })
     })
     return items
-  }, [])
+  }, [i18n.language])
 
   const results = useMemo(() => {
     if (!query.trim()) return []
