@@ -1,8 +1,10 @@
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, FileQuestion, BookOpen, Trophy, CheckCircle } from 'lucide-react'
+import { ArrowLeft, FileQuestion, BookOpen, Trophy, CheckCircle, ExternalLink } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { getWorld, getQuest } from '../data/questData'
+import { getBranchForWorld } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
+import { getQuestResources } from '../data/sqlExternalResources'
 
 function QuestDetail() {
   const { worldId, questId } = useParams()
@@ -10,22 +12,25 @@ function QuestDetail() {
 
   const world = getWorld(worldId)
   const quest = getQuest(questId)
+  const branch = getBranchForWorld(worldId)
+  const backPath = branch ? `/di-quest/branch/${branch.id}` : '/di-quest'
 
   if (!quest || !world) {
     return (
       <div className="max-w-4xl mx-auto p-6 text-center py-20">
         <p className="text-slate-500 text-lg">找不到這個關卡</p>
-        <Link to="/di-quest/map" className="btn-primary inline-block mt-4">返回地圖</Link>
+        <Link to="/di-quest" className="btn-primary inline-block mt-4">返回地圖</Link>
       </div>
     )
   }
 
   const isCompleted = questStatus[questId]?.completed
+  const externalResources = getQuestResources(questId)
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <Link
-        to="/di-quest/map"
+        to={backPath}
         className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -156,6 +161,65 @@ function QuestDetail() {
           </div>
         )}
       </div>
+
+      {/* 推薦外部練習 */}
+      {externalResources.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-6"
+        >
+          <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
+            <ExternalLink className="w-5 h-5 text-brand-accent" />
+            推薦外部練習
+          </h2>
+          <div className="grid gap-3">
+            {externalResources.map((r, i) => (
+              <a
+                key={i}
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="card flex items-center gap-4 hover:border-brand-accent/50 transition-colors group"
+              >
+                {/* 平台標記 */}
+                <span className={`px-2.5 py-1 text-xs font-bold rounded whitespace-nowrap ${
+                  r.source === 'LeetCode'
+                    ? 'bg-amber-500/20 text-amber-400'
+                    : 'bg-cyan-500/20 text-cyan-400'
+                }`}>
+                  {r.source}
+                </span>
+
+                {/* 題目資訊 */}
+                <div className="flex-1 min-w-0">
+                  <span className="text-white group-hover:text-brand-accent transition-colors">
+                    {r.id ? `#${r.id} ` : ''}{r.title}
+                  </span>
+                  {r.company && (
+                    <span className="ml-2 text-slate-500 text-sm">from {r.company}</span>
+                  )}
+                </div>
+
+                {/* 難度 */}
+                <span className={`text-xs px-2 py-0.5 rounded whitespace-nowrap ${
+                  r.difficulty === 'easy' ? 'bg-emerald-500/20 text-emerald-400' :
+                  r.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {r.difficulty === 'easy' ? 'Easy' : r.difficulty === 'medium' ? 'Medium' : 'Hard'}
+                </span>
+
+                <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-brand-accent transition-colors flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+          <p className="text-slate-600 text-xs mt-3">
+            點擊連結前往外部平台練習，搭配本章題目效果更好
+          </p>
+        </motion.div>
+      )}
 
     </div>
   )

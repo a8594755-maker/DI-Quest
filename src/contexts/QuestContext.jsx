@@ -1,6 +1,8 @@
 import { createContext, useContext, useReducer, useEffect, useMemo } from 'react'
 import { getLevelInfo, calculateChallengeXp } from '../utils/xpCalculator'
 import { calculateNextReview, performanceToQuality } from '../utils/spacedRepetition'
+import { getBranchForWorld } from '../data/branches'
+import { getWorld } from '../data/questData'
 
 const QuestContext = createContext(null)
 
@@ -166,10 +168,10 @@ export function QuestProvider({ children }) {
   const levelInfo = getLevelInfo(state.totalXp)
 
   // 判斷關卡是否解鎖（開發者模式全部解鎖）
+  // 解鎖邏輯基於 branch：每條路線的第一個 world 自動解鎖，路線間互不影響
   const isQuestUnlocked = (questId) => {
     if (state.devMode) return true
     const [worldNum, questNum] = questId.split('-').map(Number)
-    if (worldNum === 1 && questNum === 1) return true // 第一關永遠解鎖
 
     // 同一個 world 的前一關要完成
     if (questNum > 1) {
@@ -177,16 +179,32 @@ export function QuestProvider({ children }) {
       return !!state.questStatus[prevQuestId]?.completed
     }
 
-    // 新 world 的第一關：前一個 world 的 boss 關要完成
-    const prevBossId = `${worldNum - 1}-6`
-    return !!state.questStatus[prevBossId]?.completed
+    // 每個 world 的第一關：檢查是否為該 branch 的第一個 world
+    const branch = getBranchForWorld(worldNum)
+    if (!branch) return true
+    const idx = branch.worldIds.indexOf(worldNum)
+    if (idx === 0) return true // branch 內第一個 world 的第一關永遠解鎖
+
+    // 否則需要前一個 world 的最後一個 quest 完成
+    const prevWorldId = branch.worldIds[idx - 1]
+    const prevWorld = getWorld(prevWorldId)
+    if (!prevWorld || prevWorld.quests.length === 0) return true
+    const lastQuest = prevWorld.quests[prevWorld.quests.length - 1]
+    return !!state.questStatus[lastQuest.id]?.completed
   }
 
   const isWorldUnlocked = (worldId) => {
     if (state.devMode) return true
-    if (worldId === 1) return true
-    const prevBossId = `${worldId - 1}-6`
-    return !!state.questStatus[prevBossId]?.completed
+    const branch = getBranchForWorld(worldId)
+    if (!branch) return true
+    const idx = branch.worldIds.indexOf(Number(worldId))
+    if (idx === 0) return true // branch 內第一個 world 自動解鎖
+
+    const prevWorldId = branch.worldIds[idx - 1]
+    const prevWorld = getWorld(prevWorldId)
+    if (!prevWorld || prevWorld.quests.length === 0) return true
+    const lastQuest = prevWorld.quests[prevWorld.quests.length - 1]
+    return !!state.questStatus[lastQuest.id]?.completed
   }
 
   // 計算一個 quest 內已完成的 challenge 數量

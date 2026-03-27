@@ -34,6 +34,10 @@ function Layout() {
 
   useEffect(() => {
     const handleMouseUp = () => {
+      // 只在講義和題目頁顯示「問小迪」浮動按鈕
+      const path = window.location.pathname
+      if (!path.includes('/lesson/') && !path.includes('/case/')) return
+
       const selection = window.getSelection()
       const text = selection?.toString().trim()
       if (text && text.length > 2) {

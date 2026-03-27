@@ -493,19 +493,28 @@ ${lessonContent || '（無講義資料）'}
                 </button>
               </div>
             )}
-            <div className="flex gap-2">
-              <input
+            <div className="flex gap-2 items-end">
+              <textarea
                 ref={inputRef}
-                type="text"
+                rows={1}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value)
+                  // 自動展開高度，最多 5 行
+                  e.target.style.height = 'auto'
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                }}
                 onCompositionStart={() => { isComposingRef.current = true }}
                 onCompositionEnd={() => { isComposingRef.current = false }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isComposingRef.current) handleSend()
+                  if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current) {
+                    e.preventDefault()
+                    handleSend()
+                  }
                 }}
                 placeholder={selectedText ? '想問什麼？' : '問小迪...'}
-                className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors"
+                className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-brand-primary transition-colors resize-none overflow-y-auto"
+                style={{ maxHeight: '120px' }}
               />
               <button
                 onClick={() => handleSend()}

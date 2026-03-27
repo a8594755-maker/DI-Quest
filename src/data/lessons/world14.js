@@ -1,202 +1,223 @@
 const world14 = `
 # World 14：邊界與限制
 
-> **目標：** 理解 Decision Intelligence 的操作邊界、已知限制、以及如何成熟地溝通這些限制
+> **目標：** 理解 DI 系統「不能做什麼」和「刻意不做什麼」，學會成熟地溝通技術限制
 > **對應專案：** Decision-Intelligence-
 > **預估學習時間：** 2-3 小時
 
 ---
 
-## 14-1：Frontend-Only 部分啟動
+## 14-1：Frontend-Only 啟動 — 看起來能用 ≠ 真的能用
 
-### 什麼是部分啟動？
+### 一個常見的錯誤
 
-Decision Intelligence 的前端可以在沒有後端的情況下啟動（\`npm run dev\`），但這只是「部分啟動」。
+你 clone 了 DI 的 repo，跑 \`npm run dev\`，瀏覽器打開 — 哇，畫面出來了！看起來一切正常。
 
-### 能跑 vs 能用
+**但其實你只啟動了前端。** 後端（Supabase、ML API）完全沒跑。
 
-| 狀態 | 前端 Only | 完整啟動 |
-|------|-----------|----------|
-| 頁面載入 | ✅ | ✅ |
-| 路由切換 | ✅ | ✅ |
-| UI 元件渲染 | ✅ | ✅ |
-| 使用者認證 | ❌ | ✅ |
-| 數據上傳與儲存 | ❌ | ✅ |
-| AI 對話 | ❌ | ✅ |
-| 預測執行 | ❌ | ✅ |
-| 工作流完整執行 | ❌ | ✅ |
-| 健康檢查通過 | ❌ | ✅ |
+### 能看 vs 能用
 
-### 為什麼這很重要？
+| 狀態 | 只有前端 | 完整啟動 |
+|------|---------|---------|
+| 頁面能打開 | ✅ 可以 | ✅ 可以 |
+| 路由能切換 | ✅ 可以 | ✅ 可以 |
+| 按鈕能點 | ✅ 可以 | ✅ 可以 |
+| 登入 | ❌ 失敗（Supabase 沒連） | ✅ 可以 |
+| 上傳數據 | ❌ 失敗（Storage 沒連） | ✅ 可以 |
+| 跟 AI 聊天 | ❌ 失敗（ai-proxy 沒連） | ✅ 可以 |
+| 跑預測 | ❌ 失敗（ML API 沒連） | ✅ 可以 |
 
-1. **Demo 風險**：如果只跑前端去 demo，會看到很多「載入中」或錯誤
-2. **開發誤解**：新開發者可能以為「跑起來了 = 可以用了」
-3. **測試盲點**：前端 only 的測試不能代表系統真的可用
+### 為什麼要特別提這個？
+
+三個原因：
+
+1. **Demo 的時候會出糗：** 如果你只跑前端去 demo，客人點任何功能都會看到「載入中」或錯誤。
+2. **新人容易被騙：** 新加入的開發者看到畫面就以為「搞定了」，結果 debug 半天。
+3. **測試的盲點：** 你跑前端的 unit test 都會過，但不代表整個系統能用。
 
 ### 正確的做法
 
-用 \`./scripts/healthcheck.sh\` 作為真正的 readiness 信號，而不是「瀏覽器能打開」。
+用 \`./scripts/healthcheck.sh\` 作為真正的 readiness 信號。它會檢查四個服務（Supabase、ML API、AI Proxy、Frontend）是不是都活著。只有四個都綠燈，才算「系統可用」。
 
-> 💡 **Framework Tip：** 「能啟動」和「能用」是完全不同的概念。在分散式系統中，你需要一個明確的 readiness 定義，而不是「看起來沒問題」。
+> 💡 **面試官可能會追問：**
+> 「你怎麼跟一個非技術的人解釋這個問題？」
+> → 「就像一輛車，你坐上去方向盤能轉、按鈕能按，但引擎沒發動。看起來一切正常，但你踩油門不會動。我們的系統也是，畫面能打開，但如果後端沒啟動，所有需要數據的功能都不會 work。所以我們有一個『引擎檢查燈』（healthcheck script）來確認一切真的就緒。」
 
 ---
 
-## 14-2：SAP Adapter 邊界
+## 14-2：SAP Adapter — 能連 ≠ 隨插即用
 
-### Adapter ≠ Turnkey Connector
+### Adapter 不是 Turnkey Connector
 
-Decision Intelligence 有 5 個 SAP 同步 Edge Functions：
-- \`sync-materials-from-sap\`
-- \`sync-demand-fg-from-sap\`
-- \`sync-inventory-from-sap\`
-- \`sync-bom-from-sap\`
-- \`sync-po-open-lines-from-sap\`
+DI 有 5 個 SAP 同步 Edge Function：
+- \`sync-materials-from-sap\` — 同步物料主檔
+- \`sync-demand-fg-from-sap\` — 同步成品需求
+- \`sync-inventory-from-sap\` — 同步庫存
+- \`sync-bom-from-sap\` — 同步物料清單
+- \`sync-po-open-lines-from-sap\` — 同步採購單
 
-**但這些是 adapter，不是 turnkey connector。**
+但它們是 **adapter**，不是 **turnkey connector**。差別是什麼？
 
-### Adapter vs Turnkey Connector
+用插頭來比喻：
+- **Turnkey Connector** 就像萬用插頭 — 你插上去就能用，不用想。
+- **Adapter** 就像你知道插頭的規格，也準備好了轉接頭的設計圖，但你還要自己把電線接好、測試通不通電。
 
-| | Adapter | Turnkey Connector |
-|---|---------|-------------------|
-| 合約（Schema） | ✅ 已鎖定 | ✅ 已鎖定 |
-| 驗證邏輯 | ✅ 有 | ✅ 有 |
-| 客戶端設定 | ❌ 需要客製 | ✅ 自助設定 |
-| 認證管理 | ❌ 需要手動 | ✅ OAuth/SSO 整合 |
-| 監控 | ❌ 基本 | ✅ 完整 |
-| 錯誤處理 | ⚠️ 有限 | ✅ 完整重試 |
+### 具體來說，已經做好 vs 還需要做的
+
+| 已經做好的 ✅ | 還需要做的 ❌ |
+|-------------|-------------|
+| 資料格式已定義（contract locked） | 客戶的 SAP endpoint URL |
+| Schema 驗證邏輯已寫好 | SAP API 認證設定 |
+| 有 25+ 個合約測試 | 網路連通性（VPN / private link） |
+| 錯誤處理的基本框架 | 客戶特定的欄位映射 |
+| Writeback payload 驗證 | 客戶端的整合測試 |
 
 ### 合約已鎖定的意義
 
-雖然不是 turnkey，但合約（contract）是穩定的：
-- \`ADAPTER_PAYLOAD_CONTRACT\` 定義了資料格式
-- \`MUTATION_FIELD_TYPES\` 強制值類型
-- \`validateWritebackPayload()\` 做完整的 schema + type 驗證
-- 有 25+ 個合約測試
+雖然不是隨插即用，但介面是**穩定的**：
+- \`ADAPTER_PAYLOAD_CONTRACT\` 定義了送出去的數據格式
+- \`MUTATION_FIELD_TYPES\` 定義了每個欄位的型別
+- \`validateWritebackPayload()\` 會做完整的 schema 驗證
 
-這代表：**介面是穩定的，但整合需要工程工作。**
+這代表：**整合的風險是在「設定和連通」，不是在「介面會變」。** 你不用擔心介面改版導致整合壞掉。
 
-### 生產環境需要什麼？
+### 怎麼成熟地溝通這件事？
 
-要讓 SAP sync 在生產環境跑起來，還需要：
-- 客戶特定的 SAP endpoint URL
-- SAP API credentials
-- 網路連通性（通常需要 VPN 或 private link）
-- 欄位映射的客製化
+❌ 不好的說法：「我們不支援 SAP。」
+❌ 也不好：「我們完全支援 SAP。」
 
-> 💡 **Framework Tip：** 「有 adapter」和「能連」是不同的。成熟的說法是：「我們有穩定的合約和驗證邏輯，但生產整合需要客戶端的設定工作。」
+✅ 好的說法：「我們有穩定的 SAP adapter，資料合約和驗證邏輯都已經完成並測試。生產環境的整合需要一些客戶端設定工作 — 主要是 SAP endpoint、認證、和欄位映射。我們的合約是鎖定的，不會因為版本更新而改變。」
+
+> 💡 **面試官可能會追問：**
+> 「如果客戶說『我們需要即時同步』，你怎麼回？」
+> → 「目前的 sync adapter 是批次同步（batch sync），適合每天或每幾小時跑一次。即時同步（real-time sync）需要 webhook 或 Change Data Capture（CDC），這在 v1 的範圍之外，但 adapter 的合約設計是可擴展的。」
 
 ---
 
-## 14-3：Optional ML 足跡
+## 14-3：Optional ML 足跡 — 刻意的精簡
 
-### Chronos 排除
+### Chronos 為什麼被排除？
 
-Dockerfile 預設 **排除** Chronos 相關依賴（PyTorch、Transformers、Accelerate）。
+DI 的 Dockerfile 預設**不包含** Chronos（一個零樣本時序預測模型）。Chronos 需要 PyTorch、Transformers、Accelerate 這三個大套件。
 
-### 為什麼排除？
-
-| 考量 | 含 Chronos | 不含 Chronos |
-|------|-----------|-------------|
+| | 含 Chronos | 不含 Chronos |
+|---|-----------|-------------|
 | Docker image 大小 | ~3-4 GB | ~800 MB |
-| 啟動時間 | 較長 | 較短 |
-| 記憶體需求 | 較高 | 較低 |
-| 部署成本 | 較高 | 較低 |
-| 預測能力 | Prophet + LightGBM + Chronos | Prophet + LightGBM |
+| 啟動時間 | 較長（要載入 PyTorch） | 快 |
+| 記憶體需求 | 高（PyTorch 吃記憶體） | 正常 |
+| 部署成本 | 高（需要更大的機器） | 低 |
+| 可用的預測模型 | Prophet + LightGBM + Chronos | Prophet + LightGBM |
 
-### 設定方式
+### 這不是「缺少功能」，是「刻意選擇」
 
-\`\`\`
-DI_CHRONOS_ENABLED=false  # 預設值
-\`\`\`
+\`DI_CHRONOS_ENABLED=false\` 是一個**產品決策**，不是一個 bug。
 
-### Lean Runtime vs Full Research
+理由是：
+1. Prophet 和 LightGBM 已經能覆蓋大多數預測場景
+2. Chronos 的優勢是「不需要訓練數據」（零樣本），但企業客戶通常**有**訓練數據
+3. 省下的 2+ GB image 大小意味著更快的部署和更低的運營成本
 
-這是一個 **產品決策**：
-- **預設部署**：lean runtime，適合大多數場景
-- **完整部署**：需要手動修改 Dockerfile 和設定
-- 這不是「缺少功能」，而是「刻意選擇精簡」
+如果客戶真的需要 Chronos（比如做全新品項的預測，沒有歷史數據），可以手動開啟：修改 Dockerfile 移除過濾、設定 \`DI_CHRONOS_ENABLED=true\`。
 
-> 💡 **Framework Tip：** 好的系統設計會考慮「預設應該是什麼」。預設值應該對最多的使用場景有效，而不是把所有東西都塞進去。
+### 預設值的設計哲學
 
----
+> **好的預設值應該對最多的使用場景有效，而不是把所有東西都塞進去。**
 
-## 14-4：文件閱讀路線
+這個原則適用於所有軟體設計：
+- 預設 2 個 worker（夠用但不浪費記憶體）
+- 預設 ortools solver（免費且品質好）
+- 預設不含 Chronos（精簡但足夠）
 
-### 建議閱讀順序
-
-Decision Intelligence 有 50+ 份文件。repo 自己建議的閱讀順序是：
-
-**第一輪：產品理解**
-1. \`README.md\` — 產品概覽、快速開始
-2. \`docs/DEMO.md\` — 推薦的 demo 路徑
-3. \`docs/GOLDEN_PATH.md\` — v1 使用者流程
-
-**第二輪：技術理解**
-4. \`docs/ARCHITECTURE.md\` — 系統拓撲與層級
-5. \`docs/DEPLOYMENT.md\` — 部署步驟
-6. \`docs/KNOWN_LIMITATIONS.md\` — 操作邊界
-
-**第三輪：深度參考**
-7. \`docs/SPECIFICATION_zh-TW.md\` — 模組級規格
-8. \`docs/planning_api_contract.md\` — 任務分解 API
-9. \`docs/forecast_contract.md\` — 預測 API
-10. \`docs/model_registry_and_promotion.md\` — 模型治理
-
-**第四輪：營運參考**
-11. \`docs/RUNBOOK.md\` — 營運手冊
-12. \`docs/telemetry_schema.md\` — 遙測 schema
-13. \`docs/drift_and_retrain.md\` — 訓練管線
-
-### 文件不等於產品
-
-一個常見的誤解：「文件寫了 = 功能存在且完整」。
-
-實際上：
-- 文件可能描述了目標狀態（不是現在狀態）
-- 某些功能可能只有 adapter 但沒有完整實作
-- \`docs/archive/\` 裡的文件是歷史記錄，不是現在的規格
-
-> 💡 **Framework Tip：** 閱讀文件時，區分「規格文件」（應該是什麼樣）和「狀態文件」（現在是什麼樣）。KNOWN_LIMITATIONS.md 通常是最誠實的文件。
+> 💡 **面試官可能會追問：**
+> 「如果你要設計一個新的 optional 功能，你會怎麼決定它是 opt-in 還是 opt-out？」
+> → 看三個因素：1. **資源影響** — 如果它顯著增加 image 大小或記憶體，opt-in。2. **使用頻率** — 如果大多數使用者不需要，opt-in。3. **風險** — 如果它可能影響穩定性，opt-in。Chronos 三個都中，所以是 opt-in。
 
 ---
 
-## 14-5：操作邊界總覽
+## 14-4：Execution Guardrails — 系統的安全閥
 
-### 環境依賴表
+### 為什麼要設上限？
 
-| 依賴 | 為什麼重要 | 怎麼處理 |
-|------|-----------|----------|
-| Supabase | Auth、persistence、storage、Edge Functions 都靠它 | 設定 URL 和 anon key，部署 Edge Functions |
-| ML API | 預測、規劃、非同步作業不在前端跑 | 用 \`start.sh --backend\` 或容器部署 |
-| AI provider secrets | 助手、映射、prompt 流程依賴 server-side credentials | 用 \`supabase secrets set\` |
-| Migration set | 某些流程依賴特定的 schema | 按順序套用所有 migrations |
+想像一個使用者上傳了一個 5 千萬筆的 Excel 檔案，然後要求系統跑預測。沒有上限的話：
+- 伺服器記憶體用完 → 整台機器崩潰
+- 其他使用者的請求全部卡住
+- 求解器跑了一個小時都沒結果
 
-### 已解決 vs 未解決
+**Execution Guardrails 就像電梯的載重限制** — 不是說電梯不好，是保護它不要超載壞掉。
 
-**已解決的邊界：**
-- ✅ Bootstrap experience → \`start.sh\` 單一命令啟動
-- ✅ Health monitoring → \`healthcheck.sh\` + API probes + frontend check
-- ✅ ERP adapter contract → locked schema + validation + 25+ tests
+### DI 的操作上限
 
-**仍需注意的邊界：**
-- ⚠️ Partial bring-up → 前端可跑但 workflow 不完整
-- ⚠️ ERP integration → adapter 不是 turnkey connector
-- ⚠️ Optional ML footprint → Chronos 預設排除
-
-### Execution Guardrails
-
-系統透過環境變數設定操作上限：
 \`\`\`
-DI_MAX_ROWS_PER_SHEET=2000000   # 每張表最大行數
-DI_MAX_SKUS=5000                 # 最大 SKU 數
-DI_SOLVER_MAX_SECONDS=90         # 求解器最大時間
-DI_BOM_MAX_EDGES=200000          # BOM 最大邊數
-DI_BOM_MAX_DEPTH=12              # BOM 最大深度
-DI_FORECAST_MAX_SERIES=5000      # 預測最大序列數
-DI_JOB_MAX_ATTEMPTS=3            # 作業最大重試次數
+DI_MAX_ROWS_PER_SHEET = 2,000,000    # 每張表最多 200 萬筆
+DI_MAX_SKUS = 5,000                    # 最多 5,000 個品項（SKU）
+DI_SOLVER_MAX_SECONDS = 90             # 求解器最多跑 90 秒
+DI_BOM_MAX_EDGES = 200,000             # BOM 最多 20 萬條邊
+DI_BOM_MAX_DEPTH = 12                  # BOM 最多 12 層深
+DI_FORECAST_MAX_SERIES = 5,000         # 預測最多 5,000 個時間序列
+DI_FORECAST_TIMEOUT_SECONDS = 90       # 預測最多 90 秒
+DI_JOB_MAX_ATTEMPTS = 3               # 任務失敗最多重試 3 次
 \`\`\`
 
-> 💡 **Framework Tip：** 操作邊界不是「系統的缺點」，而是「系統的安全閥」。沒有邊界的系統是不安全的。
+### 這些數字怎麼來的？
+
+不是隨便設的：
+- **200 萬筆** — 大多數企業的月度銷售數據在幾萬到幾十萬筆。200 萬筆覆蓋了 99% 的場景。
+- **5,000 SKU** — 一般中型製造業的活躍品項在幾百到幾千個。
+- **90 秒求解** — OR-Tools 在大多數場景 30 秒內就能求解。90 秒留了充足餘量。超過 90 秒通常代表問題太大需要分批。
+- **3 次重試** — 暫時性錯誤（網路超時、資源忙碌）通常重試 1-2 次就會好。3 次還不行通常是真正的問題，不應該繼續重試。
+
+### 為什麼用環境變數控制？
+
+因為不同客戶、不同環境可能需要不同的上限：
+- **開發環境：** 設小一點（1,000 SKU、30 秒 timeout），跑得快
+- **正式環境：** 可以設大一點，但不要無限大
+- **特殊客戶：** 如果客戶有 10,000 個 SKU，可以調整而不需要改程式碼
+
+> 💡 **面試官可能會追問：**
+> 「如果客戶的數據超過上限怎麼辦？」
+> → 不是硬拒絕，而是建議分批。比如 10,000 SKU 可以分成 2 批各 5,000 個跑。或者跟客戶討論調高上限，但要評估對記憶體和 CPU 的影響。上限是可配置的，不是寫死的。
+
+---
+
+## 14-5：「什麼不做」的設計哲學
+
+### 環境依賴的誠實清單
+
+DI 系統依賴四個外部服務。沒有它們，對應的功能就不能用：
+
+| 依賴 | 沒有它會怎樣 | 怎麼設定 |
+|------|------------|---------|
+| **Supabase** | 不能登入、不能存數據、不能上傳檔案 | 設定 SUPABASE_URL 和 ANON_KEY |
+| **ML API** | 不能跑預測和規劃 | 啟動 Docker 容器或 \`python run_ml_api.py\` |
+| **AI Provider Secrets** | 不能用 AI 分析功能 | 用 \`supabase secrets set\` 設定 API keys |
+| **SQL Migrations** | 資料表不存在，所有數據操作失敗 | 按順序跑所有 migration |
+
+### 已解決 vs 未解決的邊界
+
+**已經解決的（用了就能用）：**
+- ✅ 啟動流程 → \`start.sh\` 一鍵啟動 + preflight 檢查
+- ✅ 健康監控 → \`healthcheck.sh\` + API probes + 前端健康面板
+- ✅ ERP 合約 → 鎖定的 schema + 驗證 + 25+ 測試
+
+**仍然存在的邊界（要跟客戶/面試官說清楚的）：**
+- ⚠️ 部分啟動陷阱 — 前端能跑但功能不完整
+- ⚠️ SAP 整合 — adapter 不是 turnkey connector
+- ⚠️ Chronos — 預設排除，需要手動開啟
+- ⚠️ 即時同步 — 目前只支援批次同步
+
+### 文件 ≠ 功能
+
+DI repo 裡有 50+ 份文件。但要注意：
+
+- **文件可能描述目標狀態**，不是現在的狀態
+- **\`docs/archive/\`** 裡的文件是歷史記錄，不代表現在的功能
+- **KNOWN_LIMITATIONS.md** 通常是最誠實的文件 — 它告訴你「什麼不行」
+
+讀文件的時候，先看日期、看版本號。2 個月前的規格文件可能已經跟程式碼對不上了。
+
+> 💡 **面試官可能會追問：**
+> 「你覺得 DI 系統最大的限制是什麼？」
+> → 一個成熟的回答不是「沒有限制」，也不是一堆抱怨。而是：「目前最大的限制是 ERP 整合需要客製化工作。合約和驗證都穩定了，但每個客戶的 SAP 環境不同，需要逐一設定。這是 v1 的設計選擇 — 先確保核心流程穩定，ERP 整合在 v2 做成 turnkey。」
 
 ---
 
@@ -211,18 +232,31 @@ DI_JOB_MAX_ATTEMPTS=3            # 作業最大重試次數
 ### 你的任務
 
 寫一封專業的回覆信。你的回覆應該：
-1. **誠實說明限制**（不是 turnkey connector）
-2. **展示技術成熟度**（有鎖定合約、有驗證、有測試）
-3. **說明需要的整合工作**（客戶端設定、credentials、映射）
+1. **誠實說明限制**（不是 turnkey connector、目前是批次同步不是即時）
+2. **展示技術成熟度**（合約鎖定、驗證邏輯、25+ 測試）
+3. **說明需要的整合工作**（endpoint、credentials、欄位映射）
 4. **把限制變成優勢**（穩定的合約 = 可靠的整合基礎）
+5. **給出前進路徑**（整合需要什麼步驟、大約什麼規模的工作量）
 
 ### 評估標準
 
-- 是否誠實（沒有說「可以直接連」）
-- 是否專業（不是只說「不行」就結束）
-- 是否展示技術深度（提到 contract、validation、adapter）
-- 是否提供了前進路徑（需要做什麼才能整合）
-- 語調是否適合客戶溝通
+- 是否**誠實**（沒有說「可以直接連、可以即時同步」）
+- 是否**專業**（不是只說「不行」就結束）
+- 是否展示**技術深度**（提到 contract、validation、adapter 這些實際的實作）
+- 是否提供了**前進路徑**（不讓客戶覺得「算了，用不了」）
+- 語調是否適合**客戶溝通**（不卑不亢、有信心）
+
+### 參考回答方向
+
+「感謝您的詢問。Decision Intelligence 確實支援 SAP 整合 — 我們有 5 個專門的 SAP adapter，涵蓋物料、需求、庫存、BOM 和採購單的同步。
+
+我想先說明兩件事讓您有正確的預期：
+
+第一，目前的整合方式是**批次同步**（可以設定每小時或每天跑一次），而不是即時串流。批次同步對大多數供應鏈規劃場景已經足夠，因為規劃本身是基於累積數據的。
+
+第二，我們的 SAP 整合是**可設定的 adapter**，而不是隨插即用的 connector。這意味著上線前需要設定您的 SAP endpoint、API 認證、和欄位映射。好消息是，我們的資料合約是鎖定且經過測試的（25+ 個自動化測試），所以整合的風險在於設定，不在於介面穩定性。
+
+如果您有興趣，我建議的下一步是安排一次技術對談，了解您的 SAP 環境細節，評估整合的工作量。通常一個熟悉 SAP API 的工程師需要 1-2 週完成設定和測試。」
 `
 
 export default world14

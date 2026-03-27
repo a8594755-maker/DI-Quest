@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap, BarChart3 } from 'lucide-react'
 import { WORLDS } from '../data/questData'
+import { BRANCHES } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
 import { DailyActivityChart, XpTrendChart, TimePerChallengeChart } from '../components/AnalyticsCharts'
 
@@ -10,14 +11,21 @@ function ProgressDashboard() {
   const totalQuestsCompleted = Object.values(questStatus).filter(q => q.completed).length
   const totalChallengesCompleted = Object.values(challengeStatus).filter(c => c.completed).length
 
-  const worldProgress = WORLDS.map(w => {
-    const completed = w.quests.filter(q => questStatus[q.id]?.completed).length
+  const branchProgress = BRANCHES.filter(b => b.worldIds.length > 0).map(branch => {
+    const worlds = WORLDS.filter(w => branch.worldIds.includes(w.id))
     return {
-      worldId: w.id,
-      name: `${w.emoji} ${w.name}`,
-      completed,
-      total: w.quests.length,
-      pct: w.quests.length > 0 ? Math.round((completed / w.quests.length) * 100) : 0,
+      branchId: branch.id,
+      branchName: `${branch.emoji} ${branch.name}`,
+      worlds: worlds.map(w => {
+        const completed = w.quests.filter(q => questStatus[q.id]?.completed).length
+        return {
+          worldId: w.id,
+          name: `${w.emoji} ${w.name}`,
+          completed,
+          total: w.quests.length,
+          pct: w.quests.length > 0 ? Math.round((completed / w.quests.length) * 100) : 0,
+        }
+      }),
     }
   })
 
@@ -119,22 +127,29 @@ function ProgressDashboard() {
             <TrendingUp className="w-5 h-5 text-brand-primary" />
             世界進度
           </h3>
-          <div className="space-y-4">
-            {worldProgress.map((w) => (
-              <div key={w.worldId}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-sm ${w.pct > 0 ? 'text-white' : 'text-slate-500'}`}>
-                    {w.name}
-                  </span>
-                  <span className={`text-sm ${w.pct > 0 ? 'text-brand-primary' : 'text-slate-600'}`}>
-                    {w.completed}/{w.total} ({w.pct}%)
-                  </span>
-                </div>
-                <div className="progress-bar h-2">
-                  <div
-                    className="h-full bg-brand-primary rounded-full transition-all duration-500"
-                    style={{ width: `${w.pct}%` }}
-                  />
+          <div className="space-y-6">
+            {branchProgress.map((branch) => (
+              <div key={branch.branchId}>
+                <h4 className="text-sm font-semibold text-slate-300 mb-3">{branch.branchName}</h4>
+                <div className="space-y-3 pl-2">
+                  {branch.worlds.map((w) => (
+                    <div key={w.worldId}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-sm ${w.pct > 0 ? 'text-white' : 'text-slate-500'}`}>
+                          {w.name}
+                        </span>
+                        <span className={`text-sm ${w.pct > 0 ? 'text-brand-primary' : 'text-slate-600'}`}>
+                          {w.completed}/{w.total} ({w.pct}%)
+                        </span>
+                      </div>
+                      <div className="progress-bar h-2">
+                        <div
+                          className="h-full bg-brand-primary rounded-full transition-all duration-500"
+                          style={{ width: `${w.pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

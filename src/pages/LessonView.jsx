@@ -5,9 +5,12 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getWorldLesson } from '../data/lessons'
 import { WORLDS } from '../data/questData'
+import { getBranchForWorld } from '../data/branches'
 
 function LessonView() {
   const { worldId } = useParams()
+  const branch = getBranchForWorld(worldId)
+  const backPath = branch ? `/di-quest/branch/${branch.id}` : '/di-quest'
   const location = useLocation()
   const lesson = getWorldLesson(Number(worldId))
   const world = WORLDS.find(w => w.id === Number(worldId))
@@ -82,7 +85,7 @@ function LessonView() {
     return (
       <div className="max-w-4xl mx-auto p-6 text-center py-20">
         <p className="text-slate-500 text-lg">找不到這個世界的講義</p>
-        <Link to="/di-quest/map" className="btn-primary inline-block mt-4">返回地圖</Link>
+        <Link to={backPath} className="btn-primary inline-block mt-4">返回地圖</Link>
       </div>
     )
   }
@@ -121,7 +124,7 @@ function LessonView() {
         {/* 頂部欄 */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700 bg-slate-900/50 flex-shrink-0">
           <div className="flex items-center gap-4">
-            <Link to="/di-quest/map" className="text-slate-400 hover:text-white transition-colors">
+            <Link to={backPath} className="text-slate-400 hover:text-white transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
@@ -137,7 +140,7 @@ function LessonView() {
               {showToc ? '隱藏目錄' : '顯示目錄'}
             </button>
             <Link
-              to="/di-quest/map"
+              to={backPath}
               className="px-4 py-1.5 bg-brand-primary text-white text-sm rounded hover:bg-blue-600 transition-colors"
             >
               開始挑戰

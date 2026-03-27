@@ -1,12 +1,19 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
-import { Lock, CheckCircle, Circle } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
+import { Lock, CheckCircle, Circle, ArrowLeft } from 'lucide-react'
 import { WORLDS } from '../data/questData'
+import { getBranch } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
 
 function QuestMap() {
-  const [expandedWorld, setExpandedWorld] = useState(1)
+  const { branchId } = useParams()
+  const branch = getBranch(branchId)
+  const branchWorlds = branch
+    ? WORLDS.filter(w => branch.worldIds.includes(w.id))
+    : WORLDS
+
+  const [expandedWorld, setExpandedWorld] = useState(branchWorlds[0]?.id ?? null)
   const { questStatus, challengeStatus, isWorldUnlocked, isQuestUnlocked } = useQuest()
 
   const getQuestStatus = (quest) => {
@@ -54,12 +61,18 @@ function QuestMap() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">Case Study 地圖</h2>
+        <Link to="/di-quest" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-4">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">返回路線選擇</span>
+        </Link>
+        <h2 className="text-3xl font-bold text-white mb-2">
+          {branch ? `${branch.emoji} ${branch.name}` : 'Case Study 地圖'}
+        </h2>
         <p className="text-slate-400">選擇一個主題開始你的面試準備之旅</p>
       </div>
 
       <div className="grid gap-4">
-        {WORLDS.map((world, wi) => {
+        {branchWorlds.map((world, wi) => {
           const isExpanded = expandedWorld === world.id
           const unlocked = isWorldUnlocked(world.id)
           const progress = getWorldProgress(world)

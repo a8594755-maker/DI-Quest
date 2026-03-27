@@ -2,7 +2,7 @@
 
 let db = null
 
-async function initSqlJs() {
+async function loadSqlJs() {
   const SQL = await globalThis.initSqlJs({
     locateFile: file => `https://sql.js.org/dist/${file}`,
   })
@@ -19,7 +19,7 @@ self.onmessage = async function (e) {
         if (!globalThis.initSqlJs) {
           importScripts('https://sql.js.org/dist/sql-wasm.js')
         }
-        const SQL = await initSqlJs()
+        const SQL = await loadSqlJs()
         db = new SQL.Database()
         // 執行 schema + seed data
         if (payload.schema) {
