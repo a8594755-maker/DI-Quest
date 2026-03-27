@@ -73,7 +73,13 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
       setEvaluation(result)
 
       const scoreMatch = result.match(/分數[：:]\s*(\d+)/)
-      const score = scoreMatch ? parseInt(scoreMatch[1]) : 70
+      if (!scoreMatch) {
+        // AI didn't return a parseable score — treat as failed so the user isn't falsely passed
+        setLastScore(0)
+        onSubmit?.(0)
+        return
+      }
+      const score = Math.min(100, Math.max(0, parseInt(scoreMatch[1])))
       setLastScore(score)
 
       onSubmit?.(score)

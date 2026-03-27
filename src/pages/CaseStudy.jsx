@@ -95,6 +95,7 @@ function CaseStudy() {
   }
 
   const handleOpenEndedSubmit = (score) => {
+    setAttempts(prev => prev + 1)
     const passed = score >= 60
     setAnswerCorrect(passed)
     if (passed) {
