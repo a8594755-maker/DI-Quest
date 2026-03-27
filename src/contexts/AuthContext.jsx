@@ -177,8 +177,8 @@ export function AuthProvider({ children }) {
           setLoading(false)
           return
         }
-        // Skip if we already handled via explicit code exchange
-        if (code && initialSessionHandled) return
+        // When exchanging OAuth code, skip onAuthStateChange — we handle it explicitly
+        if (code) return
         await handleSession(session)
       } catch (err) {
         if (err?.message?.includes('Lock')) {
