@@ -9,7 +9,7 @@ export const BRANCHES = [
     emoji: '🎯',
     description: '從問題拆解到完整商業 Case Study 面試準備',
     color: 'from-blue-500 to-indigo-500',
-    worldIds: [1, 2, 3, 5, 6, 7, 8],
+    worldIds: [1, 2, 3, 5, 6, 7, 8, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
   },
   {
     id: 'sql',
