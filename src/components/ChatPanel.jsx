@@ -33,16 +33,8 @@ function generateTitle(messages) {
   return text.length < firstUser.content.length ? text + '...' : text
 }
 
-// ── 知識庫 ──────────────────────────────────────────────────
-const KNOWLEDGE = {
-  'kpi': { content: 'KPI（Key Performance Indicator）是衡量業務表現的關鍵指標：\n\n面試中常見概念：\n• **Leading Indicator** — 預測未來的指標\n• **Lagging Indicator** — 結果指標\n• **Guardrail Metric** — 確保改善一個指標時不傷害其他面向\n\n面試技巧：提到 KPI 時永遠要說清楚「對誰而言」和「為什麼這個指標重要」。' },
-  'funnel': { content: 'Funnel Analysis（漏斗分析）是拆解使用者旅程的核心方法：\n\n典型電商漏斗：\n瀏覽 → 加入購物車 → 開始結帳 → 完成付款\n\n分析重點：\n1. 找到最大的 drop-off\n2. 按 segment 切開看\n3. 看趨勢變化' },
-  'segmentation': { content: 'Segmentation（分群）把使用者按特徵分組分析：\n\n常見切分維度：行為、人口統計、來源、時間\n\n為什麼重要？總體數據可能隱藏真相。例：整體 retention 持平，但新用戶 retention 大幅下降，只是被老用戶稀釋了。' },
-  'retention': { content: 'Retention（留存率）衡量用戶是否持續回來使用產品：\n\n• D1 / D7 / D30 — 第 1/7/30 天還有多少人回來\n• 如果 retention curve 趨於平穩，代表有核心用戶\n• 如果一路往下掉到 0，代表沒有 product-market fit' },
-  'cohort': { content: 'Cohort Analysis（世代分析）把用戶按「加入時間」分組追蹤：\n\n例：1月 cohort D7=40%, 2月=35%, 3月=28%\n→ 新用戶留存在惡化！但整體 DAU 可能因用戶基數增長看起來正常。' },
-  'sql': { content: '面試中的 SQL 思維：\n\n回答架構：\n1. 需要哪些 table？\n2. 怎麼 JOIN？\n3. 怎麼 filter（WHERE）？\n4. 怎麼 aggregate（GROUP BY）？' },
-  'ab testing': { content: 'A/B Testing 基本架構：\n1. 假設：改變 X 會讓 Y 提升\n2. 對照組 vs 實驗組：隨機分配\n3. 衡量指標：primary + guardrail metrics\n4. 樣本量和時間' },
-}
+// ── 知識庫（從 i18n 載入） ────────────────────────────────────
+const KNOWLEDGE_TOPICS = ['kpi', 'funnel', 'segmentation', 'retention', 'cohort', 'sql', 'ab_testing']
 
 const KEYWORD_MAP = [
   { keywords: ['kpi', '指標', 'leading', 'lagging', 'guardrail', 'north star', 'metric', '衡量'], topic: 'kpi' },
@@ -51,7 +43,7 @@ const KEYWORD_MAP = [
   { keywords: ['retention', '留存', '回訪', '流失'], topic: 'retention' },
   { keywords: ['cohort', '世代'], topic: 'cohort' },
   { keywords: ['sql', 'join', 'group by', '查詢', 'query'], topic: 'sql' },
-  { keywords: ['a/b test', 'ab test', '實驗', 'experiment'], topic: 'ab testing' },
+  { keywords: ['a/b test', 'ab test', '實驗', 'experiment'], topic: 'ab_testing' },
 ]
 
 function findTopic(input) {
@@ -143,7 +135,7 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
       const welcomeMsg = {
         id: 1,
         role: 'assistant',
-        content: `嗨！我是小迪 🤖\n\n我知道你${pageContext.description || t('pageContext.learning')}。\n\n你可以：\n• 選取頁面上的文字，問我相關問題\n• 直接問分析概念\n• 問我當前題目或講義的內容\n\n有什麼想問的？`,
+        content: t('panel.welcome', { context: pageContext.description || t('pageContext.learning') }),
       }
       setMessages([welcomeMsg])
       setShowHistory(false)
@@ -225,63 +217,50 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
   }
 
   const buildSystemPrompt = useCallback(() => {
-    let prompt = `你是「小迪」，DI Quest 面試練習平台的 AI 教練。用繁體中文回答。
-你的任務是幫助使用者準備商業 Case Study 面試（PM、BA、Product Analyst 等角色）。
-回答要簡潔有架構，用真實商業情境舉例。保持在 300 字以內。
-
-使用者目前等級：Lv.${levelInfo.level} ${levelInfo.title}，共 ${totalXp} XP。`
+    let prompt = t('panel.systemPrompt', { level: levelInfo.level, title: levelInfo.title, xp: totalXp })
 
     const worldId = pageContext.worldId
     const lessonContent = worldId ? getWorldLesson(Number(worldId)) : null
+    const noLesson = t('panel.noLessonData')
 
     if (pageContext.type === 'lesson') {
-      prompt += `\n\n使用者正在閱讀 ${pageContext.world?.name || ''} 的講義。
-根據以下講義內容回答使用者的問題。引用講義中的具體概念、框架、範例來回答。
-
-===== 講義內容 =====
-${lessonContent || '（無講義資料）'}
-===== 講義結束 =====`
+      prompt += t('panel.systemPromptLesson', {
+        worldName: pageContext.world?.name || '',
+        lessonContent: lessonContent || noLesson,
+      })
     } else if (pageContext.type === 'challenge') {
       const c = pageContext.challenge
-      prompt += `\n\n使用者正在做題：
-世界：${pageContext.world?.name || ''}
-關卡：${pageContext.quest?.name || ''}
-題目：${c?.name || ''}
-題型：${c?.type || ''}
-難度：${c?.difficulty || ''}
-情境：${c?.scenario?.title || ''} — ${c?.scenario?.narrative || ''}
-問題：${c?.question || c?.prompt || ''}
-選項：${c?.options?.map(o => `${o.id}. ${o.text}`).join('\n') || ''}
-
-不要直接給答案！引導使用者思考，給提示和思路方向。如果使用者明確要求解答或已經回答完，才可以詳細解釋。
-
-以下是這個世界的完整講義，用來提供背景知識和理論依據：
-
-===== 講義內容 =====
-${lessonContent || '（無講義資料）'}
-===== 講義結束 =====`
+      prompt += t('panel.systemPromptChallenge', {
+        worldName: pageContext.world?.name || '',
+        questName: pageContext.quest?.name || '',
+        challengeName: c?.name || '',
+        challengeType: c?.type || '',
+        difficulty: c?.difficulty || '',
+        scenarioTitle: c?.scenario?.title || '',
+        scenarioNarrative: c?.scenario?.narrative || '',
+        question: c?.question || c?.prompt || '',
+        options: c?.options?.map(o => `${o.id}. ${o.text}`).join('\n') || '',
+        lessonContent: lessonContent || noLesson,
+      })
     } else if (pageContext.type === 'quest-detail') {
-      prompt += `\n\n使用者正在查看關卡 ${pageContext.quest?.name || ''} 的詳情。
-
-以下是這個世界的講義，可供參考：
-
-===== 講義內容 =====
-${lessonContent || '（無講義資料）'}
-===== 講義結束 =====`
+      prompt += t('panel.systemPromptQuestDetail', {
+        questName: pageContext.quest?.name || '',
+        lessonContent: lessonContent || noLesson,
+      })
     }
 
     return prompt
-  }, [levelInfo, totalXp, pageContext])
+  }, [levelInfo, totalXp, pageContext, t])
 
   const generateLocalResponse = (userInput) => {
     const lower = userInput.toLowerCase()
     if (lower.includes('進度') || lower.includes('等級') || lower.includes('xp') || lower.includes('progress')) {
       const completedQuests = Object.values(questStatus).filter(q => q.completed).length
       const completedChallenges = Object.values(challengeStatus).filter(c => c.completed).length
-      return `你的進度：Lv.${levelInfo.level} ${levelInfo.title}，${totalXp} XP\n完成關卡：${completedQuests}，完成挑戰：${completedChallenges}`
+      return t('panel.progressResponse', { level: levelInfo.level, title: levelInfo.title, xp: totalXp, quests: completedQuests, challenges: completedChallenges })
     }
     const topic = findTopic(userInput)
-    if (topic && KNOWLEDGE[topic]) return KNOWLEDGE[topic].content
+    if (topic && KNOWLEDGE_TOPICS.includes(topic)) return t(`knowledge.${topic}`)
     return null
   }
 
@@ -289,7 +268,7 @@ ${lessonContent || '（無講義資料）'}
     const messageText = text || input
     if (!messageText.trim()) return
 
-    const contextPrefix = selectedText ? `關於「${selectedText.slice(0, 200)}」，` : ''
+    const contextPrefix = selectedText ? t('panel.contextPrefix', { text: selectedText.slice(0, 200) }) : ''
     const displayText = messageText
     const fullText = contextPrefix + messageText
 
