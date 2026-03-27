@@ -1,3 +1,21 @@
+# Dependencies
+node_modules
+
+# Environment
 .env
 .env.local
 supabase/.env.local
+
+# Build
+dist
+dist-ssr
+*.local
+
+# Editor
+.DS_Store
+.vscode/*
+.idea
+
+# Supabase temp
+supabase/.temp
+supabase/.branches
