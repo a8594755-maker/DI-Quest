@@ -230,7 +230,7 @@ function Layout() {
 
       {/* 內容 + 小迪面板 flex 排版 */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
-        <main className={`flex-1 transition-all duration-300 ${isContentPage ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <main className={`flex-1 transition-all duration-300 ${(isArena || location.pathname.includes('/lesson')) ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <Outlet />
         </main>
 

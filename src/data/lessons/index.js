@@ -96,6 +96,12 @@ import world58 from './world58'
 import world59 from './world59'
 import world60 from './world60'
 import world61 from './world61'
+import world48_en from './world48_en'
+import world49_en from './world49_en'
+import world50_en from './world50_en'
+import world51_en from './world51_en'
+import world52_en from './world52_en'
+import world53_en from './world53_en'
 import world54_en from './world54_en'
 import world55_en from './world55_en'
 import world56_en from './world56_en'
@@ -209,12 +215,12 @@ const lessonsEn = {
   40: world40_en,
   41: world41_en,
   42: world42_en,
-  48: world48,
-  49: world49,
-  50: world50,
-  51: world51,
-  52: world52,
-  53: world53,
+  48: world48_en,
+  49: world49_en,
+  50: world50_en,
+  51: world51_en,
+  52: world52_en,
+  53: world53_en,
   54: world54_en,
   55: world55_en,
   56: world56_en,

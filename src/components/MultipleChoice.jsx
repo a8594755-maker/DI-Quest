@@ -4,10 +4,19 @@ import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { triggerHaptic } from '../utils/nativeApp'
 
-function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled = false }) {
+function MultipleChoice({ question, options: rawOptions, correctAnswer, onAnswer, disabled = false }) {
   const { t } = useTranslation('case')
   const [selected, setSelected] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+
+  // Normalize options: support both string format ('A. text') and object format ({ id, text })
+  const options = rawOptions.map((opt) => {
+    if (typeof opt === 'string') {
+      const match = opt.match(/^([A-Z])\.\s*(.*)$/)
+      return match ? { id: match[1], text: match[2], explanation: '' } : { id: opt, text: opt, explanation: '' }
+    }
+    return opt
+  })
 
   const handleSelect = (optionId) => {
     if (submitted || disabled) return
@@ -47,23 +56,23 @@ function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled =
 
   return (
     <div>
-      <h3 className="text-base sm:text-lg font-medium text-white mb-3 sm:mb-4">{question}</h3>
-      <div className="space-y-2.5 sm:space-y-3">
-        {options.map((option) => (
+      <h3 className="text-sm sm:text-base font-medium text-white mb-2.5 sm:mb-3">{question}</h3>
+      <div className="space-y-2">
+        {options.map((option, index) => (
           <motion.button
-            key={option.id}
+            key={option.id ?? index}
             onClick={() => handleSelect(option.id)}
             disabled={submitted || disabled}
-            className={`w-full text-left p-3 sm:p-4 rounded-lg border-2 transition-all duration-200 touch-manipulation ${getOptionStyle(option.id)}`}
+            className={`w-full text-left px-3 py-2.5 rounded-lg border-2 transition-all duration-200 touch-manipulation ${getOptionStyle(option.id)}`}
             whileHover={!submitted && !disabled ? { scale: 1.01 } : {}}
             whileTap={!submitted && !disabled ? { scale: 0.98 } : {}}
           >
-            <div className="flex items-start gap-2.5 sm:gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-300">
+            <div className="flex items-start gap-2.5">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
                 {option.id}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-slate-200 text-sm sm:text-base">{option.text}</p>
+                <p className="text-slate-200 text-sm">{option.text}</p>
                 {submitted && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -94,14 +103,14 @@ function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled =
         <button
           onClick={handleSubmit}
           disabled={!selected || disabled}
-          className="mt-4 w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium touch-manipulation"
+          className="mt-3 w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm touch-manipulation"
         >
           {t('multipleChoice.confirm')}
         </button>
       ) : submitted && selected !== correctAnswer && !disabled && (
         <button
           onClick={handleRetry}
-          className="mt-4 w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-brand-accent text-white rounded-lg hover:bg-amber-600 transition-colors font-medium touch-manipulation"
+          className="mt-3 w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-brand-accent text-white rounded-lg hover:bg-amber-600 transition-colors font-medium text-sm touch-manipulation"
         >
           {t('multipleChoice.retry', '再試一次')}
         </button>

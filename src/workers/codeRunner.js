@@ -4,7 +4,7 @@ let db = null
 
 async function loadSqlJs() {
   const SQL = await globalThis.initSqlJs({
-    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.14.1/${file}`,
+    locateFile: () => '/sql-wasm.wasm',
   })
   return SQL
 }
@@ -15,9 +15,9 @@ self.onmessage = async function (e) {
   try {
     switch (type) {
       case 'INIT_DB': {
-        // 載入 sql.js
+        // 載入 sql.js from local public folder
         if (!globalThis.initSqlJs) {
-          importScripts('https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.14.1/sql-wasm.js')
+          importScripts('/sql-wasm.js')
         }
         const SQL = await loadSqlJs()
         db = new SQL.Database()

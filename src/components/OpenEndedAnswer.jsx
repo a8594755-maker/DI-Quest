@@ -10,7 +10,7 @@ import remarkGfm from 'remark-gfm'
 import DOMPurify from 'dompurify'
 
 function OpenEndedAnswer({ prompt, evaluationCriteria = [], sampleAnswer, scenario, onSubmit, disabled = false }) {
-  const { t } = useTranslation('case')
+  const { t, i18n } = useTranslation('case')
   const { isAuthenticated } = useAuth()
   const { canUseApi, isPremium, incrementUsage, remaining, dailyLimit } = useApiUsage()
   const [answer, setAnswer] = useState('')
@@ -33,6 +33,37 @@ function OpenEndedAnswer({ prompt, evaluationCriteria = [], sampleAnswer, scenar
         const allowed = await incrementUsage()
         if (!allowed) { setError(t('openEnded.rateLimited', 'Daily limit reached ({{limit}}/day).', { limit: dailyLimit })); setIsEvaluating(false); return }
       }
+      const isZh = i18n.language?.startsWith('zh')
+      const responseFormat = isZh
+        ? `Please evaluate the candidate's answer and respond in Traditional Chinese with this exact format:
+
+## 分數：[0-100]
+
+## 優點
+- [具體的優點 1]
+- [具體的優點 2]
+
+## 改進建議
+- [具體的改進建議 1]
+- [具體的改進建議 2]
+
+## 參考方向
+[簡短說明一個更完整的回答應該包含什麼]`
+        : `Please evaluate the candidate's answer and respond in English with this exact format:
+
+## Score: [0-100]
+
+## Strengths
+- [Specific strength 1]
+- [Specific strength 2]
+
+## Suggestions for Improvement
+- [Specific suggestion 1]
+- [Specific suggestion 2]
+
+## Reference Direction
+[Briefly describe what a more complete answer should include]`
+
       const systemPrompt = `You are an interview evaluator for Product Analyst / Business Analyst / Business Engineer roles in the tech industry.
 
 You will evaluate a candidate's case study answer. Be constructive but honest.
@@ -49,20 +80,7 @@ ${evaluationCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
 ${sampleAnswer ? `REFERENCE ANSWER:\n${sampleAnswer}` : ''}
 
-Please evaluate the candidate's answer and respond in Traditional Chinese with this exact format:
-
-## 分數：[0-100]
-
-## 優點
-- [具體的優點 1]
-- [具體的優點 2]
-
-## 改進建議
-- [具體的改進建議 1]
-- [具體的改進建議 2]
-
-## 參考方向
-[簡短說明一個更完整的回答應該包含什麼]`
+${responseFormat}`
 
       const messages = [
         { role: 'system', content: systemPrompt },
@@ -72,7 +90,7 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
       const result = await chatWithDeepSeek(messages)
       setEvaluation(result)
 
-      const scoreMatch = result.match(/分數[：:]\s*(\d+)/)
+      const scoreMatch = result.match(/(?:分數|Score)[：:]\s*(\d+)/i)
       if (!scoreMatch) {
         // AI didn't return a parseable score — treat as failed so the user isn't falsely passed
         setLastScore(0)
@@ -92,7 +110,7 @@ Please evaluate the candidate's answer and respond in Traditional Chinese with t
   }
 
   const getScoreColor = (text) => {
-    const match = text?.match(/分數[：:]\s*(\d+)/)
+    const match = text?.match(/(?:分數|Score)[：:]\s*(\d+)/i)
     if (!match) return 'text-slate-400'
     const score = parseInt(match[1])
     if (score >= 80) return 'text-emerald-400'
