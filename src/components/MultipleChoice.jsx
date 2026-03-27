@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CheckCircle, XCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import { triggerHaptic } from '../utils/nativeApp'
 
 function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled = false }) {
   const { t } = useTranslation('case')
@@ -11,12 +12,14 @@ function MultipleChoice({ question, options, correctAnswer, onAnswer, disabled =
   const handleSelect = (optionId) => {
     if (submitted || disabled) return
     setSelected(optionId)
+    triggerHaptic('selection')
   }
 
   const handleSubmit = () => {
     if (!selected || submitted || disabled) return
     setSubmitted(true)
     const isCorrect = selected === correctAnswer
+    triggerHaptic(isCorrect ? 'success' : 'error')
     onAnswer?.(isCorrect, selected)
   }
 

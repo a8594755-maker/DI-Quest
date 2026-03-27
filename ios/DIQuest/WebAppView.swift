@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import AuthenticationServices
 
 // MARK: - Configuration
 
@@ -14,6 +15,10 @@ enum AppConfig {
 
     static let appUserAgent = "DIQuestApp/1.0 (iOS; native)"
     static let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+
+    // OAuth: ASWebAuthenticationSession callback
+    static let oauthCallbackScheme = "com.diquest.app"
+    static let oauthCallbackURL = "com.diquest.app://auth-callback"
 }
 
 // MARK: - WebAppView
@@ -22,6 +27,7 @@ struct WebAppView: View {
     @EnvironmentObject var networkMonitor: NetworkMonitor
     @StateObject private var viewModel = WebViewModel()
     @State private var showSplash = true
+    @State private var showSettings = false
 
     var body: some View {
         ZStack {
@@ -40,7 +46,16 @@ struct WebAppView: View {
                 splashScreen
             }
         }
-        .onChange(of: networkMonitor.isConnected) { _, connected in
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+        }
+        .onChange(of: viewModel.showSettings) { show in
+            if show {
+                showSettings = true
+                viewModel.showSettings = false
+            }
+        }
+        .onChange(of: networkMonitor.isConnected) { connected in
             if connected && viewModel.errorMessage != nil {
                 viewModel.reload()
             }
@@ -206,13 +221,29 @@ struct WebViewContainer: UIViewRepresentable {
         prefs.allowsContentJavaScript = true
         config.defaultWebpagePreferences = prefs
 
-        // Inject native app flag before page loads
-        let script = WKUserScript(
-            source: "window.__DI_QUEST_NATIVE__ = true; window.__DI_QUEST_VERSION__ = '\(AppConfig.appVersion)';",
+        // Inject native app flag + bridge capabilities before page loads
+        let bridgeScript = WKUserScript(
+            source: """
+            window.__DI_QUEST_NATIVE__ = true;
+            window.__DI_QUEST_VERSION__ = '\(AppConfig.appVersion)';
+            window.__DI_QUEST_BRIDGE__ = {
+                haptics: true,
+                share: true,
+                biometrics: true,
+                settings: true
+            };
+            """,
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         )
-        config.userContentController.addUserScript(script)
+        config.userContentController.addUserScript(bridgeScript)
+
+        // Register native bridge message handlers
+        let bridge = NativeBridge()
+        bridge.register(on: config.userContentController)
+        bridge.onOpenSettings = { [weak viewModel] in
+            viewModel?.showSettings = true
+        }
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -234,6 +265,10 @@ struct WebViewContainer: UIViewRepresentable {
         webView.scrollView.refreshControl = refreshControl
         webView.scrollView.bounces = true
 
+        // Wire up bridge and view model
+        bridge.webView = webView
+        context.coordinator.bridge = bridge
+
         viewModel.webView = webView
         viewModel.setupProgressObserver()
         viewModel.loadURL()
@@ -249,11 +284,30 @@ struct WebViewContainer: UIViewRepresentable {
 
     // MARK: - Coordinator
 
-    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, ASWebAuthenticationPresentationContextProviding {
         let viewModel: WebViewModel
+        var bridge: NativeBridge?
+        private var authSession: ASWebAuthenticationSession?
 
         init(viewModel: WebViewModel) {
             self.viewModel = viewModel
+        }
+
+        deinit {
+            if let bridge, let controller = bridge.webView?.configuration.userContentController {
+                bridge.unregister(from: controller)
+            }
+        }
+
+        // MARK: ASWebAuthenticationPresentationContextProviding
+
+        func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+            guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene }).first,
+                  let window = scene.windows.first else {
+                return ASPresentationAnchor()
+            }
+            return window
         }
 
         @objc func handleRefresh(_ sender: UIRefreshControl) {
@@ -293,6 +347,13 @@ struct WebViewContainer: UIViewRepresentable {
             }
 
             let urlString = url.absoluteString
+
+            // Intercept OAuth flows — Google blocks sign-in inside WKWebView
+            if isOAuthURL(url) {
+                decisionHandler(.cancel)
+                handleOAuthInSystemBrowser(url: url)
+                return
+            }
 
             // Special protocols → system handler
             if urlString.hasPrefix("tel:") || urlString.hasPrefix("mailto:") || urlString.hasPrefix("sms:") {
@@ -349,6 +410,60 @@ struct WebViewContainer: UIViewRepresentable {
             return nil
         }
 
+        // MARK: OAuth
+
+        private func isOAuthURL(_ url: URL) -> Bool {
+            let s = url.absoluteString
+            return s.contains("supabase.co/auth/v1/authorize") &&
+                   (s.contains("provider=google") || s.contains("provider=apple"))
+        }
+
+        private func handleOAuthInSystemBrowser(url: URL) {
+            guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+
+            // Replace redirect_to with custom scheme for native callback
+            if let index = components.queryItems?.firstIndex(where: { $0.name == "redirect_to" }) {
+                components.queryItems?[index] = URLQueryItem(
+                    name: "redirect_to", value: AppConfig.oauthCallbackURL
+                )
+            } else {
+                var items = components.queryItems ?? []
+                items.append(URLQueryItem(name: "redirect_to", value: AppConfig.oauthCallbackURL))
+                components.queryItems = items
+            }
+
+            guard let authURL = components.url else { return }
+
+            let session = ASWebAuthenticationSession(
+                url: authURL,
+                callbackURLScheme: AppConfig.oauthCallbackScheme
+            ) { [weak self] callbackURL, error in
+                Task { @MainActor in
+                    guard let self else { return }
+                    if let callbackURL {
+                        // Pass auth tokens/code back to the web app
+                        let fragment = callbackURL.fragment ?? ""
+                        let query = callbackURL.query ?? ""
+                        var targetURL = AppConfig.baseURL
+                        if !fragment.isEmpty {
+                            targetURL += "#\(fragment)"
+                        } else if !query.isEmpty {
+                            targetURL += "?\(query)"
+                        }
+                        if let url = URL(string: targetURL) {
+                            self.viewModel.webView?.load(URLRequest(url: url))
+                        }
+                    }
+                    // Cancelled or error → user stays on login page
+                }
+            }
+
+            session.presentationContextProvider = self
+            session.prefersEphemeralWebBrowserSession = false
+            self.authSession = session
+            session.start()
+        }
+
         // MARK: Helpers
 
         private func isInternalHost(_ host: String) -> Bool {
@@ -394,6 +509,7 @@ final class WebViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var loadingProgress: Double = 0
     @Published var errorMessage: String?
+    @Published var showSettings = false
 
     weak var webView: WKWebView?
     private var progressObserver: NSKeyValueObservation?

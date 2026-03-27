@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap, BarChart3, Shield, Calendar } from 'lucide-react'
+import { Trophy, Flame, Clock, Target, TrendingUp, Award, Zap, BarChart3, Shield, Calendar, Share2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { isNativeApp, nativeShare } from '../utils/nativeApp'
 import { WORLDS } from '../data/questData'
 import { getVisibleBranches } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
@@ -55,9 +56,23 @@ function ProgressDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6">
-      <div className="mb-6 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{t('progress:dashboard.title')}</h2>
-        <p className="text-slate-400">{t('progress:dashboard.subtitle')}</p>
+      <div className="mb-6 sm:mb-8 flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{t('progress:dashboard.title')}</h2>
+          <p className="text-slate-400">{t('progress:dashboard.subtitle')}</p>
+        </div>
+        {isNativeApp() && (
+          <button
+            onClick={() => nativeShare(
+              `DI Quest | Lv.${levelInfo.level} ${levelInfo.title} | ${totalXp} XP | ${streakDays} 天連續學習`,
+              'https://di-quest.netlify.app'
+            )}
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+            aria-label="分享"
+          >
+            <Share2 className="w-5 h-5 text-slate-300" />
+          </button>
+        )}
       </div>
 
       {/* 等級與 XP 卡 */}

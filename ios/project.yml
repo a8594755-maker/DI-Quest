@@ -23,6 +23,35 @@ targets:
           - "**/*.plist"
     info:
       path: DIQuest/Info.plist
+      properties:
+        CFBundleDisplayName: DI Quest
+        LSRequiresIPhoneOS: true
+        UIRequiresFullScreen: true
+        UIStatusBarStyle: UIStatusBarStyleLightContent
+        UIViewControllerBasedStatusBarAppearance: true
+        ITSAppUsesNonExemptEncryption: false
+        NSFaceIDUsageDescription: 使用 Face ID 快速解鎖 DI Quest
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoadsInWebContent: true
+          NSExceptionDomains:
+            supabase.co:
+              NSIncludesSubdomains: true
+              NSExceptionAllowsInsecureHTTPLoads: false
+            netlify.app:
+              NSIncludesSubdomains: true
+              NSExceptionAllowsInsecureHTTPLoads: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        CFBundleURLTypes:
+          - CFBundleURLName: com.diquest.app
+            CFBundleURLSchemes:
+              - com.diquest.app
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.diquest.app

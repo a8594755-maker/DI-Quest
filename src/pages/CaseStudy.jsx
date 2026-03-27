@@ -7,6 +7,7 @@ import { getQuest, getChallenge, getWorld } from '../data/questData'
 import { getQuestSectionTitle, getQuestSectionId } from '../data/lessons/index'
 import { useQuest } from '../contexts/QuestContext'
 import { startChallenge, endChallenge } from '../utils/analyticsTracker'
+import { triggerHaptic } from '../utils/nativeApp'
 import DataTable from '../components/DataTable'
 import SimpleChart from '../components/SimpleChart'
 import MultipleChoice from '../components/MultipleChoice'
@@ -91,6 +92,7 @@ function CaseStudy() {
   const handleAnswer = (isCorrect) => {
     setAttempts(prev => prev + 1)
     setAnswerCorrect(isCorrect)
+    triggerHaptic(isCorrect ? 'success' : 'error')
     if (isCorrect) completeChallenge(100)
   }
 
@@ -98,6 +100,7 @@ function CaseStudy() {
     setAttempts(prev => prev + 1)
     const passed = score >= 60
     setAnswerCorrect(passed)
+    triggerHaptic(passed ? 'success' : 'error')
     if (passed) {
       completeChallenge(score)
     }
