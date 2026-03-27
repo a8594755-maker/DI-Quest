@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../utils/supabase'
 
 const AuthContext = createContext(null)
@@ -116,7 +116,11 @@ export function AuthProvider({ children }) {
     return data
   }, [user])
 
-  // Listen to auth state changes
+  // Stable ref for fetchProfile to avoid re-subscribing onAuthStateChange
+  const fetchProfileRef = useRef(fetchProfile)
+  useEffect(() => { fetchProfileRef.current = fetchProfile }, [fetchProfile])
+
+  // Listen to auth state changes — subscribe ONCE, never re-subscribe
   // Supabase handles PKCE code exchange automatically via detectSessionInUrl: true
   useEffect(() => {
     let mounted = true
@@ -140,11 +144,10 @@ export function AuthProvider({ children }) {
         setIsGuest(false)
         // Defer async Supabase calls to avoid deadlock (auth-js #762)
         setTimeout(() => {
-          fetchProfile(session.user.id, session.user.user_metadata, session.user)
+          fetchProfileRef.current(session.user.id, session.user.user_metadata, session.user)
             .catch(err => console.error('Profile fetch error:', err))
             .finally(() => {
               if (mounted) setLoading(false)
-              // Clean up OAuth code from URL
               if (window.location.search.includes('code=')) {
                 window.history.replaceState({}, '', window.location.pathname)
               }
@@ -164,7 +167,7 @@ export function AuthProvider({ children }) {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [fetchProfile])
+  }, []) // empty deps — subscribe once, use ref for latest fetchProfile
 
   const signUp = async ({ email, password, username, displayName }) => {
     const { data, error } = await supabase.auth.signUp({
