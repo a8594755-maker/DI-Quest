@@ -514,9 +514,13 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
   }
 
   return (
-    <div className="flex flex-col bg-slate-900 border-l border-slate-700 flex-shrink-0 w-[380px] min-h-0 overflow-hidden">
-      {panelContent}
-    </div>
+    <>
+      {/* Mobile overlay backdrop */}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[54] md:hidden" onClick={onClose} />
+      <div className="fixed inset-y-0 right-0 z-[55] w-full max-w-[380px] md:relative md:inset-auto md:z-auto flex flex-col bg-slate-900 border-l border-slate-700 flex-shrink-0 md:w-[380px] min-h-0 overflow-hidden">
+        {panelContent}
+      </div>
+    </>
   )
 }
 

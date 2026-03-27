@@ -24,9 +24,9 @@ function BranchSelect() {
   const getBranchDesc = (branch) => t(`common:branch.${branch.id}.description`, branch.description)
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">{t('quest:branchSelect.title')}</h2>
+    <div className="max-w-6xl mx-auto p-4 sm:p-6">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{t('quest:branchSelect.title')}</h2>
         <p className="text-slate-400">{t('quest:branchSelect.subtitle')}</p>
       </div>
 
@@ -43,7 +43,7 @@ function BranchSelect() {
               transition={{ delay: i * 0.1 }}
             >
               {isComingSoon ? (
-                <div className="relative rounded-2xl border-2 border-slate-800 bg-slate-900/50 p-8 opacity-60">
+                <div className="relative rounded-2xl border-2 border-slate-800 bg-slate-900/50 p-5 sm:p-8 opacity-60">
                   <div className="absolute top-4 right-4 px-3 py-1 bg-slate-700 text-slate-400 text-xs rounded-full font-medium">
                     {t('common:status.comingSoon')}
                   </div>
@@ -55,7 +55,7 @@ function BranchSelect() {
                 </div>
               ) : (
                 <Link to={`/di-quest/branch/${branch.id}`}>
-                  <div className={`relative rounded-2xl border-2 border-slate-700 hover:border-slate-500 bg-slate-900/80 p-8 transition-all duration-300 hover:scale-[1.02] cursor-pointer`}>
+                  <div className={`relative rounded-2xl border-2 border-slate-700 hover:border-slate-500 bg-slate-900/80 p-5 sm:p-8 transition-all duration-300 hover:scale-[1.02] cursor-pointer`}>
                     <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${branch.color} flex items-center justify-center text-3xl shadow-lg`}>
                       {branch.emoji}
                     </div>

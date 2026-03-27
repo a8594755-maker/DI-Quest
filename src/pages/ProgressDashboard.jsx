@@ -51,9 +51,9 @@ function ProgressDashboard() {
   ]
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">{t('progress:dashboard.title')}</h2>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{t('progress:dashboard.title')}</h2>
         <p className="text-slate-400">{t('progress:dashboard.subtitle')}</p>
       </div>
 
@@ -63,23 +63,23 @@ function ProgressDashboard() {
         animate={{ opacity: 1, y: 0 }}
         className="card mb-6"
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-2xl font-bold text-white">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-xl sm:text-2xl font-bold text-white">
               {levelInfo.level}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">{levelInfo.title}</h3>
-              <p className="text-slate-400">Lv.{levelInfo.level} Analyst</p>
+              <h3 className="text-lg sm:text-xl font-bold text-white">{levelInfo.title}</h3>
+              <p className="text-slate-400 text-sm">Lv.{levelInfo.level} Analyst</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="flex items-center gap-2 text-2xl font-bold text-white">
-              <Zap className="w-6 h-6 text-brand-accent" />
+          <div className="text-left sm:text-right">
+            <div className="flex items-center gap-2 text-xl sm:text-2xl font-bold text-white">
+              <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-brand-accent" />
               {totalXp}
-              <span className="text-slate-500 text-lg">/ {levelInfo.xpForNext} XP</span>
+              <span className="text-slate-500 text-base sm:text-lg">/ {levelInfo.xpForNext} XP</span>
             </div>
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-400 text-xs sm:text-sm">
               {t('progress:dashboard.needXp', { amount: Math.max(0, levelInfo.xpForNext - totalXp) })}
             </p>
           </div>
@@ -93,7 +93,7 @@ function ProgressDashboard() {
       </motion.div>
 
       {/* 統計卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { icon: Trophy, color: 'emerald', label: t('progress:dashboard.questsCompleted'), value: totalQuestsCompleted },
           { icon: Target, color: 'blue', label: t('progress:dashboard.challengesPassed'), value: totalChallengesCompleted },

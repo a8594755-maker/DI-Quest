@@ -120,17 +120,17 @@ function CaseStudy() {
   return (
     <div className="h-[calc(100vh-73px)] flex flex-col">
       {/* Top navigation */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700 bg-slate-900/50">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 border-b border-slate-700 bg-slate-900/50">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <Link
             to={`/di-quest/quest/${worldId}/${questId}`}
-            className="text-slate-400 hover:text-white transition-colors"
+            className="text-slate-400 hover:text-white transition-colors flex-shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div>
-            <span className="text-slate-500 text-sm">{world?.emoji} World {worldId} / {quest.name}</span>
-            <h1 className="text-white font-medium">
+          <div className="min-w-0">
+            <span className="text-slate-500 text-xs sm:text-sm truncate block">{world?.emoji} World {worldId} / {quest.name}</span>
+            <h1 className="text-white font-medium text-sm sm:text-base truncate">
               Q{challengeId}: {challenge.name}
               {challenge.difficulty && (
                 <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
@@ -146,57 +146,59 @@ function CaseStudy() {
           {sectionTitle && (
             <Link
               to={`/di-quest/lesson/${worldId}${sectionId ? `#${sectionId}` : ''}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 border border-brand-primary/30 text-brand-primary text-xs rounded-lg hover:bg-brand-primary/20 transition-colors"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 border border-brand-primary/30 text-brand-primary text-xs rounded-lg hover:bg-brand-primary/20 transition-colors flex-shrink-0"
             >
               <BookOpen className="w-3.5 h-3.5" />
               {sectionTitle}
             </Link>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
           {prevChallenge && (
             <button
               onClick={() => navigate(`/di-quest/case/${worldId}/${questId}/${prevChallenge.id}`)}
-              className="flex items-center gap-1 px-3 py-2 text-slate-400 hover:text-white text-sm transition-colors"
+              className="flex items-center gap-1 px-2 sm:px-3 py-2 text-slate-400 hover:text-white text-sm transition-colors"
             >
-              <ChevronLeft className="w-4 h-4" /> {t('case:caseStudy.prevQuestion')}
+              <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">{t('case:caseStudy.prevQuestion')}</span>
             </button>
           )}
           {nextChallenge && (
             <button
               onClick={() => navigate(`/di-quest/case/${worldId}/${questId}/${nextChallenge.id}`)}
-              className="flex items-center gap-1 px-3 py-2 text-slate-400 hover:text-white text-sm transition-colors"
+              className="flex items-center gap-1 px-2 sm:px-3 py-2 text-slate-400 hover:text-white text-sm transition-colors"
             >
-              {t('case:caseStudy.nextQuestion')} <ChevronRight className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('case:caseStudy.nextQuestion')}</span> <ChevronRight className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
         {/* Left: Scenario */}
-        <div className="flex-1 overflow-y-auto p-6 border-r border-slate-700">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:border-r border-b md:border-b-0 border-slate-700">
           {challenge.scenario && (
             <div>
-              <h2 className="text-xl font-bold text-white mb-3">{challenge.scenario.title}</h2>
-              <p className="text-slate-300 leading-relaxed whitespace-pre-line mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-3">{challenge.scenario.title}</h2>
+              <p className="text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-line mb-4">
                 {challenge.scenario.narrative}
               </p>
               {challenge.scenario.chartConfig && (
-                <div className="mb-4">
+                <div className="mb-4 overflow-x-auto">
                   <SimpleChart config={{ ...challenge.scenario.chartConfig, data: challenge.scenario.data }} />
                 </div>
               )}
               {challenge.scenario.data && (
-                <DataTable
-                  data={challenge.scenario.data}
-                  caption={challenge.scenario.dataCaption}
-                  highlightRows={challenge.scenario.highlightRows}
-                />
+                <div className="overflow-x-auto">
+                  <DataTable
+                    data={challenge.scenario.data}
+                    caption={challenge.scenario.dataCaption}
+                    highlightRows={challenge.scenario.highlightRows}
+                  />
+                </div>
               )}
               {challenge.scenario.additionalContext && (
-                <div className="mt-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+                <div className="mt-4 p-3 sm:p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
                   <p className="text-slate-400 text-sm leading-relaxed">{challenge.scenario.additionalContext}</p>
                 </div>
               )}
@@ -214,8 +216,8 @@ function CaseStudy() {
         </div>
 
         {/* Right: Question + Answer */}
-        <div className="w-[480px] flex flex-col overflow-y-auto">
-          <div className="p-6 flex-1">
+        <div className="w-full md:w-[480px] flex flex-col overflow-y-auto">
+          <div className="p-4 sm:p-6 flex-1">
             {challenge.type === 'multiple-choice' || challenge.type === 'data-interpretation' ? (
               <MultipleChoice
                 question={challenge.question}
@@ -270,20 +272,20 @@ function CaseStudy() {
       </div>
 
       {/* Bottom: Hint area */}
-      <div className="border-t border-slate-700 bg-slate-900 p-5 pr-16">
-        <div className="flex items-start gap-4 max-w-full">
-          <div className="w-12 h-12 rounded-full bg-brand-accent/20 flex items-center justify-center flex-shrink-0">
+      <div className="border-t border-slate-700 bg-slate-900 p-3 sm:p-5 pr-4 sm:pr-16">
+        <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 max-w-full">
+          <div className="hidden sm:flex w-12 h-12 rounded-full bg-brand-accent/20 items-center justify-center flex-shrink-0">
             <span className="text-brand-accent font-bold text-base">{t('case:caseStudy.xiaoDi')}</span>
           </div>
           <div className="flex-1 min-w-0">
             {submitted ? (
-              <div className="text-emerald-400 font-medium text-base">
+              <div className="text-emerald-400 font-medium text-sm sm:text-base">
                 {answerCorrect ? t('case:caseStudy.correctAnswer') : ''}
                 {nextChallenge ? ` ${t('case:caseStudy.readyForNext')}` : ` ${t('case:caseStudy.allComplete')}`}
               </div>
             ) : hintLevel > 0 && challenge.hints ? (
               <div>
-                <p className="text-slate-200 text-base leading-relaxed mb-3">
+                <p className="text-slate-200 text-sm sm:text-base leading-relaxed mb-3">
                   {challenge.hints[hintLevel - 1]}
                 </p>
                 <div className="flex items-center gap-3">
@@ -302,16 +304,16 @@ function CaseStudy() {
                 </div>
               </div>
             ) : (
-              <p className="text-slate-400 text-base">
+              <p className="text-slate-400 text-sm sm:text-base">
                 {t('case:caseStudy.defaultHint')}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
             <button
               onClick={getHint}
               disabled={hintLevel >= (challenge.hints?.length || 3) || submitted}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 text-brand-accent rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-50 text-sm"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-800 text-brand-accent rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-50 text-sm flex-1 sm:flex-initial justify-center"
             >
               <Lightbulb className="w-4 h-4" />
               {t('case:caseStudy.hintBtn')} {hintLevel > 0 ? `(${hintLevel}/${challenge.hints?.length || 3})` : ''}
@@ -319,7 +321,7 @@ function CaseStudy() {
             {submitted && nextChallenge && (
               <button
                 onClick={() => navigate(`/di-quest/case/${worldId}/${questId}/${nextChallenge.id}`)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors flex-1 sm:flex-initial justify-center"
               >
                 {t('case:caseStudy.nextQuestion')} <ChevronRight className="w-4 h-4" />
               </button>

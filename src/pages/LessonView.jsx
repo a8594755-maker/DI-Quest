@@ -16,7 +16,7 @@ function LessonView() {
   const location = useLocation()
   const lesson = getWorldLesson(Number(worldId))
   const world = WORLDS.find(w => w.id === Number(worldId))
-  const [showToc, setShowToc] = useState(true)
+  const [showToc, setShowToc] = useState(() => window.innerWidth >= 768)
   const [activeHeading, setActiveHeading] = useState('')
   const contentRef = useRef(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
@@ -89,9 +89,9 @@ function LessonView() {
   }
 
   return (
-    <div className="h-[calc(100vh-73px)] flex">
+    <div className="h-[calc(100vh-73px)] flex relative">
       {/* 側邊目錄 */}
-      <aside className={`${showToc ? 'w-72' : 'w-0'} flex-shrink-0 border-r border-slate-700 bg-slate-900/50 overflow-hidden transition-all duration-300`}>
+      <aside className={`${showToc ? 'w-72' : 'w-0'} flex-shrink-0 border-r border-slate-700 bg-slate-900/50 overflow-hidden transition-all duration-300 ${showToc ? 'absolute md:relative z-30 h-full shadow-2xl md:shadow-none' : ''}`}>
         <div className="w-72 h-full overflow-y-auto p-4">
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-700">
             <BookOpen className="w-4 h-4 text-brand-primary" />
@@ -119,26 +119,26 @@ function LessonView() {
 
       {/* 主要內容 */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700 bg-slate-900/50 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <Link to={backPath} className="text-slate-400 hover:text-white transition-colors">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 border-b border-slate-700 bg-slate-900/50 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <Link to={backPath} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <div>
-              <span className="text-2xl mr-2">{world.emoji}</span>
-              <span className="text-white font-medium">{world.name} — {t('lesson.lessonSuffix')}</span>
+            <div className="min-w-0 truncate">
+              <span className="text-xl sm:text-2xl mr-1 sm:mr-2">{world.emoji}</span>
+              <span className="text-white font-medium text-sm sm:text-base">{world.name} — {t('lesson.lessonSuffix')}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <button
               onClick={() => setShowToc(!showToc)}
-              className="px-3 py-1.5 text-slate-400 hover:text-white text-sm border border-slate-700 rounded transition-colors"
+              className="px-2 sm:px-3 py-1.5 text-slate-400 hover:text-white text-xs sm:text-sm border border-slate-700 rounded transition-colors"
             >
               {showToc ? t('lesson.hideToc') : t('lesson.showToc')}
             </button>
             <Link
               to={backPath}
-              className="px-4 py-1.5 bg-brand-primary text-white text-sm rounded hover:bg-blue-600 transition-colors"
+              className="px-3 sm:px-4 py-1.5 bg-brand-primary text-white text-xs sm:text-sm rounded hover:bg-blue-600 transition-colors"
             >
               {t('action.startChallenge')}
             </Link>
@@ -146,7 +146,7 @@ function LessonView() {
         </div>
 
         <div ref={contentRef} className="flex-1 overflow-y-auto">
-          <article className="max-w-4xl mx-auto px-8 py-8 lesson-content">
+          <article className="max-w-4xl mx-auto px-4 sm:px-8 py-4 sm:py-8 lesson-content">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{

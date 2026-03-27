@@ -84,34 +84,35 @@ function Layout() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* 導航欄 */}
-      <nav className="bg-brand-dark border-b border-slate-700 px-6 py-4">
+      <nav className="bg-brand-dark border-b border-slate-700 px-3 sm:px-6 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <NavLink to="/di-quest" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-white" />
+          <NavLink to="/di-quest" className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center">
+              <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">DI Quest</h1>
-              <p className="text-xs text-slate-400">{t('nav.subtitle')}</p>
+              <h1 className="text-base sm:text-xl font-bold text-white">DI Quest</h1>
+              <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">{t('nav.subtitle')}</p>
             </div>
           </NavLink>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="hidden md:flex items-center gap-2">
               <span className="text-brand-accent font-bold">Lv.{levelInfo.level}</span>
               <span className="text-slate-400 text-sm">{levelInfo.title}</span>
             </div>
-            <div className="w-32 progress-bar">
+            <span className="text-brand-accent font-bold text-sm md:hidden">Lv.{levelInfo.level}</span>
+            <div className="w-20 sm:w-32 progress-bar hidden sm:block">
               <div
                 className="progress-fill"
                 style={{ width: `${Math.round(levelInfo.progress * 100)}%` }}
               />
             </div>
-            <span className="text-slate-500 text-xs">{levelInfo.currentXp} XP</span>
+            <span className="text-slate-500 text-xs hidden md:inline">{levelInfo.currentXp} XP</span>
             {/* 搜尋按鈕 */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="ml-1 px-3 py-1 rounded text-xs bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-300 transition-colors flex items-center gap-1.5"
+              className="ml-1 px-2 sm:px-3 py-1 rounded text-xs bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-300 transition-colors flex items-center gap-1.5"
               title={`${t('nav.search')} (⌘K)`}
             >
               <Search className="w-3 h-3" />
@@ -122,15 +123,15 @@ function Layout() {
             {/* 開發者模式切換 */}
             <button
               onClick={() => dispatch({ type: 'TOGGLE_DEV_MODE' })}
-              className={`ml-2 px-3 py-1 rounded text-xs font-mono transition-colors ${
+              className={`ml-1 sm:ml-2 px-2 sm:px-3 py-1 rounded text-xs font-mono transition-colors ${
                 devMode
                   ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 hover:text-slate-300'
               }`}
               title={t('nav.devMode')}
             >
-              <Unlock className="w-3 h-3 inline mr-1" />
-              {devMode ? 'DEV ON' : 'DEV'}
+              <Unlock className="w-3 h-3 inline sm:mr-1" />
+              <span className="hidden sm:inline">{devMode ? 'DEV ON' : 'DEV'}</span>
             </button>
           </div>
         </div>
@@ -191,43 +192,43 @@ function Layout() {
 
       {/* 浮動導航 */}
       <div
-        className={`fixed flex flex-col gap-3 z-50 transition-all duration-300 ${
-          isArena ? 'bottom-3 scale-75 opacity-70 hover:opacity-100 hover:scale-100' : 'bottom-6'
+        className={`fixed flex flex-col gap-2 sm:gap-3 z-50 transition-all duration-300 ${
+          isArena ? 'bottom-3 scale-75 opacity-70 hover:opacity-100 hover:scale-100' : 'bottom-4 sm:bottom-6'
         }`}
-        style={{ right: chatOpen && isContentPage ? 'calc(380px + 1.5rem)' : isArena ? '0.75rem' : '1.5rem' }}
+        style={{ right: chatOpen && isContentPage ? 'max(1rem, calc(min(380px, 100vw) + 1.5rem))' : isArena ? '0.75rem' : '1rem' }}
       >
         <NavLink
           to="/di-quest/map"
           className={({ isActive }) =>
-            `w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
               isActive ? 'bg-brand-primary text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`
           }
           title={t('float.questMap')}
         >
-          <Map className="w-5 h-5" />
+          <Map className="w-4 h-4 sm:w-5 sm:h-5" />
         </NavLink>
         <NavLink
           to="/di-quest/progress"
           className={({ isActive }) =>
-            `w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
               isActive ? 'bg-brand-secondary text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`
           }
           title={t('float.progressDashboard')}
         >
-          <BarChart3 className="w-5 h-5" />
+          <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
         </NavLink>
         <NavLink
           to="/di-quest/review"
           className={({ isActive }) =>
-            `w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors relative ${
+            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors relative ${
               isActive ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
             }`
           }
           title={t('float.reviewQueue')}
         >
-          <RotateCcw className="w-5 h-5" />
+          <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
           {dueCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold">
               {dueCount > 9 ? '9+' : dueCount}
@@ -236,12 +237,12 @@ function Layout() {
         </NavLink>
         <button
           onClick={() => setChatOpen(prev => !prev)}
-          className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
             chatOpen ? 'bg-brand-accent text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
           }`}
           title={`${t('float.askXiaoDi')} (⌘J)`}
         >
-          <MessageCircle className="w-5 h-5" />
+          <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
 

@@ -36,7 +36,7 @@ function QuestDetail() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <Link
         to={backPath}
         className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors"
@@ -51,7 +51,7 @@ function QuestDetail() {
         animate={{ opacity: 1, y: 0 }}
         className="card mb-6"
       >
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-2xl">{world.emoji}</span>
@@ -60,7 +60,7 @@ function QuestDetail() {
                 <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded font-bold">BOSS</span>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-white mt-1">{quest.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mt-1">{quest.name}</h1>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 bg-brand-primary/20 rounded-lg">
             <Trophy className="w-5 h-5 text-brand-primary" />
@@ -83,21 +83,21 @@ function QuestDetail() {
         transition={{ delay: 0.1 }}
         className="card mb-6 border-brand-primary/30 bg-brand-primary/5"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-brand-primary/20 flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-brand-primary" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-brand-primary/20 flex items-center justify-center flex-shrink-0">
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-brand-primary" />
             </div>
             <div>
-              <h2 className="text-white font-bold text-lg">{t('quest:questDetail.readMaterial')}</h2>
-              <p className="text-slate-400 text-sm">
+              <h2 className="text-white font-bold text-base sm:text-lg">{t('quest:questDetail.readMaterial')}</h2>
+              <p className="text-slate-400 text-xs sm:text-sm">
                 {t('quest:questDetail.readMaterialDesc', { worldName: world.name })}
               </p>
             </div>
           </div>
           <Link
             to={`/di-quest/lesson/${worldId}`}
-            className="flex items-center gap-2 px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+            className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-brand-primary text-white rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm sm:text-base w-full sm:w-auto justify-center flex-shrink-0"
           >
             <BookOpen className="w-4 h-4" />
             {t('common:action.startReading')}
