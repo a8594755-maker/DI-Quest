@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false)
 
   // Fetch profile from Supabase, auto-create if missing, auto-populate from Google metadata
-  const fetchProfile = useCallback(async (userId, userMeta) => {
+  const fetchProfile = useCallback(async (userId, userMeta, retryCount = 0) => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -20,6 +20,11 @@ export function AuthProvider({ children }) {
 
     if (error) {
       console.error('Error fetching profile:', error)
+      // Retry once after a short delay (auth token may still be settling)
+      if (retryCount < 1) {
+        await new Promise(r => setTimeout(r, 1000))
+        return fetchProfile(userId, userMeta, retryCount + 1)
+      }
       return null
     }
 
@@ -116,11 +121,20 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
+        // Skip redundant TOKEN_REFRESHED events — just update the user object
+        if (event === 'TOKEN_REFRESHED' && session?.user) {
+          setUser(session.user)
+          return
+        }
+
         if (session?.user) {
           setUser(session.user)
           setIsGuest(false)
           await fetchProfile(session.user.id, session.user.user_metadata)
-        } else {
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setProfile(null)
+        } else if (!session) {
           setUser(null)
           setProfile(null)
           // On initial load with no session, check for guest mode
@@ -130,6 +144,11 @@ export function AuthProvider({ children }) {
           }
         }
       } catch (err) {
+        // Ignore lock contention errors — session is still valid
+        if (err?.message?.includes('Lock')) {
+          console.warn('Auth lock contention (safe to ignore):', err.message)
+          return
+        }
         console.error('Auth state change error:', err)
       } finally {
         initialSessionHandled = true
