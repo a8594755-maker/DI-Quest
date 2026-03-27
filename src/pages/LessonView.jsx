@@ -146,7 +146,7 @@ function LessonView() {
         </div>
 
         <div ref={contentRef} className="flex-1 overflow-y-auto">
-          <article className="max-w-4xl mx-auto px-4 sm:px-8 py-4 sm:py-8 lesson-content">
+          <article className="max-w-3xl mx-auto px-4 sm:px-8 py-4 sm:py-8 lesson-content">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{

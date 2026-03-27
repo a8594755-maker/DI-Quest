@@ -40,7 +40,7 @@ function BranchSelect() {
               key={branch.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: Math.min(i * 0.08, 0.3) }}
             >
               {isComingSoon ? (
                 <div className="relative rounded-2xl border-2 border-slate-800 bg-slate-900/50 p-5 sm:p-8 opacity-60">
@@ -51,18 +51,18 @@ function BranchSelect() {
                     {branch.emoji}
                   </div>
                   <h3 className="text-xl font-bold text-slate-500 mt-4">{getBranchName(branch)}</h3>
-                  <p className="text-sm text-slate-600 mt-2">{getBranchDesc(branch)}</p>
+                  <p className="text-sm text-slate-500 mt-2">{getBranchDesc(branch)}</p>
                 </div>
               ) : (
                 <Link to={`/di-quest/branch/${branch.id}`}>
-                  <div className={`relative rounded-2xl border-2 border-slate-700 hover:border-slate-500 bg-slate-900/80 p-5 sm:p-8 transition-all duration-300 hover:scale-[1.02] cursor-pointer`}>
+                  <div className={`relative rounded-2xl border-2 border-slate-700 hover:border-slate-500 bg-slate-900/80 p-5 sm:p-8 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-brand-primary/5 cursor-pointer active:scale-[0.99]`}>
                     <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${branch.color} flex items-center justify-center text-3xl shadow-lg`}>
                       {branch.emoji}
                     </div>
                     <h3 className="text-xl font-bold text-white mt-4">{getBranchName(branch)}</h3>
                     <p className="text-sm text-slate-400 mt-2">{getBranchDesc(branch)}</p>
                     <div className="mt-4 flex items-center gap-3">
-                      <span className="text-xs text-slate-500">{t('quest:branchSelect.worldCount', { count: branch.worldIds.length })}</span>
+                      <span className="text-xs text-slate-400">{t('quest:branchSelect.worldCount', { count: branch.worldIds.length })}</span>
                       {progress.completedQuests > 0 && (
                         <>
                           <span className="text-slate-700">|</span>

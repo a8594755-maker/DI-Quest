@@ -84,9 +84,9 @@ function Layout() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* 導航欄 */}
-      <nav className="bg-brand-dark border-b border-slate-700 px-3 sm:px-6 py-3 sm:py-4">
+      <nav className="bg-brand-dark border-b border-slate-700 px-3 sm:px-6 py-3 sm:py-4" role="navigation" aria-label={t('nav.mainNav', 'Main navigation')}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <NavLink to="/di-quest" className="flex items-center gap-2 sm:gap-3">
+          <NavLink to="/di-quest" className="flex items-center gap-2 sm:gap-3" aria-label="DI Quest Home">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-lg flex items-center justify-center">
               <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
@@ -99,21 +99,21 @@ function Layout() {
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="hidden md:flex items-center gap-2">
               <span className="text-brand-accent font-bold">Lv.{levelInfo.level}</span>
-              <span className="text-slate-400 text-sm">{levelInfo.title}</span>
+              <span className="text-slate-300 text-sm">{levelInfo.title}</span>
             </div>
             <span className="text-brand-accent font-bold text-sm md:hidden">Lv.{levelInfo.level}</span>
-            <div className="w-20 sm:w-32 progress-bar hidden sm:block">
+            <div className="w-20 sm:w-32 progress-bar hidden sm:block" role="progressbar" aria-valuenow={Math.round(levelInfo.progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`Level progress: ${Math.round(levelInfo.progress * 100)}%`}>
               <div
                 className="progress-fill"
                 style={{ width: `${Math.round(levelInfo.progress * 100)}%` }}
               />
             </div>
-            <span className="text-slate-500 text-xs hidden md:inline">{levelInfo.currentXp} XP</span>
+            <span className="text-slate-400 text-xs hidden md:inline">{levelInfo.currentXp} XP</span>
             {/* 搜尋按鈕 */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="ml-1 px-2 sm:px-3 py-1 rounded text-xs bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-300 transition-colors flex items-center gap-1.5"
-              title={`${t('nav.search')} (⌘K)`}
+              className="ml-1 px-2 sm:px-3 py-1 rounded text-xs bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200 hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+              aria-label={`${t('nav.search')} (⌘K)`}
             >
               <Search className="w-3 h-3" />
               <span className="hidden sm:inline">⌘K</span>
@@ -126,9 +126,10 @@ function Layout() {
               className={`ml-1 sm:ml-2 px-2 sm:px-3 py-1 rounded text-xs font-mono transition-colors ${
                 devMode
                   ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 hover:text-slate-300'
+                  : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200 hover:bg-slate-700'
               }`}
-              title={t('nav.devMode')}
+              aria-label={t('nav.devMode')}
+              aria-pressed={devMode}
             >
               <Unlock className="w-3 h-3 inline sm:mr-1" />
               <span className="hidden sm:inline">{devMode ? 'DEV ON' : 'DEV'}</span>
@@ -139,7 +140,7 @@ function Layout() {
 
       {/* 開發者模式提示條 */}
       {devMode && (
-        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-1.5 text-center">
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-1.5 text-center" role="status">
           <span className="text-amber-400 text-xs font-mono">🔓 {t('nav.devModeOn')}</span>
         </div>
       )}
@@ -184,6 +185,7 @@ function Layout() {
             top: `${selectionPopup.y}px`,
             transform: 'translate(-50%, -100%)',
           }}
+          aria-label={t('float.askXiaoDi')}
         >
           <MessageCircle className="w-3 h-3" />
           {t('float.askXiaoDi')}
@@ -191,60 +193,62 @@ function Layout() {
       )}
 
       {/* 浮動導航 */}
-      <div
+      <nav
         className={`fixed flex flex-col gap-2 sm:gap-3 z-50 transition-all duration-300 ${
           isArena ? 'bottom-3 scale-75 opacity-70 hover:opacity-100 hover:scale-100' : 'bottom-4 sm:bottom-6'
         }`}
         style={{ right: chatOpen && isContentPage ? 'max(1rem, calc(min(380px, 100vw) + 1.5rem))' : isArena ? '0.75rem' : '1rem' }}
+        aria-label={t('float.navLabel', 'Quick navigation')}
       >
         <NavLink
           to="/di-quest/map"
           className={({ isActive }) =>
-            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
-              isActive ? 'bg-brand-primary text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl ${
+              isActive ? 'bg-brand-primary text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`
           }
-          title={t('float.questMap')}
+          aria-label={t('float.questMap')}
         >
           <Map className="w-4 h-4 sm:w-5 sm:h-5" />
         </NavLink>
         <NavLink
           to="/di-quest/progress"
           className={({ isActive }) =>
-            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
-              isActive ? 'bg-brand-secondary text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl ${
+              isActive ? 'bg-brand-secondary text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`
           }
-          title={t('float.progressDashboard')}
+          aria-label={t('float.progressDashboard')}
         >
           <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
         </NavLink>
         <NavLink
           to="/di-quest/review"
           className={({ isActive }) =>
-            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors relative ${
-              isActive ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+            `w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl relative ${
+              isActive ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`
           }
-          title={t('float.reviewQueue')}
+          aria-label={`${t('float.reviewQueue')}${dueCount > 0 ? ` (${dueCount})` : ''}`}
         >
           <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
           {dueCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold" aria-hidden="true">
               {dueCount > 9 ? '9+' : dueCount}
             </span>
           )}
         </NavLink>
         <button
           onClick={() => setChatOpen(prev => !prev)}
-          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
-            chatOpen ? 'bg-brand-accent text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl ${
+            chatOpen ? 'bg-brand-accent text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
           }`}
-          title={`${t('float.askXiaoDi')} (⌘J)`}
+          aria-label={`${t('float.askXiaoDi')} (⌘J)`}
+          aria-expanded={chatOpen}
         >
           <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
-      </div>
+      </nav>
 
       {/* 搜尋彈窗 */}
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />

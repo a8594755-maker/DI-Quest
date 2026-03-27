@@ -8,21 +8,36 @@
   }
   body {
     @apply bg-brand-dark text-white;
-    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* ── Reduced Motion ─────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer components {
   .btn-primary {
     @apply px-6 py-3 bg-brand-primary text-white rounded-lg font-medium
-           hover:bg-blue-600 transition-colors duration-200;
+           hover:bg-blue-600 active:scale-[0.98] transition-all duration-200;
   }
   .btn-secondary {
     @apply px-6 py-3 bg-brand-secondary text-white rounded-lg font-medium
-           hover:bg-emerald-600 transition-colors duration-200;
+           hover:bg-emerald-600 active:scale-[0.98] transition-all duration-200;
   }
   .card {
-    @apply bg-brand-dark border border-slate-700 rounded-xl p-6;
+    @apply bg-brand-dark border border-slate-700 rounded-xl p-6
+           transition-shadow duration-200;
+  }
+  .card-interactive {
+    @apply card hover:shadow-lg hover:shadow-brand-primary/5 hover:border-slate-600
+           cursor-pointer;
   }
   .progress-bar {
     @apply h-2 bg-slate-700 rounded-full overflow-hidden;
@@ -31,6 +46,16 @@
     @apply h-full bg-brand-primary rounded-full transition-all duration-500;
   }
 }
+
+/* ── Z-Index Scale ─────────────────────────────────── */
+/* z-10: floating elements (scroll-to-top)
+   z-20: sticky headers
+   z-30: sidebars (TOC overlay)
+   z-40: (reserved)
+   z-50: floating nav buttons
+   z-55: chat panel (sidebar/overlay)
+   z-60: modals & search
+   z-70: selection popup */
 
 /* Monaco Editor 自訂樣式 */
 .monaco-editor-container {
@@ -44,4 +69,26 @@
 }
 .animate-fade-in {
   animation: fade-in 0.15s ease-out forwards;
+}
+
+/* ── Count-up animation for XP numbers ─────────── */
+@keyframes count-up-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.animate-count-pop {
+  animation: count-up-pop 0.4s ease-out;
+}
+
+/* ── Skeleton loading ──────────────────────────── */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  @apply rounded-lg;
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }

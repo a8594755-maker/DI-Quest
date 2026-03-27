@@ -32,7 +32,7 @@ function QuestMap() {
       case 'completed':
         return <CheckCircle className="w-5 h-5 text-emerald-400" />
       case 'in-progress':
-        return <Circle className="w-5 h-5 text-brand-primary animate-pulse" />
+        return <Circle className="w-5 h-5 text-brand-primary" />
       case 'available':
         return <Circle className="w-5 h-5 text-slate-400" />
       default:
@@ -89,7 +89,7 @@ function QuestMap() {
               key={world.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: wi * 0.08 }}
+              transition={{ delay: Math.min(wi * 0.05, 0.3) }}
               className={`rounded-xl border-2 overflow-hidden transition-all duration-300 ${
                 isExpanded ? 'border-slate-600' : 'border-slate-800 hover:border-slate-700'
               }`}
@@ -105,7 +105,7 @@ function QuestMap() {
                   <h3 className={`text-xl font-bold ${unlocked ? 'text-white' : 'text-slate-500'}`}>
                     {world.name}
                   </h3>
-                  <p className={`text-sm mt-1 ${unlocked ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <p className={`text-sm mt-1 ${unlocked ? 'text-slate-400' : 'text-slate-500'}`}>
                     {world.description}
                   </p>
                   {unlocked && progress.completed > 0 && (
@@ -113,7 +113,7 @@ function QuestMap() {
                       <div className="flex-1 h-1.5 bg-slate-700 rounded-full max-w-[200px]">
                         <div className="h-full bg-brand-primary rounded-full transition-all" style={{ width: `${progress.pct}%` }} />
                       </div>
-                      <span className="text-xs text-slate-500">{progress.completed}/{progress.total}</span>
+                      <span className="text-xs text-slate-400">{progress.completed}/{progress.total}</span>
                     </div>
                   )}
                 </div>
@@ -137,7 +137,7 @@ function QuestMap() {
                         <span className="text-brand-primary text-sm">📖</span>
                       </div>
                       <span className="flex-1 font-medium text-brand-primary">{t('common:action.readLesson')}</span>
-                      <span className="text-slate-500 text-sm">{t('common:action.readFirst')}</span>
+                      <span className="text-slate-400 text-sm">{t('common:action.readFirst')}</span>
                     </Link>
                     {world.quests.map((quest, index) => {
                       const status = getQuestStatus(quest)
@@ -174,7 +174,7 @@ function QuestMap() {
                               BOSS
                             </span>
                           )}
-                          <span className="text-slate-500 text-sm">{quest.xp} XP</span>
+                          <span className="text-slate-400 text-sm">{quest.xp} XP</span>
                         </Link>
                       )
                     })}

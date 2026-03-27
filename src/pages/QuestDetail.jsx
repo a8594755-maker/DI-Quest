@@ -123,11 +123,11 @@ function QuestDetail() {
                 key={item.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + index * 0.08 }}
+                transition={{ delay: Math.min(0.1 + index * 0.04, 0.3) }}
               >
                 <Link
                   to={`/di-quest/case/${worldId}/${questId}/${item.id}`}
-                  className="card flex items-center gap-4 hover:border-brand-primary/50 transition-colors group"
+                  className="card flex items-center gap-4 hover:border-brand-primary/50 hover:shadow-lg hover:shadow-brand-primary/5 transition-all group"
                 >
                   <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl font-bold transition-colors ${
                     cCompleted
@@ -189,7 +189,7 @@ function QuestDetail() {
                 href={r.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="card flex items-center gap-4 hover:border-brand-accent/50 transition-colors group"
+                className="card flex items-center gap-4 hover:border-brand-accent/50 hover:shadow-lg hover:shadow-brand-accent/5 transition-all group"
               >
                 <span className={`px-2.5 py-1 text-xs font-bold rounded whitespace-nowrap ${
                   r.source === 'LeetCode'

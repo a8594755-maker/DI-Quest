@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Bot, User, X, Plus, Clock, ChevronLeft, Trash2 } from 'lucide-react'
+import { Send, Bot, User, X, Plus, Clock, ChevronLeft, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -126,6 +126,7 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [feedback, setFeedback] = useState({}) // { [msgId]: 'up' | 'down' }
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const isComposingRef = useRef(false)
@@ -408,6 +409,29 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
                         </div>
                       )}
                     </div>
+                    {/* Feedback buttons for AI responses (skip welcome message) */}
+                    {msg.role === 'assistant' && msg.id !== 1 && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <button
+                          onClick={() => setFeedback(prev => ({ ...prev, [msg.id]: prev[msg.id] === 'up' ? null : 'up' }))}
+                          className={`p-1 rounded transition-colors ${
+                            feedback[msg.id] === 'up' ? 'text-brand-primary' : 'text-slate-600 hover:text-slate-400'
+                          }`}
+                          aria-label={t('panel.helpful', 'Helpful')}
+                        >
+                          <ThumbsUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => setFeedback(prev => ({ ...prev, [msg.id]: prev[msg.id] === 'down' ? null : 'down' }))}
+                          className={`p-1 rounded transition-colors ${
+                            feedback[msg.id] === 'down' ? 'text-red-400' : 'text-slate-600 hover:text-slate-400'
+                          }`}
+                          aria-label={t('panel.notHelpful', 'Not helpful')}
+                        >
+                          <ThumbsDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -419,7 +443,7 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
                   <Bot className="w-3.5 h-3.5 text-brand-accent" />
                 </div>
                 <div className="bg-slate-800 px-3 py-2 rounded-xl flex items-center gap-1.5">
-                  <span className="text-slate-500 text-xs">{t('panel.thinking')}</span>
+                  <span className="text-slate-400 text-xs">{t('panel.thinking')}</span>
                   <div className="flex gap-0.5">
                     {[0, 0.2, 0.4].map((delay, i) => (
                       <motion.span key={i} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay }} className="w-1 h-1 bg-brand-accent rounded-full" />

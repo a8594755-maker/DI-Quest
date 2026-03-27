@@ -5,6 +5,7 @@ import { WORLDS } from '../data/questData'
 import { BRANCHES } from '../data/branches'
 import { useQuest } from '../contexts/QuestContext'
 import { DailyActivityChart, XpTrendChart, TimePerChallengeChart } from '../components/AnalyticsCharts'
+import AnimatedNumber from '../components/AnimatedNumber'
 
 function ProgressDashboard() {
   const { t } = useTranslation(['progress', 'common'])
@@ -76,8 +77,8 @@ function ProgressDashboard() {
           <div className="text-left sm:text-right">
             <div className="flex items-center gap-2 text-xl sm:text-2xl font-bold text-white">
               <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-brand-accent" />
-              {totalXp}
-              <span className="text-slate-500 text-base sm:text-lg">/ {levelInfo.xpForNext} XP</span>
+              <AnimatedNumber value={totalXp} />
+              <span className="text-slate-400 text-base sm:text-lg">/ {levelInfo.xpForNext} XP</span>
             </div>
             <p className="text-slate-400 text-xs sm:text-sm">
               {t('progress:dashboard.needXp', { amount: Math.max(0, levelInfo.xpForNext - totalXp) })}
@@ -104,7 +105,7 @@ function ProgressDashboard() {
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + i * 0.1 }}
+            transition={{ delay: Math.min(0.05 + i * 0.05, 0.25) }}
             className="card"
           >
             <div className="flex items-center gap-3 mb-2">
@@ -123,7 +124,7 @@ function ProgressDashboard() {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.15 }}
           className="card"
         >
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -138,10 +139,10 @@ function ProgressDashboard() {
                   {branch.worlds.map((w) => (
                     <div key={w.worldId}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className={`text-sm ${w.pct > 0 ? 'text-white' : 'text-slate-500'}`}>
+                        <span className={`text-sm ${w.pct > 0 ? 'text-white' : 'text-slate-400'}`}>
                           {w.name}
                         </span>
-                        <span className={`text-sm ${w.pct > 0 ? 'text-brand-primary' : 'text-slate-600'}`}>
+                        <span className={`text-sm ${w.pct > 0 ? 'text-brand-primary' : 'text-slate-500'}`}>
                           {w.completed}/{w.total} ({w.pct}%)
                         </span>
                       </div>
@@ -163,7 +164,7 @@ function ProgressDashboard() {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.2 }}
           className="card"
         >
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -172,7 +173,7 @@ function ProgressDashboard() {
           </h3>
           <div className="space-y-3">
             {recentActivity.length === 0 ? (
-              <p className="text-slate-500 text-sm text-center py-4">{t('progress:dashboard.noChallenges')}</p>
+              <p className="text-slate-400 text-sm text-center py-4">{t('progress:dashboard.noChallenges')}</p>
             ) : (
               recentActivity.map((a) => (
                 <div
@@ -195,7 +196,7 @@ function ProgressDashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
+        transition={{ delay: 0.15 }}
         className="card mt-6"
       >
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -231,7 +232,7 @@ function ProgressDashboard() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
+        transition={{ delay: 0.2 }}
         className="mt-6"
       >
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
