@@ -1,3 +1,28 @@
+import { w23Generated } from './_w23_generated.js'
+import { w24Generated } from './_w24_generated.js'
+import { w25Generated } from './_w25_generated.js'
+import { w26Generated } from './_w26_generated.js'
+import { w23Extra } from './_w23_extra.js'
+import { w24Extra } from './_w24_extra.js'
+import { w25Extra } from './_w25_extra.js'
+import { w26Extra } from './_w26_extra.js'
+
+// Merge extra challenges into generated worlds
+function mergeExtras(world, extras) {
+  for (const quest of world.quests) {
+    const extraChallenges = extras[quest.id]
+    if (extraChallenges) {
+      quest.challenges = [...quest.challenges, ...extraChallenges]
+    }
+  }
+  return world
+}
+
+const w23 = mergeExtras({ ...w23Generated, quests: w23Generated.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, w23Extra)
+const w24 = mergeExtras({ ...w24Generated, quests: w24Generated.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, w24Extra)
+const w25 = mergeExtras({ ...w25Generated, quests: w25Generated.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, w25Extra)
+const w26 = mergeExtras({ ...w26Generated, quests: w26Generated.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, w26Extra)
+
 export const sqlWorlds = [
   {
     id: 4,
@@ -360,4 +385,12 @@ export const sqlWorlds = [
       ] },
     ],
   },
+  // ── SQL 基礎查詢（Phase 1）──
+  w23,
+  // ── SQL 分析核心（Phase 2）──
+  w24,
+  // ── SQL 進階分析（Phase 3）──
+  w25,
+  // ── SQL 工程應用（Phase 4）──
+  w26,
 ]

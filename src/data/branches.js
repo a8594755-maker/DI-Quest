@@ -33,7 +33,7 @@ export const BRANCHES = [
     emoji: '🏢',
     description: 'Decision Intelligence 產品架構、部署、品質與邊界',
     color: 'from-purple-500 to-pink-500',
-    worldIds: [9, 10, 11, 12, 13, 14],
+    worldIds: [9, 10, 11, 12, 13, 14, 39, 40, 41],
   },
 ]
 

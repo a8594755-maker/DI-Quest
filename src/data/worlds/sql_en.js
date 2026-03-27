@@ -1,3 +1,27 @@
+import { w23GeneratedEn } from './_w23_generated_en.js'
+import { w24GeneratedEn } from './_w24_generated_en.js'
+import { w25GeneratedEn } from './_w25_generated_en.js'
+import { w26GeneratedEn } from './_w26_generated_en.js'
+import { w23ExtraEn } from './_w23_extra_en.js'
+import { w24ExtraEn } from './_w24_extra_en.js'
+import { w25ExtraEn } from './_w25_extra_en.js'
+import { w26ExtraEn } from './_w26_extra_en.js'
+
+function mergeExtras(world, extras) {
+  for (const quest of world.quests) {
+    const extraChallenges = extras[quest.id]
+    if (extraChallenges) {
+      quest.challenges = [...quest.challenges, ...extraChallenges]
+    }
+  }
+  return world
+}
+
+const w23En = mergeExtras({ ...w23GeneratedEn, quests: w23GeneratedEn.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, w23ExtraEn)
+const w24En = mergeExtras({ ...w24GeneratedEn, quests: w24GeneratedEn.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, w24ExtraEn)
+const w25En = mergeExtras({ ...w25GeneratedEn, quests: w25GeneratedEn.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, w25ExtraEn)
+const w26En = mergeExtras({ ...w26GeneratedEn, quests: w26GeneratedEn.quests.map(q => ({ ...q, challenges: [...q.challenges] })) }, w26ExtraEn)
+
 export const sqlWorldsEn = [
   {
     id: 4,
@@ -360,4 +384,8 @@ export const sqlWorldsEn = [
       ] },
     ],
   },
+  w23En,
+  w24En,
+  w25En,
+  w26En,
 ]
