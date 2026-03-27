@@ -51,6 +51,38 @@ export function useChatSync() {
   const cloudLoadedRef = useRef(false)
   const saveTimerRef = useRef(null)
 
+  // Debounced save to cloud when sessions change
+  const saveToCloud = useCallback(async (userId, session) => {
+    try {
+      await supabase
+        .from('chat_sessions')
+        .upsert({
+          id: session.id,
+          user_id: userId,
+          title: session.title,
+          messages: session.messages,
+          created_at: new Date(session.createdAt).toISOString(),
+          updated_at: new Date(session.updatedAt).toISOString(),
+        }, { onConflict: 'id,user_id' })
+    } catch {}
+  }, [])
+
+  const uploadAllToCloud = useCallback(async (userId, localSessions) => {
+    try {
+      const rows = localSessions.map(s => ({
+        id: s.id,
+        user_id: userId,
+        title: s.title,
+        messages: s.messages,
+        created_at: new Date(s.createdAt).toISOString(),
+        updated_at: new Date(s.updatedAt).toISOString(),
+      }))
+      await supabase
+        .from('chat_sessions')
+        .upsert(rows, { onConflict: 'id,user_id' })
+    } catch {}
+  }, [])
+
   // Load from Supabase on first auth, merge with localStorage
   useEffect(() => {
     if (!isAuthenticated || !user || cloudLoadedRef.current) return
@@ -98,39 +130,7 @@ export function useChatSync() {
       }
     }
     loadCloud()
-  }, [isAuthenticated, user])
-
-  // Debounced save to cloud when sessions change
-  const saveToCloud = useCallback(async (userId, session) => {
-    try {
-      await supabase
-        .from('chat_sessions')
-        .upsert({
-          id: session.id,
-          user_id: userId,
-          title: session.title,
-          messages: session.messages,
-          created_at: new Date(session.createdAt).toISOString(),
-          updated_at: new Date(session.updatedAt).toISOString(),
-        }, { onConflict: 'id,user_id' })
-    } catch {}
-  }, [])
-
-  const uploadAllToCloud = useCallback(async (userId, localSessions) => {
-    try {
-      const rows = localSessions.map(s => ({
-        id: s.id,
-        user_id: userId,
-        title: s.title,
-        messages: s.messages,
-        created_at: new Date(s.createdAt).toISOString(),
-        updated_at: new Date(s.updatedAt).toISOString(),
-      }))
-      await supabase
-        .from('chat_sessions')
-        .upsert(rows, { onConflict: 'id,user_id' })
-    } catch {}
-  }, [])
+  }, [isAuthenticated, user, uploadAllToCloud])
 
   // Update or create a session
   const updateSession = useCallback((sessionOrUpdater) => {

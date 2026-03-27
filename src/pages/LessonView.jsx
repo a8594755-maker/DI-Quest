@@ -92,7 +92,7 @@ function LessonView() {
   return (
     <div className="h-[calc(100vh-73px)] flex relative">
       {/* 側邊目錄 */}
-      <aside className={`${showToc ? 'w-72' : 'w-0'} flex-shrink-0 border-r border-slate-700 bg-slate-900/50 overflow-hidden transition-all duration-300 ${showToc ? 'absolute md:relative z-30 h-full shadow-2xl md:shadow-none' : ''}`}>
+      <aside className={`${showToc ? 'w-72' : 'w-0'} flex-shrink-0 border-r border-slate-700 overflow-hidden transition-all duration-300 ${showToc ? 'absolute md:relative z-30 h-full shadow-2xl md:shadow-none bg-slate-900' : 'bg-slate-900/50'}`}>
         <div className="w-72 h-full overflow-y-auto p-4">
           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-700">
             <BookOpen className="w-4 h-4 text-brand-primary" />
