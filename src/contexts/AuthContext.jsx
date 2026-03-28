@@ -257,6 +257,7 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!user
   const isLoggedInOrGuest = isAuthenticated || isGuest
+  const isAdmin = profile?.role === 'admin'
 
   return (
     <AuthContext.Provider value={{
@@ -265,6 +266,7 @@ export function AuthProvider({ children }) {
       isGuest,
       isAuthenticated,
       isLoggedInOrGuest,
+      isAdmin,
       loading,
       needsProfileSetup,
       signUp,

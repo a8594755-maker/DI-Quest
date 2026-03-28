@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 
 // Lazy-loaded pages
 const DIQuest = lazy(() => import('./pages/DIQuest'))
@@ -16,6 +17,7 @@ const ReviewQueue = lazy(() => import('./pages/ReviewQueue'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const FriendsPage = lazy(() => import('./pages/FriendsPage'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 
 function Loading() {
   return (
@@ -43,6 +45,7 @@ function App() {
             <Route path="chat" element={<NPCChat />} />
             <Route path="review" element={<ReviewQueue />} />
             <Route path="friends" element={<FriendsPage />} />
+            <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           </Route>
           <Route index element={<Navigate to="/di-quest" replace />} />
         </Route>

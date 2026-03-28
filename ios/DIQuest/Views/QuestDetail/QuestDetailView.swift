@@ -4,11 +4,23 @@ struct QuestDetailView: View {
     let quest: Quest
     let worldId: Int
     @EnvironmentObject var progressVM: QuestProgressViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var currentChallengeIndex: Int?
+    @State private var showQuestComplete = false
 
     private var completedChallenges: Int {
         quest.challenges.filter {
             progressVM.isChallengeCompleted(questId: quest.id, challengeId: $0.id)
         }.count
+    }
+
+    private var allCompleted: Bool {
+        completedChallenges == quest.challenges.count && !quest.challenges.isEmpty
+    }
+
+    private var firstIncompleteChallengeIndex: Int? {
+        quest.challenges.firstIndex { !progressVM.isChallengeCompleted(questId: quest.id, challengeId: $0.id) }
     }
 
     var body: some View {
@@ -18,62 +30,164 @@ struct QuestDetailView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     // Quest info card
-                    VStack(spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(quest.name)
-                                    .font(DIQuestTheme.headlineFont)
-                                    .foregroundStyle(.white)
+                    questInfoCard
 
-                                Text(quest.description)
-                                    .font(.subheadline)
-                                    .foregroundStyle(DIQuestTheme.textSecondary)
-                            }
-                            Spacer()
-                        }
-
-                        HStack(spacing: 16) {
-                            StatBadge(icon: "bolt.fill", value: "\(quest.xp)", label: "XP")
-                            StatBadge(icon: "list.bullet", value: "\(quest.challenges.count)", label: "挑戰")
-                            StatBadge(
-                                icon: "checkmark.circle",
-                                value: "\(completedChallenges)/\(quest.challenges.count)",
-                                label: "完成"
-                            )
-                        }
-
-                        // Progress bar
-                        let questProgress = quest.challenges.isEmpty ? 0 :
-                            Double(completedChallenges) / Double(quest.challenges.count)
-                        ProgressView(value: questProgress)
-                            .tint(DIQuestTheme.accent)
+                    // Start / Continue button
+                    if !allCompleted {
+                        startButton
                     }
-                    .padding()
-                    .background(DIQuestTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: DIQuestTheme.cardCornerRadius))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DIQuestTheme.cardCornerRadius)
-                            .strokeBorder(DIQuestTheme.cardBorder)
-                    )
 
                     // Challenge list
                     VStack(spacing: 8) {
-                        ForEach(quest.challenges) { challenge in
-                            ChallengeRowView(
-                                challenge: challenge,
-                                questId: quest.id,
-                                isCompleted: progressVM.isChallengeCompleted(
-                                    questId: quest.id, challengeId: challenge.id
+                        ForEach(Array(quest.challenges.enumerated()), id: \.element.id) { index, challenge in
+                            NavigationLink(
+                                destination: challengePlayDestination(for: index)
+                            ) {
+                                ChallengeRowContent(
+                                    challenge: challenge,
+                                    questId: quest.id,
+                                    isCompleted: progressVM.isChallengeCompleted(
+                                        questId: quest.id, challengeId: challenge.id
+                                    )
                                 )
-                            )
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
                 .padding()
             }
+
+            // Quest complete overlay
+            if showQuestComplete {
+                QuestCompleteView(
+                    quest: quest,
+                    earnedXp: quest.xp
+                ) {
+                    showQuestComplete = false
+                    dismiss()
+                }
+                .transition(.opacity)
+            }
         }
-        .navigationTitle("任務詳情")
+        .navigationTitle(LanguageManager.shared.string("quest.detail"))
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: completedChallenges) { newCount in
+            if newCount == quest.challenges.count && !quest.challenges.isEmpty {
+                // All challenges done — mark quest complete
+                progressVM.completeQuest(questId: quest.id, score: 100, bonusXp: quest.xp)
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showQuestComplete = true
+                }
+            }
+        }
+    }
+
+    // MARK: - Quest Info Card
+
+    private var questInfoCard: some View {
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(quest.name)
+                        .font(DIQuestTheme.headlineFont)
+                        .foregroundStyle(.white)
+
+                    Text(quest.description)
+                        .font(.subheadline)
+                        .foregroundStyle(DIQuestTheme.textSecondary)
+                }
+                Spacer()
+            }
+
+            HStack(spacing: 16) {
+                StatBadge(icon: "bolt.fill", value: "\(quest.xp)", label: LanguageManager.shared.string("quest.xp"))
+                StatBadge(icon: "list.bullet", value: "\(quest.challenges.count)", label: LanguageManager.shared.string("quest.challenges"))
+                StatBadge(
+                    icon: "checkmark.circle",
+                    value: "\(completedChallenges)/\(quest.challenges.count)",
+                    label: LanguageManager.shared.string("quest.completed")
+                )
+            }
+
+            let questProgress = quest.challenges.isEmpty ? 0 :
+                Double(completedChallenges) / Double(quest.challenges.count)
+            ProgressView(value: questProgress)
+                .tint(DIQuestTheme.accent)
+        }
+        .padding()
+        .background(DIQuestTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: DIQuestTheme.cardCornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: DIQuestTheme.cardCornerRadius)
+                .strokeBorder(DIQuestTheme.cardBorder)
+        )
+    }
+
+    // MARK: - Start Button
+
+    private var startButton: some View {
+        NavigationLink(
+            destination: challengePlayDestination(for: firstIncompleteChallengeIndex ?? 0)
+        ) {
+            HStack {
+                Image(systemName: completedChallenges > 0 ? "arrow.right.circle.fill" : "play.circle.fill")
+                Text(completedChallenges > 0 ? LanguageManager.shared.string("action.continueChallenge") : LanguageManager.shared.string("action.startChallenge"))
+                    .fontWeight(.bold)
+            }
+            .font(.system(size: 17))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(DIQuestTheme.accentGradient)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+    }
+
+    // MARK: - Challenge Destination
+
+    @ViewBuilder
+    private func challengePlayDestination(for index: Int) -> some View {
+        ChallengeFlowView(
+            quest: quest,
+            startIndex: index
+        )
+    }
+}
+
+// MARK: - Challenge Flow (sequential navigation)
+
+struct ChallengeFlowView: View {
+    let quest: Quest
+    let startIndex: Int
+    @EnvironmentObject var progressVM: QuestProgressViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var currentIndex: Int
+
+    init(quest: Quest, startIndex: Int) {
+        self.quest = quest
+        self.startIndex = startIndex
+        self._currentIndex = State(initialValue: startIndex)
+    }
+
+    var body: some View {
+        if currentIndex < quest.challenges.count {
+            ChallengePlayView(
+                challenge: quest.challenges[currentIndex],
+                questId: quest.id,
+                questXp: quest.xp,
+                allChallenges: quest.challenges,
+                onNext: {
+                    if currentIndex < quest.challenges.count - 1 {
+                        currentIndex += 1
+                    } else {
+                        dismiss()
+                    }
+                }
+            )
+            .id(currentIndex) // Force recreation when index changes
+        }
     }
 }
 
@@ -104,7 +218,7 @@ private struct StatBadge: View {
 
 // MARK: - Challenge Row
 
-private struct ChallengeRowView: View {
+private struct ChallengeRowContent: View {
     let challenge: Challenge
     let questId: String
     let isCompleted: Bool
@@ -181,9 +295,9 @@ private struct ChallengeRowView: View {
 
     private var challengeTypeLabel: String {
         switch challenge.type {
-        case .multipleChoice: return "選擇題"
-        case .openEnded: return "開放題"
-        case .code: return "程式題"
+        case .multipleChoice: return LanguageManager.shared.string("challenge.multipleChoice")
+        case .openEnded: return LanguageManager.shared.string("challenge.openEnded")
+        case .code: return LanguageManager.shared.string("challenge.code")
         }
     }
 }

@@ -12,6 +12,11 @@ struct Challenge: Identifiable {
     let hints: [String]
     let explanation: String
     let frameworkTip: String?
+    var sampleSchema: String? = nil
+    var starterCode: String? = nil
+    var expectedQuery: String? = nil
+    var evaluationCriteria: [String]? = nil
+    var sampleAnswer: String? = nil
 
     struct Scenario {
         let title: String

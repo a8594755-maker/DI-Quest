@@ -85,11 +85,14 @@ function ProfileSetupModal({ isOpen, onClose }) {
     try {
       const result = await redeemCode(promoCode)
       setPromoStatus('success')
-      setPromoMessage(t('promo.success', 'Premium activated! All content unlocked.'))
+      const msg = result?.role === 'admin'
+        ? 'Admin mode activated!'
+        : t('promo.success', 'Premium activated! All content unlocked.')
+      setPromoMessage(msg)
       setPromoCode('')
       // Force re-render with updated premium status
-      if (result?.role === 'premium') {
-        setLocalPremium(true)
+      if (result?.role) {
+        setLocalRole(result.role)
       }
     } catch (err) {
       setPromoStatus('error')
@@ -103,9 +106,10 @@ function ProfileSetupModal({ isOpen, onClose }) {
     }
   }
 
-  // Track premium status locally to update immediately after promo code redemption
-  const [localPremium, setLocalPremium] = useState(false)
-  const isPremium = profile?.role === 'premium' || localPremium
+  // Track upgraded role locally to update immediately after promo code redemption
+  const [localRole, setLocalRole] = useState(null)
+  const effectiveRole = localRole || profile?.role || 'user'
+  const isPremium = effectiveRole === 'premium' || effectiveRole === 'admin'
 
   return (
     <AnimatePresence>
@@ -199,40 +203,38 @@ function ProfileSetupModal({ isOpen, onClose }) {
               </button>
             </form>
 
-            {/* Promo Code Section */}
-            {!isPremium && (
-              <div className="mt-6 pt-5 border-t border-slate-700/50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Gift className="w-4 h-4 text-brand-accent" />
-                  <span className="text-sm text-slate-300 font-medium">
-                    {t('promo.title', 'Promo Code')}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    placeholder={t('promo.placeholder', 'Enter code')}
-                    className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-brand-accent focus:outline-none text-sm font-mono"
-                    maxLength={20}
-                  />
-                  <button
-                    type="button"
-                    onClick={handlePromo}
-                    disabled={promoLoading || !promoCode.trim()}
-                    className="px-4 py-2 bg-brand-accent/20 text-brand-accent rounded-xl text-sm font-medium hover:bg-brand-accent/30 transition-colors disabled:opacity-50"
-                  >
-                    {promoLoading ? '...' : t('promo.redeem', 'Redeem')}
-                  </button>
-                </div>
-                {promoStatus && (
-                  <p className={`text-xs mt-2 ${promoStatus === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {promoMessage}
-                  </p>
-                )}
+            {/* Promo Code Section — always visible so user can upgrade role */}
+            <div className="mt-6 pt-5 border-t border-slate-700/50">
+              <div className="flex items-center gap-2 mb-3">
+                <Gift className="w-4 h-4 text-brand-accent" />
+                <span className="text-sm text-slate-300 font-medium">
+                  {t('promo.title', 'Promo Code')}
+                </span>
               </div>
-            )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  placeholder={t('promo.placeholder', 'Enter code')}
+                  className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-brand-accent focus:outline-none text-sm font-mono"
+                  maxLength={20}
+                />
+                <button
+                  type="button"
+                  onClick={handlePromo}
+                  disabled={promoLoading || !promoCode.trim()}
+                  className="px-4 py-2 bg-brand-accent/20 text-brand-accent rounded-xl text-sm font-medium hover:bg-brand-accent/30 transition-colors disabled:opacity-50"
+                >
+                  {promoLoading ? '...' : t('promo.redeem', 'Redeem')}
+                </button>
+              </div>
+              {promoStatus && (
+                <p className={`text-xs mt-2 ${promoStatus === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {promoMessage}
+                </p>
+              )}
+            </div>
           </motion.div>
         </motion.div>
       )}

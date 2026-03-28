@@ -1,0 +1,1695 @@
+import Foundation
+
+enum SupplyChainWorldsEn {
+    static let worlds: [World] = [
+        World(
+            id: 54,
+            name: "Supply Chain Overview",
+            emoji: "🔗",
+            description: "Understand the entire supply chain: the complete flow from raw materials to the end consumer",
+            quests: [
+                Quest(
+                    id: "54-1",
+                    name: "Supply Chain Roles & Flows",
+                    description: "Learn the role of each player in the supply chain, and how physical, information, and financial flows work.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Identifying Supply Chain Roles",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "What role is ④? Who downstream is most directly affected when it fails?",
+                            scenario: Challenge.Scenario(
+                                title: "First-Day Confusion",
+                                narrative: "You just joined the Supply Chain department of a consumer goods company. Your manager gives you a process diagram with six nodes:\n\n① Provides raw materials ② Processes into finished goods ③ Stores finished goods in bulk ④ Distributes to various regions ⑤ Sells at storefronts ⑥ Purchases and uses\n\nYour manager asks: \"If ④ has a problem, who is directly affected?\"",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "④ is Manufacturer, affecting Warehouse", explanation: "Manufacturer is ② (processing). ④ is the role that \"distributes to various regions.\""),
+                                Challenge.Option(id: "B", text: "④ is Distributor, affecting Retailer", explanation: "Correct! The Distributor handles delivery to retailers. When it fails, retailers cannot receive goods and shelves go empty."),
+                                Challenge.Option(id: "C", text: "④ is Retailer, affecting Customer", explanation: "Retailer is ⑤ (storefront sales). ④ is the distribution role."),
+                                Challenge.Option(id: "D", text: "④ is 3PL, affecting Manufacturer", explanation: "3PL is a service provider, not a fixed node in the supply chain. ④ best matches Distributor."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["\"Distributes to various regions\" is the definition of a Distributor.", "Supply chain order: Supplier → Manufacturer → Warehouse → Distributor → Retailer → Customer"],
+                            explanation: "The six key supply chain roles are: Supplier → Manufacturer → Warehouse → Distributor → Retailer → Customer. The Distributor connects the warehouse to the retail end, and its efficiency directly impacts retail supply stability.",
+                            frameworkTip: "Remember S → M → W → D → R → C. A problem at any role affects everyone downstream."
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Three Flows: Physical, Information, Financial",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Slow payment processing, out-of-sync shipment information, and non-real-time delivery date information — which three flows do these correspond to?",
+                            scenario: Challenge.Scenario(
+                                title: "A Cross-Departmental Meeting Debate",
+                                narrative: "At a supply chain improvement meeting, three issues are raised:\n• Finance: Payment processing is too slow\n• Logistics: Shipment information is out of sync, causing delays\n• Procurement: Supplier delivery date information is not real-time\n\nYour manager asks: \"Which type of flow does each problem correspond to?\"",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Financial, Physical, Information", explanation: "\"Out-of-sync shipment information\" — the keyword is \"information,\" not the physical flow itself."),
+                                Challenge.Option(id: "B", text: "Financial, Information, Information", explanation: "Correct! Payment = Financial Flow. \"Shipment information\" out of sync and \"delivery date information\" not being real-time are both Information Flow problems. Information Flow is the most common bottleneck."),
+                                Challenge.Option(id: "C", text: "Physical, Information, Financial", explanation: "Payment is Financial Flow, not Physical Flow. Delivery date information is Information Flow, not Financial Flow."),
+                                Challenge.Option(id: "D", text: "All three are Information Flow", explanation: "Slow payment processing is about actual money movement, not just an information issue."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Ask what is actually flowing in each problem — money? goods? or data?", "\"Shipment information\" and \"delivery date information\" both have the keyword \"information.\""],
+                            explanation: "The three major supply chain flows are: Physical Flow (movement of goods), Information Flow (orders, forecasts, inventory data, etc.), and Financial Flow (payments, invoices, and other monetary movements). The quality of Information Flow often determines the efficiency of the other two flows.",
+                            frameworkTip: "Three flows: Physical (goods move), Information (data moves), Financial (money moves)"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Push vs Pull Supply Chain",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "From a supply chain strategy perspective, which description is most accurate?",
+                            scenario: Challenge.Scenario(
+                                title: "ZARA's Secret",
+                                narrative: "You are studying different supply chain strategies. Traditional fashion brands mass-produce 6-9 months in advance and push inventory to stores. But ZARA:\n• Design to shelf in just 2-3 weeks\n• Small-batch replenishment weekly, adjusted based on store data\n• Inventory turnover rate is 2x the industry average\n• End-of-season markdowns account for only 15% (industry average: 30-40%)",
+                                data: [
+                                    ["metric": "Design to Shelf", "traditional": "6-9 months", "zara": "2-3 weeks"],
+                                    ["metric": "Replenishment Frequency", "traditional": "Quarterly", "zara": "Weekly"],
+                                    ["metric": "Inventory Turnover", "traditional": "3-4x/year", "zara": "6-8x/year"],
+                                    ["metric": "End-of-Season Markdown Ratio", "traditional": "30-40%", "zara": "15%"],
+                                ],
+                                dataCaption: "Traditional Brand vs ZARA Comparison"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "ZARA uses a pure Pull strategy, producing entirely based on demand", explanation: "ZARA still needs to pre-stock fabrics and produce basics in advance — it is not 100% Pull."),
+                                Challenge.Option(id: "B", text: "ZARA uses Push for raw materials and Pull for finished goods — a Push-Pull hybrid strategy", explanation: "Correct! ZARA pre-stocks fabric (Push), but finished garment decisions are driven by store sales data (Pull). The boundary is called the Decoupling Point, allowing ZARA to achieve both economies of scale and market responsiveness."),
+                                Challenge.Option(id: "C", text: "ZARA uses a Push strategy, just faster", explanation: "The core of Push is forecast-driven, but ZARA is demand-driven — production decisions are based on actual sales data."),
+                                Challenge.Option(id: "D", text: "It has nothing to do with Push/Pull — it is purely faster logistics", explanation: "ZARA's success is a holistic strategy design — information flow feeds back into production decisions, not just faster logistics."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Push = produce in advance based on forecasts; Pull = produce based on actual demand.", "ZARA pre-stocks fabric (Push), but garment styles are determined by sales data (Pull)."],
+                            explanation: "Push is forecast-driven (make-to-stock), Pull is demand-driven (make-to-order). In practice, most companies adopt a Push-Pull hybrid strategy. Before the Decoupling Point, materials are prepared (Push); after it, production responds to demand (Pull). ZARA's Decoupling Point is at the fabric stage, which is key to its fast-fashion success.",
+                            frameworkTip: "Push-Pull Decoupling Point: forecast-driven material prep before, demand-driven production after"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "54-2",
+                    name: "Key Supply Chain Concepts",
+                    description: "Master core concepts including Lead Time, Bottleneck, and the Bullwhip Effect.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Lead Time Analysis",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "With raw materials already in stock, what is the Lead Time?",
+                            scenario: Challenge.Scenario(
+                                title: "The Customer Is Chasing Their Order",
+                                narrative: "A major customer places an urgent order. You check the time for each step:\n• Raw material procurement: 5 days\n• Production: 3 days\n• Quality inspection: 1 day\n• Packaging: 1 day\n• Shipping: 2 days\n\nHowever, you discover the raw materials are already in stock at the warehouse.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "12 days (sum of all steps)", explanation: "Raw materials are in stock, so you do not need to wait the 5-day procurement time. Lead Time is the actual time required."),
+                                Challenge.Option(id: "B", text: "7 days (minus procurement time)", explanation: "Correct! 3+1+1+2 = 7 days. The key to Lead Time is identifying \"what do we actually still need to wait for.\""),
+                                Challenge.Option(id: "C", text: "5 days (only the longest step)", explanation: "Lead Time is not just the longest single step — it is the sum of all necessary steps."),
+                                Challenge.Option(id: "D", text: "6 days (forgot packaging)", explanation: "Every sequential step must be included: Production 3 + Inspection 1 + Packaging 1 + Shipping 2 = 7."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Lead Time = total time from order placement to delivery. Steps with existing stock do not count.", "Production 3 + Inspection 1 + Packaging 1 + Shipping 2 = ?"],
+                            explanation: "Lead Time is the total elapsed time from order trigger to delivery completion. Subtypes include: Procurement LT, Manufacturing LT, and Delivery LT. Ways to shorten it: maintain safety stock, parallelize processes, and improve bottleneck steps.",
+                            frameworkTip: "Lead Time = sum of all sequential step times. To shorten it, target the longest step."
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Finding the Bottleneck",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What is the maximum throughput of the entire line? Where is the bottleneck?",
+                            scenario: Challenge.Scenario(
+                                title: "Why Is the Line So Slow?",
+                                narrative: "An assembly line has four workstations:",
+                                data: [
+                                    ["station": "A: Parts Preparation", "capacity": "60 units/hr", "utilization": "75%"],
+                                    ["station": "B: Welding & Assembly", "capacity": "40 units/hr", "utilization": "98%"],
+                                    ["station": "C: Functional Testing", "capacity": "55 units/hr", "utilization": "72%"],
+                                    ["station": "D: Packaging & Shipping", "capacity": "70 units/hr", "utilization": "57%"],
+                                ],
+                                dataCaption: "Workstation Capacity & Utilization"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "60 units/hr, bottleneck at A", explanation: "The bottleneck is not the station that comes first — it is the station with the lowest capacity."),
+                                Challenge.Option(id: "B", text: "40 units/hr, bottleneck at B", explanation: "Correct! In a serial production line, maximum throughput = the capacity of the lowest-capacity station. B can only handle 40 units/hr and is at 98% utilization — fully loaded."),
+                                Challenge.Option(id: "C", text: "56 units/hr (average of all four)", explanation: "A serial line cannot use an average — the whole system is constrained by the slowest station."),
+                                Challenge.Option(id: "D", text: "70 units/hr, use the fastest as the benchmark", explanation: "The opposite — the slowest sets the benchmark. D's low utilization (57%) is precisely because it is waiting on upstream stations."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["In a serial system, throughput = the speed of the slowest step, like the narrowest point on a highway determines traffic flow.", "The workstation with the highest utilization (98%) is usually the bottleneck."],
+                            explanation: "A Bottleneck is the step with the lowest capacity, and it determines overall maximum throughput. Identification methods: (1) find the lowest capacity, (2) look for the highest utilization, (3) check where WIP accumulates most. Improving the bottleneck yields the highest ROI.",
+                            frameworkTip: "Theory of Constraints: System throughput = Bottleneck capacity. Improving non-bottlenecks does not increase overall throughput."
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "The Bullwhip Effect",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Why does demand fluctuation amplify upstream? What is the most effective countermeasure?",
+                            scenario: Challenge.Scenario(
+                                title: "Lessons from the Beer Game",
+                                narrative: "Results from a supply chain simulation game:",
+                                data: [
+                                    ["role": "Consumer Demand", "fluctuation": "±10%"],
+                                    ["role": "Retailer Orders", "fluctuation": "±25%"],
+                                    ["role": "Wholesaler Orders", "fluctuation": "±45%"],
+                                    ["role": "Manufacturer Production", "fluctuation": "±80%"],
+                                ],
+                                dataCaption: "Demand Fluctuation Amplification Across Tiers"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Upstream is too far from consumers, so each player stocks extra inventory", explanation: "Stocking extra is a symptom-level fix and may actually worsen the fluctuation."),
+                                Challenge.Option(id: "B", text: "Each tier forecasts independently and adds safety buffers; the solution is to share actual consumer data", explanation: "Correct! The main causes of the Bullwhip Effect are: independent forecasting at each tier, order batching, adding safety buffers, and promotional stockpiling. The most effective countermeasure is Information Sharing — letting upstream players see POS data."),
+                                Challenge.Option(id: "C", text: "Manufacturers react too slowly; they should speed up production", explanation: "The problem is information distortion, not production speed."),
+                                Challenge.Option(id: "D", text: "Retailers deliberately over-order; their order quantities should be capped", explanation: "Retailers do not over-order intentionally — they add safety buffers because they cannot see true demand."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["If every tier could directly see consumer purchase data, would they still need to \"guess\"?", "Four root causes: demand signal processing, order batching, price fluctuation, shortage gaming."],
+                            explanation: "The Bullwhip Effect is the classic phenomenon where demand variability amplifies at each upstream tier. Countermeasures include: VMI, CPFR, and POS data sharing. The 2025 trend is using AI Control Towers to integrate real-time data and suppress this effect.",
+                            frameworkTip: "Countermeasure priority: 1. Share data 2. Shorten Lead Time 3. Reduce order batching 4. Stabilize pricing"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "54-3",
+                    name: "Supply Chain Performance Metrics",
+                    description: "Learn to measure supply chain performance using Service Level, Fill Rate, and TCO.",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Service Level vs Fill Rate",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What are the Order Fill Rate and Line Fill Rate respectively?",
+                            scenario: Challenge.Scenario(
+                                title: "The Numbers Your Manager Wants",
+                                narrative: "A food distribution company's data from last month:\n• Total orders: 1,000\n• Fully fulfilled orders: 920\n• Total ordered line items: 5,000\n• Actually delivered line items: 4,700",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Order 92%, Line 94%", explanation: "Correct! Order = 920/1000 = 92%, Line = 4700/5000 = 94%. Line is higher because some orders were only missing 1-2 items."),
+                                Challenge.Option(id: "B", text: "Order 94%, Line 92%", explanation: "Reversed. Order uses order count (920/1000), Line uses item count (4700/5000)."),
+                                Challenge.Option(id: "C", text: "Both are 93%", explanation: "Different metrics cannot be averaged together."),
+                                Challenge.Option(id: "D", text: "Order 92%, Line 92%", explanation: "Line Fill Rate = 4700/5000 = 94%, not 92%."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["Order Fill Rate = fully fulfilled orders / total orders", "Line Fill Rate = actually delivered line items / total ordered line items"],
+                            explanation: "Order Fill Rate measures the proportion of orders fully fulfilled (a stricter standard), while Line Fill Rate measures the proportion of line items delivered. Companies track both: Order FR reflects customer experience, Line FR identifies areas for improvement.",
+                            frameworkTip: "Order Fill Rate measures customer experience; Line Fill Rate identifies improvement opportunities."
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Total Cost of Ownership",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "From a TCO perspective, which judgment is most reasonable?",
+                            scenario: Challenge.Scenario(
+                                title: "Is the Cheaper Supplier Really Cheaper?",
+                                narrative: "You are evaluating two suppliers:",
+                                data: [
+                                    ["item": "Unit Price", "a": "$10/unit", "b": "$8/unit"],
+                                    ["item": "Minimum Order Quantity", "a": "500 units", "b": "2,000 units"],
+                                    ["item": "Delivery Time", "a": "7 days", "b": "30 days (ocean freight)"],
+                                    ["item": "Defect Rate", "a": "1%", "b": "5%"],
+                                    ["item": "Shipping Cost", "a": "Included in unit price", "b": "$0.5/unit"],
+                                    ["item": "Inspection Cost", "a": "Not required", "b": "$500/batch"],
+                                ],
+                                dataCaption: "Supplier A vs B Comparison"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Choose B — unit price is 20% cheaper", explanation: "Looking only at unit price is the most common mistake. After adding shipping, quality losses, and inventory costs, B may not be cheaper."),
+                                Challenge.Option(id: "B", text: "Choose A — although the unit price is higher, the TCO may be lower", explanation: "Correct! TCO includes: unit price + shipping + quality costs (5% vs 1%) + inventory costs (MOQ 2000 vs 500) + inspection + stockout risk (30 days vs 7 days). When totaled, A is very likely lower."),
+                                Challenge.Option(id: "C", text: "About the same — either one is fine", explanation: "TCO analysis reveals significant differences in hidden costs."),
+                                Challenge.Option(id: "D", text: "Not enough information to decide", explanation: "The given information is sufficient to determine the trend. The hidden costs of a 5% defect rate and 2000-unit MOQ are substantial."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["TCO goes beyond unit price. Shipping, quality losses, and inventory holding costs must all be factored in.", "B's 5% defect rate = 100 defective units per 2,000 that need to be returned or replaced."],
+                            explanation: "TCO includes: direct costs (unit price, shipping) + indirect costs (quality losses, inspection, inventory holding) + risk costs (emergency air freight due to unreliable delivery). Purchase price typically accounts for only 50-70% of TCO. The 2026 trend is using AI to calculate TCO while incorporating carbon emissions and geopolitical risk.",
+                            frameworkTip: "TCO = Purchase Price + Logistics + Quality + Inventory + Management + Risk Costs"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Supply Chain Overview Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "Using supply chain concepts, which analysis is most comprehensive?",
+                            scenario: Challenge.Scenario(
+                                title: "A Global Electronics Company's Supply Chain Crisis",
+                                narrative: "You are a Supply Chain Analyst. The company is facing multiple issues:\n1. Chip supplier (Taiwan) shut down for two weeks due to a typhoon\n2. Ocean freight rates surged 3x (Red Sea crisis)\n3. European customer delivery time extended from 4 weeks to 8 weeks\n4. US customers switching to competitors\n5. Warehouse full of last season's unsold inventory",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "It is the Bullwhip Effect — the solution is data sharing", explanation: "The problems are more about supply-side disruption, not just demand signal distortion."),
+                                Challenge.Option(id: "B", text: "Chips are the Bottleneck — just fix that", explanation: "There are also logistics costs, old inventory, and customer attrition issues — focusing on one point is not enough."),
+                                Challenge.Option(id: "C", text: "Multiple issues are intertwined: supply disruption → logistics obstruction → service level decline → customer attrition. There is also an unsold inventory problem. Short-, medium-, and long-term countermeasures are needed.", explanation: "Correct! Short-term: alternative sources or air freight. Medium-term: diversify suppliers, build safety stock. Long-term: nearshoring, Digital Twin risk simulation. These are real supply chain challenges from 2024-2026."),
+                                Challenge.Option(id: "D", text: "It is mainly a shipping cost issue — just wait for prices to drop", explanation: "Shipping costs are just one factor. Waiting is not a strategy."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["Real supply chain problems are rarely single-cause. Connect each issue to the concepts you have learned.", "Think about what can be done in the short, medium, and long term."],
+                            explanation: "This integrates all concepts: roles (supplier, logistics, customer), Bottleneck (chips), Lead Time (delivery time doubled), Bullwhip Effect, Service Level (customer attrition), TCO (emergency air freight costs). From 2024-2026, the Red Sea crisis, geopolitics, and extreme weather have made Resilience the most important keyword.",
+                            frameworkTip: "Analysis framework: 1. Identify affected links 2. Distinguish root causes vs symptoms 3. Separate short/medium/long-term countermeasures 4. Evaluate trade-offs"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 55,
+            name: "Demand Forecasting & Inventory Management",
+            emoji: "📦",
+            description: "Learn to forecast demand, calculate safety stock, and master inventory decision models like EOQ",
+            quests: [
+                Quest(
+                    id: "55-1",
+                    name: "Demand Forecasting Fundamentals",
+                    description: "Understand forecasting method categories and accuracy measurement.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Choosing the Right Forecasting Method",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "What forecasting methods should be used for each task?",
+                            scenario: Challenge.Scenario(
+                                title: "New Product vs Established Product",
+                                narrative: "You are a Demand Planner with two tasks:\n\nTask A: Forecast next year's monthly sales for a best-selling shampoo (sold for 5 years, complete historical data available)\nTask B: Forecast next month's sales for a new energy drink flavor launching soon (no historical data)",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Use time series analysis (Quantitative) for both", explanation: "Task B has no historical data, so time series analysis cannot be used."),
+                                Challenge.Option(id: "B", text: "Quantitative methods for A, Qualitative methods for B", explanation: "Correct! A has 5 years of data, making it suitable for Moving Average and Exponential Smoothing. B has no historical data, so it requires Market Research, Expert Opinion, or the Delphi Method. New products can also reference similar product sales curves (analogous forecasting)."),
+                                Challenge.Option(id: "C", text: "Use Expert Opinion (Qualitative) for both", explanation: "Having complete historical data but not using it is wasteful. Quantitative methods are usually more accurate when sufficient data is available."),
+                                Challenge.Option(id: "D", text: "Use AI for A, use Excel for B", explanation: "The tool is not the point — the methodology is. Regardless of the tool, A needs quantitative methods and B needs qualitative methods."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Quantitative methods require historical data; qualitative methods rely on judgment and research.", "A new product has no historical data — can you use time series?"],
+                            explanation: "Forecasting falls into two main categories: Quantitative (based on historical data: Time Series, Causal Models) and Qualitative (based on judgment: Expert Opinion, Market Research, Delphi). The 2025 trend is AI-based Demand Sensing, combining POS, social media, weather, and other external signals for short-term forecasting.",
+                            frameworkTip: "Have data → Quantitative; No data → Qualitative; Combine both = Consensus Forecasting"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Moving Average Calculation",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Using a 3-month SMA, what is the July forecast? If actual sales are 160, what is the error?",
+                            scenario: Challenge.Scenario(
+                                title: "Calculating Next Month's Forecast",
+                                narrative: "You are using Simple Moving Average to forecast monthly snack sales:",
+                                data: [
+                                    ["month": "Jan", "sales": "100"],
+                                    ["month": "Feb", "sales": "120"],
+                                    ["month": "Mar", "sales": "110"],
+                                    ["month": "Apr", "sales": "130"],
+                                    ["month": "May", "sales": "140"],
+                                    ["month": "Jun", "sales": "150"],
+                                ],
+                                dataCaption: "Past 6 Months of Sales"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Forecast 140, error 20", explanation: "Correct! SMA(3) = (130+140+150)/3 = 140. Error = |160-140| = 20. SMA assigns equal weight to all periods and has a lag effect."),
+                                Challenge.Option(id: "B", text: "Forecast 125, error 35", explanation: "You may have calculated the 6-month average. A 3-month SMA uses only the most recent 3 months."),
+                                Challenge.Option(id: "C", text: "Forecast 150, error 10", explanation: "That only uses the last month. SMA(3) requires the average of the most recent 3 months."),
+                                Challenge.Option(id: "D", text: "Forecast 145, error 15", explanation: "(130+140+150)/3 = 420/3 = 140, not 145."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["SMA(3) = sum of the most recent 3 months ÷ 3", "Most recent 3 months: Apr 130, May 140, Jun 150."],
+                            explanation: "SMA is the most basic forecasting method. Drawbacks: equal weighting across all periods and lag effect. Improved versions include: Weighted Moving Average (higher weight for recent periods) and Exponential Smoothing (automatic weight adjustment). Larger N means smoother but more lagged forecasts.",
+                            frameworkTip: "SMA(N) = average of the most recent N periods. Large N → stable but lagged; Small N → responsive but volatile"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Forecast Accuracy: MAE",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Using MAE to compare, which model is more accurate?",
+                            scenario: Challenge.Scenario(
+                                title: "Which Model Is Better?",
+                                narrative: "Performance of two forecasting models:",
+                                data: [
+                                    ["month": "Jan", "actual": "100", "model_a": "110", "model_b": "95"],
+                                    ["month": "Feb", "actual": "120", "model_a": "115", "model_b": "130"],
+                                    ["month": "Mar", "actual": "90", "model_a": "100", "model_b": "85"],
+                                    ["month": "Apr", "actual": "130", "model_a": "125", "model_b": "140"],
+                                ],
+                                dataCaption: "Forecast vs Actual"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A: MAE=7.5, B: MAE=7.5 — equally accurate", explanation: "Correct! A: (10+5+10+5)/4=7.5, B: (5+10+5+10)/4=7.5. However, Bias differs — A tends to overestimate, while B alternates between over and under. In practice, you should also examine the direction of bias."),
+                                Challenge.Option(id: "B", text: "A: MAE=10, worse than B", explanation: "MAE takes the absolute value of each error then averages — it is not the maximum error."),
+                                Challenge.Option(id: "C", text: "B: MAE=5, better than A", explanation: "Recalculate: B's absolute errors are 5+10+5+10=30, and 30/4=7.5."),
+                                Challenge.Option(id: "D", text: "Too little data to compare", explanation: "4 months is sufficient to calculate MAE for a preliminary comparison."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["MAE = Σ|Forecast - Actual| / n. First calculate each month's absolute error, then average.", "A's errors: |10|, |5|, |10|, |5|; B's: |5|, |10|, |5|, |10|"],
+                            explanation: "Common metrics: MAE (mean absolute error), MAPE (percentage error, enables cross-product comparison), Bias (reveals direction of deviation). Even when MAE is the same, Bias may differ. In 2025, the industry uses Forecast Value Added (FVA) to measure whether each adjustment step actually improves accuracy.",
+                            frameworkTip: "MAE measures error magnitude, MAPE enables cross-product comparison, Bias reveals deviation direction"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "55-2",
+                    name: "Inventory Control Models",
+                    description: "Learn the calculation and application of Safety Stock, Reorder Point, and EOQ.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Safety Stock Concept",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Why do 500 units (50 x 10 days) still result in stockouts? How can this be improved?",
+                            scenario: Challenge.Scenario(
+                                title: "Why Are We Still Running Out of Stock?",
+                                narrative: "A product averages 50 units sold per day, and the supplier takes 10 days to deliver. Replenishment is triggered when inventory drops to 500 units.\n\nBut last month, stockouts happened twice:\n• Daily sales spiked to 70 units, and replenishment had not arrived yet\n• The supplier was 3 days late on delivery, also causing a stockout",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "500 is not enough — set a higher level like 1,000 units", explanation: "Arbitrarily raising the level increases holding costs. The correct approach is to calculate Safety Stock."),
+                                Challenge.Option(id: "B", text: "500 only covers the average scenario without accounting for variability. Safety Stock needs to be added.", explanation: "Correct! Reorder Point = Average Demand x LT + Safety Stock. 500 is just the base quantity with no buffer. SS depends on demand standard deviation, lead time standard deviation, and target Service Level."),
+                                Challenge.Option(id: "C", text: "The problem is the supplier — switch to a different one", explanation: "Even good suppliers have occasional delays. Safety Stock exists precisely to handle uncertainty."),
+                                Challenge.Option(id: "D", text: "Switch to daily replenishment", explanation: "This increases transportation and handling costs. The correct approach is to calculate the appropriate ROP."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["50 x 10 = 500 is the quantity needed when \"everything goes as planned.\" Reality has variability.", "Safety Stock addresses the \"unplanned\": demand higher than expected, lead time longer than expected."],
+                            explanation: "Safety Stock formula concept: SS = Z x σ x √LT. Z = the value corresponding to the service level (95% → 1.65), σ = demand standard deviation, LT = Lead Time. Reorder Point = (Avg Demand x LT) + SS.",
+                            frameworkTip: "ROP = (Avg Demand x LT) + Safety Stock. SS is determined by variability and target service level."
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "EOQ: Economic Order Quantity",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What is the EOQ? How many times per year should orders be placed?",
+                            scenario: Challenge.Scenario(
+                                title: "How Much Should We Order?",
+                                narrative: "Office supplies procurement:\n• Annual demand D = 10,000 units\n• Ordering cost per order S = $50\n• Annual holding cost per unit H = $2\n\nA colleague says ordering in bulk saves money. You decide to calculate using EOQ.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "EOQ ≈ 707 units, approximately 14 times per year", explanation: "Correct! EOQ = √(2×10000×50/2) = √500000 ≈ 707. Annual orders = 10000/707 ≈ 14. EOQ finds the balance between ordering cost and holding cost."),
+                                Challenge.Option(id: "B", text: "EOQ = 5,000 units, 2 times per year", explanation: "Ordering too much at once results in very high holding costs."),
+                                Challenge.Option(id: "C", text: "EOQ = 100 units, 100 times per year", explanation: "Ordering too frequently: 100 times × $50 = $5,000 in ordering costs alone — far too high."),
+                                Challenge.Option(id: "D", text: "EOQ = 10,000 units, once per year", explanation: "Average inventory of 5,000 units × $2 = $10,000 in holding costs — far from optimal."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["EOQ = √(2DS/H). Substitute D=10000, S=50, H=2.", "2×10000×50/2 = 500,000. √500,000 ≈ 707."],
+                            explanation: "EOQ balances Ordering Cost and Holding Cost. Formula: Q* = √(2DS/H). At the EOQ point, the two costs are equal and total cost is minimized. Limitations: assumes stable demand and no quantity discounts. In practice, it is used alongside Safety Stock.",
+                            frameworkTip: "EOQ = √(2DS/H). Order too much → high inventory cost; Order too little → high ordering cost"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "ABC Analysis",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Based on the ABC analysis, which inventory strategy is most reasonable?",
+                            scenario: Challenge.Scenario(
+                                title: "How to Manage 3,000 SKUs?",
+                                narrative: "You performed an ABC analysis:",
+                                data: [
+                                    ["category": "A Class (Top 20% SKUs)", "count": "600", "revenue": "80% of revenue"],
+                                    ["category": "B Class (Middle 30%)", "count": "900", "revenue": "15% of revenue"],
+                                    ["category": "C Class (Bottom 50%)", "count": "1,500", "revenue": "5% of revenue"],
+                                ],
+                                dataCaption: "SKU ABC Classification"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Use EOQ for all items — manage fairly", explanation: "Fair does not mean effective. A-class items need more granular management; C-class items can be managed simply."),
+                                Challenge.Option(id: "B", text: "A: tight control, precise forecasting, frequent cycle counts; B: moderate; C: simplified management, higher safety stock", explanation: "Correct! The principle of ABC is \"invest resources where they matter most.\" A-class items have the highest revenue share and deserve the investment. C-class items can have higher SS (since their holding cost share is low) with reduced management frequency. This is the Pareto 80/20 rule in action."),
+                                Challenge.Option(id: "C", text: "There are too many C-class items — discontinue them all", explanation: "C-class items may be accessories that customers need — they cannot be arbitrarily discontinued."),
+                                Challenge.Option(id: "D", text: "A-class items sell well and do not need attention — focus resources on C-class", explanation: "A-class items cannot go out of stock — stockouts cause the greatest revenue loss."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["80/20 rule: 20% of items contribute 80% of revenue and deserve the most attention.", "C-class items contribute only 5% of revenue — excessive management effort is not cost-effective."],
+                            explanation: "ABC analysis is based on the Pareto Principle. The advanced version, ABC-XYZ, adds variability (X = stable, Y = moderate, Z = high variability). AX is easiest to manage (high value, stable); CZ is hardest (low value, high variability).",
+                            frameworkTip: "ABC classification + XYZ variability = differentiated inventory strategy"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "55-3",
+                    name: "Inventory Strategy & Balance",
+                    description: "Understand Inventory Turnover and the trade-off between Stockout vs Overstock.",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Inventory Turnover Analysis",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What is each company's Inventory Turnover? Which is best?",
+                            scenario: Challenge.Scenario(
+                                title: "Which Company Manages Inventory Best?",
+                                narrative: "Comparing three retail companies:",
+                                data: [
+                                    ["company": "A (Supermarket)", "cogs": "$50M", "avg_inv": "$5M"],
+                                    ["company": "B (Furniture Store)", "cogs": "$20M", "avg_inv": "$10M"],
+                                    ["company": "C (Electronics)", "cogs": "$80M", "avg_inv": "$16M"],
+                                ],
+                                dataCaption: "Annual Data (COGS = Cost of Goods Sold)"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A=10, B=2, C=5. A is best.", explanation: "Correct! Turnover = COGS / Avg Inventory. A: 50/5=10, B: 20/10=2, C: 80/16=5. However, reasonable values differ by industry — supermarkets are expected to have high turnover, while furniture naturally has low turnover. Cross-industry comparisons should be made cautiously."),
+                                Challenge.Option(id: "B", text: "C is best because it has the highest revenue", explanation: "Highest revenue ≠ best inventory management. Turnover measures efficiency."),
+                                Challenge.Option(id: "C", text: "B is worst and should improve immediately", explanation: "The furniture industry naturally has low turnover (large items, long cycles). It needs to be compared against industry peers."),
+                                Challenge.Option(id: "D", text: "Different industries — cannot be compared", explanation: "They can be calculated and compared, but interpretation must account for industry characteristics."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["Inventory Turnover = COGS ÷ Avg Inventory. Higher is faster.", "Reasonable ranges vary by industry."],
+                            explanation: "Inventory Turnover measures how quickly inventory converts to sales. A related metric is DOI = 365 / Turnover (how many days of inventory on hand). A's DOI = 36.5 days, B = 182.5 days. Gartner reports that supply chain leaders achieve 30-50% higher Turnover than industry peers.",
+                            frameworkTip: "Turnover = COGS / Avg Inv. DOI = 365 / Turnover. Only same-industry comparisons are meaningful."
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Newsvendor: Stockout vs Overstock",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "To maximize profit, how many units should be stocked?",
+                            scenario: Challenge.Scenario(
+                                title: "How Many Winter Jackets Should We Stock?",
+                                narrative: "A seasonal product stocking decision:\n• Profit per unit sold: $30\n• Loss per unsold unit: $15\n• Hidden cost per stockout: $10\n\nDemand probability distribution:",
+                                data: [
+                                    ["demand": "8,000 units", "probability": "20%"],
+                                    ["demand": "10,000 units", "probability": "50%"],
+                                    ["demand": "12,000 units", "probability": "30%"],
+                                ],
+                                dataCaption: "Demand Probabilities"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "8,000 — play it safe, avoid overstock", explanation: "There is an 80% chance demand will be ≥10,000, meaning a high probability of stockout. Stockout losses could far exceed overstock risk."),
+                                Challenge.Option(id: "B", text: "10,000 — follow the forecast", explanation: "This ignores cost asymmetry. Stockout cost ($40) > Overstock cost ($15), so stocking higher is justified."),
+                                Challenge.Option(id: "C", text: "12,000 — stockout cost ($40) far exceeds overstock cost ($15), so stock more", explanation: "Correct! Newsvendor core: Cu=$40, Co=$15. Critical Ratio = 40/55 ≈ 73%. Cumulative probability at demand ≤10,000 = 70% < 73%, at ≤12,000 = 100% > 73%. The optimum is between 10k-12k, making 12,000 a reasonable high-side strategy."),
+                                Challenge.Option(id: "D", text: "15,000 — better safe than sorry", explanation: "The excess unsold units would cause $45k-$105k in losses — excessive."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["Stockout cost = Profit $30 + Hidden cost $10 = $40. Overstock = $15. Which is more expensive?", "Critical Ratio = Cu/(Cu+Co). The higher the stockout cost, the more you should stock."],
+                            explanation: "The Newsvendor Model handles one-time inventory decisions. Critical Ratio = Cu/(Cu+Co); stock enough so that the cumulative demand probability ≥ CR. In 2025, companies use Monte Carlo simulation combined with ML for more granular optimization.",
+                            frameworkTip: "Newsvendor: CR = Cu/(Cu+Co). Higher stockout cost → stock more."
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Inventory Management Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "What should be addressed first? In what order?",
+                            scenario: Challenge.Scenario(
+                                title: "Crisis in the Warehouse",
+                                narrative: "You are the new Inventory Manager and discover:\n• Turnover dropped from 8 to 5\n• A-class Fill Rate dropped from 97% to 88%\n• C-class items occupy 45% of warehouse space\n• 200 SKUs have had zero sales for over 6 months\n• Safety stock settings have not been updated in two years",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Clear the 200 dead-stock SKUs first → free up space → then handle the rest", explanation: "Dead stock is important but not the most urgent. A-class stockouts have a bigger revenue impact."),
+                                Challenge.Option(id: "B", text: "Update safety stock → improve A-class Fill Rate → clear dead stock → optimize C-class", explanation: "Correct! (1) Updating SS addresses the root cause (two years without updates may have caused both A-class stockouts and C-class excess). (2) Rescue A-class items (greatest revenue impact). (3) Clear dead stock (free up space and capital). (4) Optimize C-class. Fix the root cause first, rescue high-value items, then clean up and optimize."),
+                                Challenge.Option(id: "C", text: "Implement a new WMS system to solve all problems", explanation: "A new system is a medium-to-long-term initiative and does not address the immediate Fill Rate decline."),
+                                Challenge.Option(id: "D", text: "Increase safety stock across the board to prevent stockouts", explanation: "This would further worsen Turnover (already dropped from 8 to 5), and C-class items would consume even more space. A differentiated strategy is needed."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Safety stock settings have not been updated in two years — this could be the root cause of many problems.", "A-class stockouts have the greatest revenue impact and should be prioritized."],
+                            explanation: "Inventory management improvement priority: (1) Update foundational parameters (SS, ROP). (2) Prioritize high-value item issues. (3) Clear dead stock to free resources. (4) Optimize classification strategy. This is the practical application of ABC analysis + root cause analysis.",
+                            frameworkTip: "Improvement sequence: Fix root cause → Rescue A-class → Clear dead stock → Optimize strategy. Always ask \"why\" first."
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 56,
+            name: "Procurement & Supplier Management",
+            emoji: "🤝",
+            description: "From sourcing to supplier evaluation — master the core processes and strategies of modern procurement",
+            quests: [
+                Quest(
+                    id: "56-1",
+                    name: "Procurement Process & Documents",
+                    description: "Understand the differences between RFI, RFQ, and RFP, and every step of the procurement process.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "RFI vs RFQ vs RFP",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Which document should be used for each task?",
+                            scenario: Challenge.Scenario(
+                                title: "Your Manager Asks You to Send Documents to Suppliers",
+                                narrative: "You work in the procurement department. Your manager gives you three tasks:\n\nTask A: The company wants to implement a new warehouse management system and first needs to understand what vendors and solutions are available in the market\nTask B: You need to purchase 10,000 standard screws — specifications are already set, you just need to compare prices\nTask C: You need to find a logistics company for nationwide distribution — vendors must submit a complete service proposal with pricing",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A=RFP, B=RFQ, C=RFI", explanation: "Task A is just about understanding the market — it hasn't reached the stage of asking vendors for proposals yet. RFI is the right choice."),
+                                Challenge.Option(id: "B", text: "A=RFI, B=RFQ, C=RFP", explanation: "Correct! RFI (Request for Information) = Gather information, understand the market and vendor capabilities. RFQ (Request for Quotation) = Specifications are clear, only pricing is needed. RFP (Request for Proposal) = Vendors must submit a complete proposal including pricing. The typical flow is RFI → RFP → RFQ."),
+                                Challenge.Option(id: "C", text: "Just use RFP for all three", explanation: "Buying standard screws doesn't require a \"proposal\" — only a quote (RFQ). Using the wrong document wastes both the supplier's and your own time."),
+                                Challenge.Option(id: "D", text: "A=RFQ, B=RFI, C=RFP", explanation: "RFQ is for quotations, not suitable for \"understanding the market.\" RFI is for gathering information, not suitable for \"just comparing prices.\""),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["RFI = I want to learn about you; RFQ = Tell me your price; RFP = Give me a complete proposal.", "When specifications are already set for a standard product and you only need to compare prices, which document do you use?"],
+                            explanation: "RFI (explore market) → RFP (request proposals) → RFQ (final price comparison). In practice, you don't always go through all three steps. Standard products go directly to RFQ; complex services require an RFP. The 2025 trend is using AI to automate the RFQ process — automatically sending, collecting, and comparing quotes to significantly shorten the procurement cycle.",
+                            frameworkTip: "RFI = Explore market → RFP = Request proposals → RFQ = Final price comparison. Skip unnecessary steps as needed"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Single vs Multi-Sourcing",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Considering cost, risk, and feasibility, which option is most reasonable?",
+                            scenario: Challenge.Scenario(
+                                title: "Lessons from COVID",
+                                narrative: "During the 2020 pandemic, your company relied 100% on a single factory in China for a critical component. The factory shut down for 3 months due to lockdowns, bringing your production lines to a complete halt with losses exceeding $5M.\n\nNow your manager asks you to redesign the supplier strategy. There are three options:\n\nA: Continue Single Source (the current supplier has the best quality and lowest price)\nB: Dual Source (original supplier 70% + new Vietnam supplier 30%)\nC: Multi Source (three or more suppliers spread across different regions)",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Option A — quality and price are most important", explanation: "After suffering a $5M loss, you still won't diversify risk? The cost savings from single sourcing may be far less than the loss from a single disruption."),
+                                Challenge.Option(id: "B", text: "Option B — Dual Source balances cost and risk", explanation: "Correct! Dual Sourcing is the most common diversification strategy. A 70/30 allocation lets the primary supplier maintain economies of scale while developing a backup source. Having the new supplier in a different region reduces geopolitical risk. Since 2025, Dual/Multi Sourcing has become the industry standard, especially for critical components."),
+                                Challenge.Option(id: "C", text: "Option C — the more diversified the safer", explanation: "Theoretically the safest, but has the highest management cost. Three or more suppliers means more quality control, contract management, and relationship maintenance. For critical components, Dual Source is usually sufficient."),
+                                Challenge.Option(id: "D", text: "Don't change suppliers — just stock 6 months of extra inventory instead", explanation: "The carrying cost of 6 months of inventory is extremely high, and components may become obsolete. Inventory cannot replace supplier diversification."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Single Source risk is too high (already proven). Multi Source management cost is too high. What about the middle ground?", "A 70/30 allocation lets the primary supplier maintain economies of scale while the backup supplier can step in at any time."],
+                            explanation: "Single Sourcing has the lowest cost but the highest risk. Multi Sourcing has the lowest risk but the highest management complexity. Dual Sourcing is the mainstream balanced strategy. In 2025-2026, due to intensifying geopolitical tensions (US-China relations, Red Sea crisis) and climate risks, Nearshoring and China+1 strategies have become global trends. Many companies are shifting some capacity from China to Vietnam, India, and Mexico.",
+                            frameworkTip: "Single = low cost, high risk; Multi = low risk, high cost; Dual = best balance. Critical components need at least Dual Source"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Procure-to-Pay Process",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "What is the correct sequence for Procure-to-Pay (P2P)?",
+                            scenario: Challenge.Scenario(
+                                title: "The Correct Procurement Sequence",
+                                narrative: "A new colleague asks you: \"From identifying a need to paying the supplier, what steps are involved?\"\n\nYou list the following steps, but they're scrambled:\n\n① Three-Way Match (PO, Goods Receipt, Invoice)\n② Create Purchase Requisition (PR)\n③ Supplier ships goods, warehouse receives and inspects\n④ After approval, issue Purchase Order (PO)\n⑤ Pay the supplier\n⑥ Select supplier and negotiate pricing",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "② → ⑥ → ④ → ③ → ① → ⑤", explanation: "Correct! Requisition → Supplier selection & negotiation → Issue PO → Receive & inspect goods → Three-Way Match → Payment. Three-Way Match confirms that the PO content, received quantity, and invoice amount all match — it is a critical internal control step in procurement."),
+                                Challenge.Option(id: "B", text: "⑥ → ② → ④ → ③ → ⑤ → ①", explanation: "You should have a requisition (PR) before selecting a supplier. Matching should happen before payment, not after."),
+                                Challenge.Option(id: "C", text: "② → ④ → ⑥ → ③ → ① → ⑤", explanation: "You should select the supplier (⑥) before issuing the PO (④), not issue the PO first and then select a supplier."),
+                                Challenge.Option(id: "D", text: "② → ⑥ → ④ → ③ → ⑤ → ①", explanation: "Payment (⑤) should come after Three-Way Match (①) — you need to confirm everything matches before paying."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["Procurement always starts with a \"need\" and ends with \"payment.\"", "What needs to be confirmed before payment? The PO, goods receipt, and invoice must be matched."],
+                            explanation: "P2P (Procure-to-Pay) is the end-to-end procurement process. Three-Way Match (PO + Goods Receipt + Invoice) is a critical internal control that prevents overpayment or paying for goods not yet received. In ERP systems (such as SAP), each step has a corresponding transaction code and document. Automating P2P is a key focus area for enterprise digital transformation.",
+                            frameworkTip: "P2P: PR → Sourcing → PO → Receipt → 3-Way Match → Payment"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "56-2",
+                    name: "Supplier Evaluation & Performance",
+                    description: "Learn to evaluate suppliers using Scorecards and understand the QCD framework.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Supplier Scorecard",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Using the weighted scoring method, which supplier has the highest total score?",
+                            scenario: Challenge.Scenario(
+                                title: "Who Is the Best Supplier?",
+                                narrative: "You use a Supplier Scorecard to evaluate three suppliers (each criterion scored out of 100):",
+                                data: [
+                                    ["criteria": "Quality (30%)", "s1": "95", "s2": "80", "s3": "90"],
+                                    ["criteria": "Delivery (25%)", "s1": "85", "s2": "95", "s3": "75"],
+                                    ["criteria": "Price (25%)", "s1": "70", "s2": "90", "s3": "95"],
+                                    ["criteria": "Service (20%)", "s1": "90", "s2": "75", "s3": "80"],
+                                ],
+                                dataCaption: "Scores for Suppliers S1, S2, and S3"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "S1: highest at 85.75", explanation: "Correct! S1: 95×0.3+85×0.25+70×0.25+90×0.2 = 28.5+21.25+17.5+18 = 85.25. S2: 80×0.3+95×0.25+90×0.25+75×0.2 = 24+23.75+22.5+15 = 85.25. S3: 90×0.3+75×0.25+95×0.25+80×0.2 = 27+18.75+23.75+16 = 85.5. Actually S3 is the highest! Be careful with your calculations."),
+                                Challenge.Option(id: "B", text: "S2: highest at 85.25", explanation: "S2 = 24+23.75+22.5+15 = 85.25. But you need to compare this with the weighted scores of the other two suppliers."),
+                                Challenge.Option(id: "C", text: "S3: highest at 85.5", explanation: "Correct! S1=85.25, S2=85.25, S3=85.5. S3 wins by a slim margin, mainly because its weighted scores for Quality (second highest) and Price (highest) give it an edge. However, the three are very close — in practice, you may need to consider additional dimensions."),
+                                Challenge.Option(id: "D", text: "They're all about the same — just pick the lowest price", explanation: "Price only accounts for 25% of the weight. The whole point of a weighted scorecard is to look beyond price alone."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["Weighted score = Σ(score for each criterion × weight). Remember to multiply each score by its weight before summing.", "S3: 90×0.3 + 75×0.25 + 95×0.25 + 80×0.2 = ?"],
+                            explanation: "The Supplier Scorecard is a standard tool for evaluating suppliers using weighted scoring. Common dimensions (QCD+S): Quality, Cost, Delivery, Service. Weights reflect the company's strategic priorities. Advanced approaches add Risk and Sustainability dimensions. The 2025 trend is AI-automated Supplier Scoring that integrates external signals (news, financial reports, ESG ratings) for dynamic score updates.",
+                            frameworkTip: "Supplier Scorecard = weighted scoring. QCD+S are the basic dimensions; weights reflect strategic priorities"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Supplier Performance Tracking",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Facing this trend of continuous deterioration, what is the most appropriate action?",
+                            scenario: Challenge.Scenario(
+                                title: "Quarterly Supplier Review",
+                                narrative: "You're preparing the Q3 supplier performance report and notice a key supplier's performance has been deteriorating:",
+                                data: [
+                                    ["metric": "On-Time Delivery", "q1": "96%", "q2": "92%", "q3": "84%", "target": "95%"],
+                                    ["metric": "Defect Rate", "q1": "0.5%", "q2": "0.8%", "q3": "2.1%", "target": "<1%"],
+                                    ["metric": "Response Time", "q1": "4 hrs", "q2": "6 hrs", "q3": "12 hrs", "target": "<8 hrs"],
+                                ],
+                                dataCaption: "Supplier X performance over the past three quarters (with targets)"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Immediately terminate the contract and switch suppliers", explanation: "Too impulsive. You can't just swap out a key supplier — switching costs are high and a new supplier needs a ramp-up period. You should first identify the root cause."),
+                                Challenge.Option(id: "B", text: "Issue a Corrective Action Request (CAR), require improvement within a deadline, and begin evaluating backup suppliers", explanation: "Correct! CAR is a standard practice in supplier management: (1) Formally notify the supplier of the issue (2) Require root cause analysis and an improvement plan (3) Set a deadline for review (4) Simultaneously begin evaluating backup suppliers. All three metrics deteriorating at once may indicate a systemic issue (capacity, management, financial) that requires deeper investigation."),
+                                Challenge.Option(id: "C", text: "Wait for Q4 to see if things improve on their own", explanation: "With three consecutive quarters of deterioration, self-recovery is highly unlikely. Waiting means Q4 could be even worse."),
+                                Challenge.Option(id: "D", text: "Send someone to the supplier's factory for on-site supervision", explanation: "On-site supervision is an extreme measure, typically considered only after a CAR proves ineffective. Follow the formal process first."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["All three metrics deteriorating simultaneously = systemic issue, not an isolated incident.", "You can't just swap out a key supplier. What is the formal improvement process?"],
+                            explanation: "Supplier performance management process: Monitor → Alert → CAR → Review → Escalate/Exit. A CAR (Corrective Action Request) requires the supplier to provide a Root Cause Analysis and Corrective Action Plan. If there is no improvement after the CAR, then consider a Business Review and ultimately an Exit Strategy. At the same time, activate a Contingency Plan.",
+                            frameworkTip: "Performance management: Monitor → Alert → CAR → Review → Escalate. Always have a Plan B"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "2026 Procurement Trends",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "Which strategy combination best addresses the 2025-2026 procurement environment?",
+                            scenario: Challenge.Scenario(
+                                title: "Decision-Making in a Tariff Storm",
+                                narrative: "In 2025, your company imports electronic components from China, but faces the following situation:\n\n• The US imposes a 25% tariff on Chinese goods\n• The EU CBAM (Carbon Border Adjustment Mechanism) begins levying carbon tariffs\n• The Red Sea crisis extends ocean shipping time from 30 days to 45 days\n• Everstream Analytics' 2026 forecast: geopolitical fragmentation risk level at 97%\n\nYour manager asks you to propose a supply chain restructuring plan.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Move everything to Southeast Asia and completely exit China", explanation: "A complete exit is impractical — China still has irreplaceable industrial cluster advantages in many areas. And moving everything to a single region just shifts the concentration risk."),
+                                Challenge.Option(id: "B", text: "Maintain the status quo and use inventory buffers for all risks", explanation: "Tariffs are an ongoing cost (not a one-time shock), and inventory cannot solve that. Extended shipping times and carbon tariffs are also structural changes."),
+                                Challenge.Option(id: "C", text: "China+1 strategy + Nearshoring + supplier carbon footprint assessment", explanation: "Correct! (1) China+1: Keep Chinese suppliers but develop alternatives in Vietnam/India (2) Nearshoring: Move some capacity closer to consumer markets (e.g., Mexico for North America) to reduce transit time and carbon emissions (3) Carbon footprint assessment: In response to CBAM, choosing low-carbon suppliers can avoid carbon tariffs. This is the mainstream direction for global supply chain restructuring in 2025-2026."),
+                                Challenge.Option(id: "D", text: "Negotiate a 25% price reduction with the Chinese supplier to offset tariffs", explanation: "A 25% price cut is nearly impossible for the supplier, and it doesn't address extended shipping times or carbon tariffs."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["China+1 = Don't leave China entirely, but have at least one alternative source.", "CBAM means suppliers with high carbon emissions will cost you more in tariffs. This affects supplier selection."],
+                            explanation: "Three major global procurement trends for 2025-2026: (1) China+1/Nearshoring — diversify geopolitical risk; Mexico and Vietnam are the hottest destinations (2) Carbon border taxes (EU CBAM) make carbon footprint a critical factor in supplier selection (3) AI-driven Supplier Risk Management — using machine learning to integrate external signals like news, weather, and trade policies for real-time supplier risk assessment. Everstream Analytics rates the 2026 geopolitical fragmentation risk at 97% and extreme weather risk at 93%.",
+                            frameworkTip: "2026 procurement strategy: China+1 to diversify risk + Nearshoring to shorten distances + ESG/carbon assessment for compliance"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "56-3",
+                    name: "Procurement Strategy in Practice",
+                    description: "Integrate procurement knowledge to handle complex supplier decision scenarios.",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Make vs Buy Decision",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "From both financial and strategic perspectives, should you Make or Buy?",
+                            scenario: Challenge.Scenario(
+                                title: "Make It In-House or Outsource?",
+                                narrative: "Your company currently outsources packaging operations to a supplier at an annual cost of $800K. The factory has space to build an in-house packaging line:\n\n• Equipment investment: $1.5M (5-year depreciation)\n• Annual operating cost (labor + materials): $500K\n• Quality can be controlled in-house; defect rate expected to drop from 3% to 0.5%\n• But you need to hire 5 operators with a 3-month training period\n• The current outsourcing vendor occasionally causes delivery delays",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Buy — continue outsourcing, $800K is cheaper than building in-house", explanation: "On the surface, $800K < $500K+$300K(depreciation)=$800K seems equal, but you haven't accounted for the benefits of quality improvement and delivery control."),
+                                Challenge.Option(id: "B", text: "Make — in-house cost is comparable, but quality and delivery control are the key differentiators", explanation: "Correct! Annual cost: $500K+$300K(depreciation)=$800K, same as outsourcing. But building in-house has hidden benefits: defect rate drops from 3% to 0.5% (saving quality costs), no more delays from the outsourcing vendor (improving service levels), and flexibility of owned capacity. Make vs Buy isn't just about direct costs — you must also consider strategic value."),
+                                Challenge.Option(id: "C", text: "Make — because doing it yourself is always better than outsourcing", explanation: "Not necessarily. If packaging isn't a core competency, or the labor market is tight and hard to recruit, outsourcing may be better. You need to analyze the specifics."),
+                                Challenge.Option(id: "D", text: "Hybrid — outsource during peak periods, do it in-house otherwise", explanation: "Theoretically decent, but the complexity of maintaining two systems is high. In this scenario, in-house costs already match outsourcing, so a hybrid approach would actually be more expensive."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["First calculate direct costs: annual in-house cost = $500K + $1.5M/5 = $800K. Same as outsourcing?", "When costs are the same, quality improvement and delivery control become the deciding factors."],
+                            explanation: "Make vs Buy analysis framework: (1) Direct cost comparison (2) Quality and delivery impact (3) Core competency assessment (is this a core business function?) (4) Risk assessment (external dependency vs. investment recovery) (5) Strategic flexibility. When costs are similar, strategic factors (quality, delivery, flexibility) become the key decision drivers.",
+                            frameworkTip: "Make vs Buy: Cost is only one dimension. Quality, delivery, core competency, and risk must all be considered"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Negotiation Strategy: BATNA",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What is your BATNA? What is the most reasonable negotiation target?",
+                            scenario: Challenge.Scenario(
+                                title: "Preparing for Price Negotiation",
+                                narrative: "You need to negotiate next year's contract renewal with a supplier who is quoting a 15% price increase (citing rising raw material costs). Your preparation data:\n\n• Current contract price: $100/unit\n• Supplier's quote: $115/unit\n• Your backup supplier's quote: $108/unit (but quality unverified, 3-month onboarding required)\n• Market raw materials have indeed risen by 8%\n• Your company accounts for 20% of this supplier's revenue",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "BATNA is $108, target is to keep it at $100 with no increase", explanation: "No increase at all is unreasonable — raw materials have indeed risen 8%. This approach could damage the long-term relationship."),
+                                Challenge.Option(id: "B", text: "BATNA is $108, target is between $105-$108", explanation: "Correct! BATNA (Best Alternative to Negotiated Agreement) = your backup option at $108. This means if the price exceeds $108, you should switch suppliers. But considering raw materials have indeed risen 8%, a reasonable price = $100×1.08 = $108. You can leverage the fact that you represent 20% of their revenue to push for a price between $105-$108 (reflecting only the raw material increase, not accepting the full 15% hike)."),
+                                Challenge.Option(id: "C", text: "No BATNA — you can only accept $115", explanation: "You have a backup supplier quote at $108 — that is your BATNA. Having an alternative gives you negotiating leverage."),
+                                Challenge.Option(id: "D", text: "BATNA is $115, just accept it", explanation: "BATNA is your alternative ($108), not the other party's offer. $115 exceeds your BATNA, so you should not simply accept it."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["BATNA = If negotiations break down, what is your best alternative?", "Your leverage: a backup quote at $108 + you account for 20% of their revenue. They won't want to lose you easily."],
+                            explanation: "BATNA (Best Alternative to Negotiated Agreement) is the core concept in negotiation. Knowing your BATNA allows you to set your bottom line. Negotiation techniques: (1) Always come to the table with a BATNA (2) Use data to support your position (raw material price data) (3) Emphasize the long-term partnership (4) Propose win-win solutions (e.g., commit to larger order volumes in exchange for a better price).",
+                            frameworkTip: "BATNA = your trump card. Know your alternatives so you don't get led by the other party"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Procurement Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "How should you handle this?",
+                            scenario: Challenge.Scenario(
+                                title: "Shocking Findings from a Supplier Audit",
+                                narrative: "You are a Procurement Analyst at a multinational consumer goods company. A third-party audit report reveals that your Tier 2 supplier (your direct supplier's raw material supplier) has the following issues:\n\n• Workers work over 70 hours per week (local legal limit is 48 hours)\n• Wastewater is discharged without treatment\n• But this supplier's prices are 30% lower than alternatives\n• Your direct supplier says: \"That's their problem, it's not our concern\"\n\nMeanwhile, EU CSRD regulations require your company to disclose ESG risks across the entire supply chain.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "This is a Tier 2 issue — we only manage Tier 1", explanation: "Post-2025, this is no longer viable. EU CSRD and Germany's LkSG regulations require companies to be responsible for human rights and environmental standards across the entire supply chain, including Tier 2 and beyond."),
+                                Challenge.Option(id: "B", text: "Immediately condemn publicly and terminate all related contracts", explanation: "Too extreme and irresponsible. Suddenly cutting ties could cause the affected workers to lose their jobs and would also disrupt your supply. The situation should be handled constructively."),
+                                Challenge.Option(id: "C", text: "Require Tier 1 to submit an improvement plan for Tier 2, set deadlines, incorporate ESG clauses into contracts, and simultaneously evaluate alternative sources", explanation: "Correct! (1) Require your direct supplier to take management responsibility for Tier 2 (2) Set an improvement plan with deadlines (3) Incorporate ESG clauses into contracts (non-compliance = breach of contract) (4) Simultaneously evaluate alternative sources in case improvement fails. This aligns with 2025 CSRD compliance requirements and is the standard practice for responsible supply chain management."),
+                                Challenge.Option(id: "D", text: "The 30% cost advantage is too significant — maintain the status quo for now", explanation: "Violating CSRD can result in fines, contract cancellations, and brand damage. ESG compliance is no longer optional — it is a legal requirement."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["CSRD requires disclosure of ESG risks across the entire supply chain — not just Tier 1.", "You can't ignore it, but you also can't impulsively cut ties. Constructive improvement + backup plan."],
+                            explanation: "Starting in 2025, supply chain ESG compliance has become a legal requirement. EU CSRD requires disclosure of Scope 3 emissions (supply chain emissions typically account for 70-90% of a company's carbon footprint). Germany's LkSG holds companies legally liable for human rights issues in their supply chain. Four major ESG frameworks — GRI, SASB, ISSB — provide reporting standards. Companies must establish a Supplier Code of Conduct, conduct regular audits, maintain ongoing monitoring, and embed ESG clauses into contracts.",
+                            frameworkTip: "ESG supply chain management: Audit → Improvement plan → Contract clauses → Continuous monitoring → Backup plan"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 57,
+            name: "Logistics & Warehousing",
+            emoji: "🚛",
+            description: "Transportation mode selection, warehouse operations, last-mile delivery, and warehouse automation",
+            quests: [
+                Quest(
+                    id: "57-1",
+                    name: "Transportation Modes & Logistics",
+                    description: "Understand the characteristics, cost structures, and Incoterms of different transportation modes.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Transportation Mode Selection",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Which transportation mode is most suitable for each shipment?",
+                            scenario: Challenge.Scenario(
+                                title: "How to Ship Three Shipments?",
+                                narrative: "You are a logistics coordinator with three shipments to arrange:\n\nShipment A: 500 kg of chips, valued at $2M, customer needs them within 3 days (from Taiwan to the US)\nShipment B: 20 containers of furniture, no rush, just need to arrive within 2 months (from Vietnam to Europe)\nShipment C: 50 tons of steel, domestic transport 800 km to the factory",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A=Air, B=Ocean, C=Rail or Road", explanation: "Correct! A: high-value + urgent → Air freight (fast but expensive, ideal for lightweight, high-value, time-sensitive goods). B: large volume + not urgent → Ocean freight (slow but cheap, ideal for bulk goods). C: domestic medium-distance heavy goods → Rail or Road (rail suits bulk long-distance; road offers flexible door-to-door service)."),
+                                Challenge.Option(id: "B", text: "Use ocean freight for all three — it's cheapest", explanation: "Shipment A is worth $2M and needs to arrive in 3 days — ocean freight takes 2-3 weeks, causing delays. Urgent high-value goods are not suited for ocean freight."),
+                                Challenge.Option(id: "C", text: "A=Ocean, B=Air, C=Air", explanation: "Completely reversed. B is 20 containers of furniture — air freight costs would be astronomical."),
+                                Challenge.Option(id: "D", text: "Use road transport for everything — it's most flexible", explanation: "International shipments (Taiwan to the US, Vietnam to Europe) cannot rely solely on road transport."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["When selecting a transport mode, consider: speed, cost, cargo characteristics (weight/volume/value), and distance.", "Air: fast but expensive, ideal for lightweight high-value urgent goods. Ocean: slow but cheap, ideal for bulk."],
+                            explanation: "Characteristics of the four major transportation modes: Air (fastest and most expensive, ideal for high-value urgent goods), Ocean (cheapest but slowest, ideal for large-volume, low-urgency goods), Rail (medium-distance bulk, cost between ocean and road), Road/Truck (most flexible, door-to-door, preferred for short to medium distances). Intermodal combines the advantages of different modes. Selection criteria: urgency, value-to-weight ratio, volume, distance.",
+                            frameworkTip: "Transport selection matrix: Urgent + high-value → Air; Large volume + not urgent → Ocean; Medium distance → Rail/Road; Flexible → Road"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Incoterms Basics",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Which understanding of these three Incoterms is correct?",
+                            scenario: Challenge.Scenario(
+                                title: "Who Pays for Freight and Bears the Risk?",
+                                narrative: "You're handling an international purchase. The supplier is in Germany, your company is in Taiwan. The supplier quotes three prices:\n\n• EXW (Ex Works): $10,000\n• FOB Hamburg (Free On Board, Port of Hamburg): $11,500\n• CIF Kaohsiung (Cost, Insurance, Freight to Port of Kaohsiung): $14,000\n\nYou need to decide which Incoterm to use.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "EXW is cheapest so it's best — just pick that one", explanation: "EXW has the lowest quoted price, but you're responsible for all transportation, insurance, and customs clearance from the German factory to Kaohsiung. The total cost may exceed CIF. Plus, if you're unfamiliar with local logistics in Germany, arranging it will be very difficult."),
+                                Challenge.Option(id: "B", text: "FOB means the supplier is responsible until the goods are loaded on the ship in Hamburg; after that, risk and freight are borne by the buyer", explanation: "Correct! FOB (Free On Board) = the supplier is responsible for delivering goods on board the vessel and completing export clearance. Once the goods are on the ship, risk and costs transfer to the buyer. CIF = the supplier additionally covers ocean freight and insurance to the destination port. EXW = the buyer is responsible for everything, starting from picking up goods at the factory. In practice, FOB and CIF are the most commonly used Incoterms in international trade."),
+                                Challenge.Option(id: "C", text: "CIF means the supplier is responsible all the way to Kaohsiung port, including customs duties", explanation: "CIF covers freight and insurance to the destination port, but does not include import duties or transportation after the destination port. Import clearance and duties are the buyer's responsibility."),
+                                Challenge.Option(id: "D", text: "The total landed cost should be the same for all three Incoterms", explanation: "In theory, if both parties are equally efficient, costs might be close. But in practice, suppliers are usually more efficient at arranging export-side logistics (FOB/CIF), while buyers are more efficient at arranging the import side."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Incoterms define the point where responsibilities split between buyer and seller: who pays freight, who bears risk, and up to where.", "FOB = risk transfers once goods are on the ship. CIF = supplier additionally covers ocean freight and insurance."],
+                            explanation: "Incoterms (International Commercial Terms) are the universal language of international trade, defining the risk and cost split between buyer and seller. Commonly used: EXW (buyer takes all), FOB (transfers on board), CIF (includes freight and insurance to destination port), DDP (supplier covers everything to door). Selection tip: If you have a good international logistics provider → FOB may save more. If you're unfamiliar with the exporting country's logistics → CIF lets the supplier handle it.",
+                            frameworkTip: "Incoterms risk transfer points: EXW = factory → FOB = on board → CIF = destination port → DDP = buyer's door"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Logistics KPIs",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Three KPIs are below target. Which should be addressed first?",
+                            scenario: Challenge.Scenario(
+                                title: "Logistics Department Performance Report",
+                                narrative: "You're preparing the monthly logistics KPI report:",
+                                data: [
+                                    ["kpi": "On-Time Delivery (OTD)", "value": "89%", "target": "95%", "status": "❌"],
+                                    ["kpi": "Order Accuracy", "value": "97%", "target": "99%", "status": "❌"],
+                                    ["kpi": "Freight Cost per Unit", "value": "$3.20", "target": "<$3.00", "status": "❌"],
+                                    ["kpi": "Damage Rate", "value": "0.3%", "target": "<0.5%", "status": "✅"],
+                                ],
+                                dataCaption: "This month's logistics KPIs"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Improve freight cost first ($3.20 vs $3.00) since it directly impacts costs", explanation: "Freight being 7% over target is important but not the most urgent. OTD at 89% means over 10% of orders are delivered late, directly impacting customer satisfaction and order retention."),
+                                Challenge.Option(id: "B", text: "Improve OTD first (89% vs 95%) since customer impact is most direct", explanation: "Correct! OTD has the largest gap (6 percentage points), and on-time delivery directly affects customer satisfaction, renewal rates, and brand reputation. The primary mission of logistics is \"delivering the right goods on time.\" Improving OTD (optimizing routes, improving scheduling) may also help reduce freight costs in the process."),
+                                Challenge.Option(id: "C", text: "Improve Order Accuracy first (97% vs 99%) — a 2% error rate is too high", explanation: "97% seems decent but there is room for improvement. However, OTD's gap is larger (6pp vs 2pp), and late deliveries typically generate more complaints than wrong items."),
+                                Challenge.Option(id: "D", text: "Address all three at once for comprehensive improvement", explanation: "With limited resources, you cannot improve all metrics simultaneously. Focus on the one with the greatest customer impact first."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["OTIF (On-Time In-Full) is considered the most important logistics KPI.", "Which metric has the largest gap? Which has the most direct customer impact?"],
+                            explanation: "Core logistics KPIs: OTD/OTIF (On-Time In-Full delivery rate), Order Accuracy, Freight Cost per Unit, Damage Rate, Warehouse Utilization. OTIF is generally considered the most important logistics KPI because it directly reflects customer experience. In 2025, major retailers (like Walmart) require OTIF rates from suppliers as high as 98%, with fines for non-compliance.",
+                            frameworkTip: "OTIF is the king of logistics. \"Delivering the right goods, in full, on time\" = the core mission of logistics"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "57-2",
+                    name: "Warehouse Operations & Automation",
+                    description: "Learn warehouse operation processes, picking strategies, and 2026 warehouse automation trends.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Warehouse Operation Process",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Why is picking the most labor-intensive part of warehouse operations?",
+                            scenario: Challenge.Scenario(
+                                title: "A Day in an E-Commerce Warehouse",
+                                narrative: "You visit an e-commerce warehouse and observe the following operational areas:\n\n• Receiving area: Trucks arrive, goods are unloaded, counted, and inspected\n• Put-away area: Products are placed in designated storage locations\n• Picking area: Items are retrieved from storage locations based on orders\n• Packing area: Picked items are boxed and labeled\n• Shipping area: Sorted by delivery route, loaded onto trucks for dispatch\n\nThe manager says: \"Picking accounts for 55% of the warehouse's labor costs.\"",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Because pickers spend a lot of time walking to find products", explanation: "Correct! Pickers spend approximately 60% of their time \"walking\" rather than \"picking.\" The larger the warehouse and the more SKUs, the farther they walk. This is why picking strategies and warehouse layout are so important — the goal is to reduce walking distance. Common optimizations: Zone Picking (divide into zones), Batch Picking (pick multiple orders simultaneously), Wave Picking (process in timed waves), Goods-to-Person (bring products to the picker)."),
+                                Challenge.Option(id: "B", text: "Because picking requires the most specialized skills", explanation: "Picking doesn't require much specialized skill, but it does demand accuracy and speed. Labor costs are high because \"walking distance\" takes up most of the time."),
+                                Challenge.Option(id: "C", text: "Because picking robots haven't been invented yet", explanation: "Picking robots (such as AMRs) are already widely used. But many warehouses still rely on manual labor, and the cost is indeed the highest."),
+                                Challenge.Option(id: "D", text: "Because receiving and shipping are already automated", explanation: "Not necessarily. Many warehouses also perform receiving and shipping manually. Picking accounts for the largest share because every order requires picking, and walking distances are long."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["Imagine a warehouse the size of a football field where each order requires picking 5-10 items from different shelves.", "\"Walking\" accounts for 60% of picking time. How can you reduce walking distance?"],
+                            explanation: "The five major warehouse operation processes: Receiving → Put-away → Picking → Packing → Shipping. Picking has the highest labor cost (approximately 55%), primarily due to walking distance. Optimization strategies: Zone Picking (divide into zones to reduce range), Batch Picking (combine multiple orders to eliminate redundant routes), Wave Picking (process in timed batches). The 2026 trend is Goods-to-Person (using AMR robots to bring shelves to the picker), completely eliminating walking time.",
+                            frameworkTip: "Warehouse process: Receive → Put-away → Pick → Pack → Ship. Pick is the biggest cost optimization opportunity"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Warehouse Automation Trends 2026",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Given your situation, which is the best starting option?",
+                            scenario: Challenge.Scenario(
+                                title: "Automation Investment Decision",
+                                narrative: "Your warehouse faces challenges:\n• E-commerce orders growing 25% annually\n• Labor shortage — can't recruit enough pickers\n• Peak season (Singles' Day, Black Friday) labor gap reaches 40%\n• MHI/Deloitte 2025 report indicates 55% of supply chain leaders are increasing automation investments\n\nYou're evaluating three automation options:\nA: AMR Autonomous Mobile Robots (Goods-to-Person) — $500K investment, 12-month ROI\nB: Fully automated AS/RS automated storage and retrieval system — $5M investment, 3-year ROI\nC: Voice Picking system — $100K investment, 6-month ROI",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Option B — go all-in on full automation", explanation: "A $5M investment with a 3-year ROI is too risky for most companies. Full automation also requires major warehouse structural modifications with a long implementation period."),
+                                Challenge.Option(id: "B", text: "Option A — AMR is the most mainstream warehouse automation direction for 2026", explanation: "Correct! AMR (Autonomous Mobile Robots) is currently the fastest-growing warehouse automation technology. Advantages: (1) No warehouse structural modifications needed (2) Flexibly scalable (add robots for peak season, reduce for off-season) (3) 12-month ROI is reasonable (4) Directly addresses the biggest pain point of \"walking distance.\" The global warehouse automation market is projected to reach $90.7 billion by 2034 (CAGR of 15.1%)."),
+                                Challenge.Option(id: "C", text: "Option C — smallest investment, safest choice", explanation: "Voice Picking is indeed a low-cost entry option, but it only improves picking efficiency by 10-15% and cannot solve the labor shortage problem. A 40% peak-season labor gap needs a more fundamental solution."),
+                                Challenge.Option(id: "D", text: "Don't invest yet — use temporary workers for peak season", explanation: "Labor shortage is a structural problem. Temporary workers are increasingly hard to find and training costs are high. The MHI report shows 55% of leaders are already investing in automation — inaction will leave you behind."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["AMR is flexibly scalable — turn on more units during peak season, turn them off during slow periods — this solves the seasonal fluctuation problem.", "When evaluating investments, consider: ROI timeframe, implementation complexity, and whether it solves the core problem."],
+                            explanation: "2026 warehouse automation trends: (1) AMR is the fastest-growing technology, expected to dominate new warehouse investments (2) Goods-to-Person model replacing traditional Person-to-Goods (3) Collaborative robots (Cobots) working alongside humans (4) AI visual recognition improving sorting accuracy. The MHI/Deloitte report indicates the warehouse automation market will reach $90.7 billion by 2034. Key drivers: labor shortage + e-commerce growth + consumer expectations for next-day delivery.",
+                            frameworkTip: "Automation investment: Start with quick-ROI options (AMR/Voice) → Validate results → Then scale up investment"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Last-Mile Delivery",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Which strategy combination best improves last-mile efficiency?",
+                            scenario: Challenge.Scenario(
+                                title: "The Last-Mile Cost Challenge",
+                                narrative: "You are an e-commerce logistics manager. Data shows:\n\n• Last-mile delivery (from distribution center to the consumer's doorstep) accounts for 53% of total logistics costs\n• Customers increasingly expect \"same-day\" or even \"within hours\" delivery\n• Delivery failure rate (recipient not home) is as high as 12%\n• Return rate is 15%, and reverse logistics costs are 2-3 times that of forward logistics\n\nYou're evaluating improvement options.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Switch entirely to an owned fleet for quality control", explanation: "An owned fleet has high fixed costs, and delivery demand fluctuates. Most companies use a flexible combination of 3PL + crowdsourced delivery."),
+                                Challenge.Option(id: "B", text: "Set up Micro-Fulfillment Centers + smart route planning + pickup points/smart lockers", explanation: "Correct! (1) Micro-FCs (Micro-Fulfillment Centers) located close to consumers shorten delivery distances (2) AI route planning optimizes delivery sequences and reduces empty runs (3) Pickup points/smart lockers solve the \"not home\" problem (delivery failure rate drops from 12% to near 0%). Dark Stores are a similar concept — small warehouses not open to the public, dedicated to processing online orders."),
+                                Challenge.Option(id: "C", text: "Raise shipping fees and have customers pick up at stores instead", explanation: "This would degrade customer experience and conversion rates. Delivery convenience is core to e-commerce competitiveness."),
+                                Challenge.Option(id: "D", text: "Only accept large orders — don't deliver small orders", explanation: "This would lose a large number of customers. The strategy should be to reduce the delivery cost of small orders, not to refuse service."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["The biggest last-mile costs come from \"distance\" and \"failed deliveries.\" How do you shorten the distance? How do you avoid wasted trips?", "Micro-Fulfillment = placing small warehouses closer to consumers."],
+                            explanation: "Last-mile delivery accounts for 53% of logistics costs (Capgemini research) and is the biggest cost challenge in logistics. 2025-2026 trends: (1) Micro-Fulfillment Centers / Dark Stores close to demand (2) AI route optimization (e.g., Google OR-Tools) (3) Pickup point/Locker networks (4) Drone/autonomous vehicle pilots (5) Crowdsourced Delivery (flexible delivery capacity). Amazon and Walmart are both actively deploying urban micro-warehouses.",
+                            frameworkTip: "Three last-mile strategies: Get closer to customers (Micro-FC) + Smart routing + Alternative delivery (pickup/Locker)"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "57-3",
+                    name: "Logistics in Practice & OTIF",
+                    description: "Integrate logistics knowledge to handle cross-border logistics scenarios.",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "OTIF Calculation",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What is the OTIF? Will there be a penalty?",
+                            scenario: Challenge.Scenario(
+                                title: "Walmart's OTIF Requirements",
+                                narrative: "Your company is a Walmart supplier. Walmart's OTIF standards:\n• On-Time: Arrive within the designated delivery window (±1 day)\n• In-Full: 100% of ordered quantity delivered\n• OTIF target: 98%\n• Non-compliance penalty: 3% of COGS\n\nYour results for last month's 100 orders:\n• 92 orders delivered on time and in full\n• 4 orders on time but with quantity shortages\n• 3 orders complete but arrived 2 days late\n• 1 order both late and short",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "OTIF = 92%, penalty will apply", explanation: "Correct! OTIF = orders that are simultaneously on-time AND in-full / total orders = 92/100 = 92%. Below the 98% target, so a penalty applies. Note: even if an order is on time but quantity is short (4 orders) or quantity is complete but late (3 orders), they do not count as OTIF compliant. OTIF is the strictest logistics KPI — both conditions must be met simultaneously."),
+                                Challenge.Option(id: "B", text: "OTIF = 96% (93 were on time, 93 were in full — take the higher one)", explanation: "OTIF is not calculated separately and then taking the higher figure. Both conditions must be met \"simultaneously.\" Both criteria must be satisfied at the same time."),
+                                Challenge.Option(id: "C", text: "OTIF = 99% (only 1 order completely failed)", explanation: "Incorrect. 4 short + 3 late + 1 both = 8 non-compliant orders. Only 92 orders met both conditions simultaneously."),
+                                Challenge.Option(id: "D", text: "OTIF = 95% (92 + 3 that were on time)", explanation: "The 3 orders that were complete but late cannot count as OTIF compliant. \"On-Time\" and \"In-Full\" are both required conditions."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["OTIF = On-Time AND In-Full. Both conditions must be met simultaneously.", "Only 92 orders were both on time and complete. 92/100 = ?"],
+                            explanation: "OTIF is the most important supplier performance metric in retail. Large retailers like Walmart and Target have strict OTIF requirements (typically 95-98%), with direct fines for non-compliance. OTIF is strict because retailers have limited shelf space — if your goods arrive late or short, shelves go empty, and the retailer loses sales. Methods to improve OTIF: accurate forecasting → adequate safety stock → reliable logistics → real-time tracking.",
+                            frameworkTip: "OTIF = simultaneously on-time + in-full. The strictest logistics KPI and a hard metric for major retailers"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Reverse Logistics",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What is the most effective way to reduce the return rate?",
+                            scenario: Challenge.Scenario(
+                                title: "The Return Wave Is Here",
+                                narrative: "The return rate on your e-commerce platform has risen from 10% to 18%. Analysis reveals:\n\n• 40% of returns: wrong size\n• 25% of returns: product doesn't match photos\n• 20% of returns: product damaged\n• 15% of returns: changed mind\n\nEach return costs 2.5 times more to process than forward logistics.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Raise return barriers (charge return shipping, shorten return window)", explanation: "This reduces customer purchase intent and satisfaction. Research shows that lenient return policies actually increase purchase conversion rates."),
+                                Challenge.Option(id: "B", text: "Improve product information (size guides, 360° real photos, AR try-on) — 65% of returns can be prevented this way", explanation: "Correct! Wrong size (40%) + doesn't match photos (25%) = 65% of return reasons are related to \"insufficient information before purchase.\" Improving product page information, adding AI size recommendations, and AR virtual try-on can reduce returns at the source. This is far cheaper than handling returns through reverse logistics. In 2025, ASOS reduced size-related returns by 30% using AI size recommendations."),
+                                Challenge.Option(id: "C", text: "Strengthen packaging to reduce damage", explanation: "Damage only accounts for 20%, with limited room for improvement. 65% of returns are caused by insufficient information — addressing the root cause has a much bigger impact."),
+                                Challenge.Option(id: "D", text: "Don't accept returns", explanation: "Impractical. Returns are a necessary cost of e-commerce. The key is reducing the return rate, not refusing returns."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Look at the return reason percentages: 40% + 25% = 65% are related to \"not knowing the actual product before buying.\"", "Reducing returns at the source vs. optimizing return processing — which is more fundamental?"],
+                            explanation: "Reverse Logistics is a major cost challenge for e-commerce. Processing a return costs 2-3 times more than forward logistics (transportation + inspection + restocking/refurbishment/disposal + customer service). The best strategy is \"prevention over treatment\": improving product information to reduce returns from occurring. For returns that do happen, effective sorting is key: can be resold vs. needs refurbishment vs. scrap. In 2025, AI is transforming return management: smart size recommendations, return prediction, and automated sorting.",
+                            frameworkTip: "Reverse logistics: Prevention > Treatment. Address return causes at the source — 65%+ can be prevented upstream"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Logistics Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "What is the most reasonable layout strategy?",
+                            scenario: Challenge.Scenario(
+                                title: "Logistics Network for a Cross-Border E-Commerce Company",
+                                narrative: "Your e-commerce company currently has one central warehouse in the US (Kansas City), serving all US customers. You now face:\n\n• West Coast customers wait an average of 5 days to receive goods (competitors deliver in 2 days)\n• East Coast customers wait 3 days (acceptable)\n• Transportation costs remain high due to long distances\n• Next year, you plan to expand into the Canadian market\n• Budget is limited — you can't build too many warehouses at once\n\nYou need to propose a logistics network optimization plan.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Add a West Coast warehouse in LA; use cross-border direct shipping for Canada", explanation: "A West Coast warehouse can improve delivery times, but LA has the highest real estate and labor costs in the US. And it only solves one problem."),
+                                Challenge.Option(id: "B", text: "Set up a second warehouse in Reno/Phoenix (low-cost western region) + a Canadian warehouse near Toronto or use 3PL", explanation: "Correct! (1) The western warehouse doesn't have to be in LA — Reno (Nevada, tax-free) or Phoenix have lower costs while still covering the West Coast (2) Two-warehouse strategy: Kansas City covers the Midwest + East Coast, western warehouse covers the West Coast, reducing average delivery to 2 days (3) For Canada, start with 3PL to test the market before deciding whether to build your own. This is standard practice for Network Optimization."),
+                                Challenge.Option(id: "C", text: "Switch to air freight nationwide to guarantee 2-day delivery", explanation: "Air freight costs 5-10 times more than ground shipping. E-commerce margins cannot support nationwide air freight."),
+                                Challenge.Option(id: "D", text: "Keep one warehouse and just promise 5-day delivery", explanation: "Competitors already deliver in 2 days — 5 days will continue to lose customers. Delivery speed is a core competitive advantage in e-commerce."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Adding a warehouse doesn't mean choosing a major city. Low-cost areas with good transportation networks may be better.", "For a new market (Canada), you can start with 3PL to test demand — no need to build your own warehouse right away."],
+                            explanation: "Network Optimization is at the heart of logistics strategy. Decision factors: (1) Customer distribution and delivery time requirements (2) Warehouse location costs (real estate, labor, taxes) (3) Transportation costs and coverage area (4) Service level requirements. Tools: Center of Gravity Model to find optimal locations. New market strategy: Start with 3PL → Validate demand → Then build your own. Amazon's success is built on 200+ FCs across the US to achieve next-day delivery coverage.",
+                            frameworkTip: "Logistics network: Use Center of Gravity to find locations + low-cost regions + test new markets with 3PL first"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 58,
+            name: "ERP & System Processes",
+            emoji: "⚙️",
+            description: "Understand how enterprise systems like ERP, WMS, TMS, and MRP support supply chain operations",
+            quests: [
+                Quest(
+                    id: "58-1",
+                    name: "ERP Fundamentals & Modules",
+                    description: "Learn the core concepts and major modules of ERP systems.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "What Is ERP?",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "What is the most core value of implementing ERP?",
+                            scenario: Challenge.Scenario(
+                                title: "Why Do Companies Use ERP?",
+                                narrative: "You join a mid-sized manufacturing company and discover that each department uses a different system:\n\n• Finance tracks accounts in Excel\n• The warehouse records inventory on paper\n• Sales uses its own CRM to manage customers\n• Procurement communicates with suppliers via email\n\nProblem: At month-end close, finance spends 3 days collecting numbers from every department. Inventory figures frequently don't match. Delivery dates promised by sales don't align with actual timelines.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Giving every department a nice-looking system interface", explanation: "UI is just surface-level. The core value of ERP is not about having a pretty interface."),
+                                Challenge.Option(id: "B", text: "Establishing a Single Source of Truth — all departments use the same dataset", explanation: "Correct! The core of ERP (Enterprise Resource Planning) is \"one database, multiple modules.\" Finance, warehouse, sales, and procurement all operate on the same system with real-time data synchronization. Once an order is created, inventory is automatically deducted, finance is automatically recorded, and procurement requirements are automatically triggered. No more \"version inconsistency\" problems."),
+                                Challenge.Option(id: "C", text: "Automating all work so that people are no longer needed", explanation: "ERP doesn't replace people — it makes their work more efficient. It automates data flow and process rules, but decisions still require human judgment."),
+                                Challenge.Option(id: "D", text: "It's only needed for regulatory compliance", explanation: "Compliance is one benefit, but not the core value. Data consistency and process efficiency are."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Data inconsistency across departments is the biggest pain point. How do you solve it?", "ERP = Enterprise Resource Planning. \"Planning\" is built on \"unified data.\""],
+                            explanation: "ERP is the core enterprise system that integrates all business processes onto a single platform. Leading ERPs: SAP S/4HANA (preferred by large enterprises), Oracle ERP Cloud, Microsoft Dynamics 365, NetSuite (small and mid-sized enterprises). Core modules: Financial (FI), Controlling (CO), Materials Management (MM), Sales & Distribution (SD), Production Planning (PP), Warehouse Management (WM). The ERP market is projected to exceed $500B+ by 2025.",
+                            frameworkTip: "ERP core value = Single Source of Truth. One database + multiple modules = data consistency"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Master Data",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Why is Master Data quality so important?",
+                            scenario: Challenge.Scenario(
+                                title: "The Big Project Before Go-Live",
+                                narrative: "During an ERP implementation project, the consultant says: \"Master Data quality determines whether the system succeeds or fails.\"\n\nYou need to organize the following data:\n• Material Master: basic information for all materials (part number, description, unit, storage location…)\n• Customer Master: customer information (name, address, payment terms…)\n• Vendor Master: supplier information (name, procurement terms, lead time…)\n• Bill of Materials (BOM): product component lists\n• Routing: production steps and work hours\n\nBut the data provided by each department is in different formats, with many duplicates and errors.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Just to make the system screens look nice", explanation: "Master Data affects the correctness of all business processes, not just the display."),
+                                Challenge.Option(id: "B", text: "Because all transactions reference Master Data — if material information is wrong, orders, inventory, and financials will all be wrong", explanation: "Correct! Master Data is the foundation of all transactional data. If the Material Master has the wrong unit (setting \"carton\" as \"piece\"), all purchase quantities, inventory, and costs will be wrong. If the BOM is wrong, MRP will calculate incorrect raw material requirements. Industry statistics show that 60% of ERP implementation issues stem from poor Master Data quality."),
+                                Challenge.Option(id: "C", text: "Because the boss said to organize it, so we organize it", explanation: "Master Data cleanup has clear business justifications — it's not just busywork."),
+                                Challenge.Option(id: "D", text: "It only needs to be organized before go-live and can be ignored afterward", explanation: "Master Data requires ongoing maintenance. New product launches, supplier changes, and customer information updates all require timely updates. Data Governance is a long-term effort."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Every transaction in ERP references Master Data. Transactions = orders, goods receipts, invoices, payments…", "Garbage In, Garbage Out. If foundational data is wrong, all reports and decisions will be wrong."],
+                            explanation: "Master Data is the foundation of ERP. Types: Material Master (materials), Customer Master (customers), Vendor Master (suppliers), BOM (Bill of Materials), Routing (manufacturing process routes). Quality requirements: completeness, consistency, accuracy, timeliness. Data Governance is the ongoing effort to ensure Master Data quality, including Data Owners, Data Standards, and Change Processes.",
+                            frameworkTip: "Master Data = the foundation of ERP. GIGO (Garbage In, Garbage Out) — foundational data quality determines everything"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "MRP Material Requirements Planning",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What purchase recommendations will MRP generate?",
+                            scenario: Challenge.Scenario(
+                                title: "MRP Run Results",
+                                narrative: "Your company manufactures Product A with the following BOM:\n\nProduct A = 2 × Part B + 1 × Part C\n\nKnown information:\n• Product A demand: 100 units (delivery in 2 weeks)\n• Part B on-hand inventory: 50 units, Lead Time 1 week\n• Part C on-hand inventory: 30 units, Lead Time 2 weeks\n• Assembly of A takes 1 day",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Buy 200 B and 100 C (without deducting inventory)", explanation: "That is the gross requirement. MRP deducts on-hand inventory (Net Requirements = Gross - On Hand)."),
+                                Challenge.Option(id: "B", text: "Buy 150 B (order now) and 70 C (order now)", explanation: "Correct! B gross requirement = 100×2 = 200, minus inventory 50 = net requirement 150. C gross requirement = 100×1 = 100, minus inventory 30 = net requirement 70. Timing: A must be delivered in week 2, assembly takes 1 day, so parts must arrive by early week 2. B has LT=1 week, so order in week 1. C has LT=2 weeks, so order now! C is more urgent."),
+                                Challenge.Option(id: "C", text: "Buy 150 B; no need to buy C (30 in stock is enough)", explanation: "The requirement for C is 100 units, and inventory is only 30 — you still need 70 more."),
+                                Challenge.Option(id: "D", text: "Wait until week 2 to place all orders at once", explanation: "C has a Lead Time of 2 weeks! If you order in week 2, it won't arrive until week 4 — a 2-week delay. MRP's value is precisely in back-scheduling order dates based on Lead Times."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["MRP logic: (1) Calculate gross requirements (BOM explosion) (2) Deduct inventory (net requirements) (3) Back-schedule order dates based on Lead Time.", "Product A needs 2 B and 1 C. 100 units of A = how many B and C are needed?"],
+                            explanation: "MRP (Material Requirements Planning) is the core planning engine for manufacturing. Logic: (1) Master Production Schedule determines what to produce (2) BOM Explosion breaks down material requirements (3) Deduct on-hand inventory and in-transit quantities (4) Back-schedule order dates based on Lead Time. MRP inputs: MPS + BOM + Inventory Status + Lead Times. Outputs: Planned Purchase Orders and Planned Production Orders. MRP in ERP automatically performs this calculation.",
+                            frameworkTip: "MRP: What is needed (BOM) × How much (MPS) - What is available (inventory) = What to buy (planned orders)"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "58-2",
+                    name: "Supply Chain System Ecosystem",
+                    description: "Learn about WMS, TMS, and the system processes for Order-to-Cash and Procure-to-Pay.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "WMS vs TMS",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "What are these two systems?",
+                            scenario: Challenge.Scenario(
+                                title: "System Requirements for Warehouse and Transportation",
+                                narrative: "The logistics manager says: \"We need two systems — one to manage operations inside the warehouse, and one to manage delivery after goods leave the warehouse.\"\n\nWarehouse requirements: manage storage locations, assign picking tasks, track inventory locations, manage receiving and shipping\nTransportation requirements: plan delivery routes, select carriers, track in-transit shipments, calculate freight costs",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "WMS for the warehouse, TMS for transportation", explanation: "Correct! WMS (Warehouse Management System) manages internal warehouse operations: storage location management, pick path optimization, inventory tracking, and receiving/shipping management. TMS (Transportation Management System) manages transportation: route planning, carrier selection, freight management, and in-transit tracking. Both typically integrate with ERP to form a complete supply chain system ecosystem."),
+                                Challenge.Option(id: "B", text: "Just use ERP for both", explanation: "ERP has basic warehouse and transportation functions, but they are usually not deep enough. Specialized WMS and TMS provide more powerful optimization capabilities. Many enterprises use a combination of ERP + specialized WMS/TMS."),
+                                Challenge.Option(id: "C", text: "TMS for the warehouse, WMS for transportation", explanation: "That's reversed. WMS = Warehouse Management System (warehouse), TMS = Transportation Management System (transportation)."),
+                                Challenge.Option(id: "D", text: "CRM for the warehouse, SCM for transportation", explanation: "CRM manages customer relationships, not warehouses. SCM is a broad concept, not a specific system."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["WMS: the W stands for Warehouse. TMS: the T stands for Transportation.", "Operations inside the warehouse → WMS. Transportation after leaving the warehouse → TMS."],
+                            explanation: "Supply chain system ecosystem: ERP (core backbone) + WMS (warehouse optimization) + TMS (transportation optimization) + MES (manufacturing execution) + SCP (supply chain planning). Leading WMS solutions: Manhattan Associates, Blue Yonder, SAP EWM. Leading TMS solutions: Oracle TMS, SAP TM, project44. The 2025 trend is cloud-native systems and AI-powered optimization.",
+                            frameworkTip: "System ecosystem: ERP (core) + WMS (warehouse) + TMS (transportation) + MES (production) + SCP (planning)"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Order-to-Cash Process",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "If step ② finds that the customer's credit limit is exceeded, how should the system handle it?",
+                            scenario: Challenge.Scenario(
+                                title: "How Does an Order Flow Through the System?",
+                                narrative: "A customer places an order on your B2B platform. You trace the order's journey through the ERP system:\n\n① Sales Order created → ② System checks inventory and credit limit → ③ Warehouse receives picking instructions → ④ Shipment and Delivery Note generated → ⑤ Invoice issued → ⑥ Customer pays → ⑦ Payment confirmed and order closed\n\nThis is the Order-to-Cash (O2C) process.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Automatically cancel the order", explanation: "Too aggressive. The customer may be temporarily over the limit — canceling outright would lose business and damage the customer relationship."),
+                                Challenge.Option(id: "B", text: "The system creates a Credit Block, pauses the order, and notifies the credit management team for approval", explanation: "Correct! ERP's Credit Management function automatically freezes the order (Credit Block) when the credit limit is exceeded, while notifying credit management personnel for review. The order is only released after approval (e.g., confirming the customer is about to make payment). This is an important internal control mechanism — it protects the company from bad debt risk without automatically rejecting the customer."),
+                                Challenge.Option(id: "C", text: "Ignore the credit check and proceed with shipment", explanation: "No credit controls would lead to bad debt risk. Uncontrolled accounts receivable is a major threat to a company's cash flow."),
+                                Challenge.Option(id: "D", text: "Require the customer to pay in full before processing", explanation: "This might be one of the final decisions, but it should not be automatically executed by the system. It requires human judgment."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["ERP internal controls typically follow a \"freeze + notify\" approach, not outright rejection.", "Credit Block lets humans make the final decision — the system just acts as a gatekeeper."],
+                            explanation: "O2C (Order-to-Cash) is the end-to-end process on the sales side. Key control points: Credit Check, ATP Check (Available-to-Promise), Pricing rules, and Billing. In SAP, the corresponding transactions are: VA01 (create order) → VL01N (delivery) → VF01 (billing) → F-28 (payment receipt). O2C efficiency directly impacts DSO (Days Sales Outstanding) and the cash conversion cycle.",
+                            frameworkTip: "O2C: Order → Credit Check → Pick/Pack/Ship → Invoice → Payment. Each step is a system control point"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "System Integration Challenges",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "What is the most fundamental problem?",
+                            scenario: Challenge.Scenario(
+                                title: "Month 18 of the ERP Implementation",
+                                narrative: "Your company has had SAP for 18 months, but problems keep surfacing:\n\n• Warehouse staff complain the system is too complex and secretly go back to Excel\n• Inventory figures deviate from actual counts by over 15%\n• Monthly financial close has gone from 3 days to 7 days\n• Procurement still uses the old system to place orders\n• Management cannot see real-time Dashboards\n\nYour manager asks: \"We spent $2M implementing SAP — why is everything still a mess?\"",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "SAP is not user-friendly; we should switch to a different ERP", explanation: "Switching systems won't solve the problem — if the root cause is people and process issues, any system will have the same problems. Industry statistics show that 70% of ERP implementation failures are due to insufficient Change Management."),
+                                Challenge.Option(id: "B", text: "The system design is flawed and needs extensive customization", explanation: "Over-customization is actually a common ERP implementation mistake. Processes should be adapted to system best practices, rather than modifying the system to match old processes."),
+                                Challenge.Option(id: "C", text: "Insufficient Change Management — users were not adequately trained or convinced, and processes were not truly transformed", explanation: "Correct! All symptoms point to Change Management issues: (1) Warehouse reverting to Excel = insufficient training or the system doesn't align with actual workflows (2) Inventory discrepancies = some people aren't operating in the system (3) Slower month-end close = unfamiliarity with new processes (4) Still using old systems = resistance to change. Solutions: strengthen training, appoint Key Users (power users in each department), enforce system usage (shut down old systems), and have leadership lead by example."),
+                                Challenge.Option(id: "D", text: "More IT staff are needed to maintain the system", explanation: "IT maintenance is not the bottleneck. The problem is that users are unwilling or don't know how to use the system."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["Technology is usually not the primary reason ERP implementations fail. Think about it: the system is there — why aren't people using it?", "70% of ERP implementation problems come from People and Process, not Technology."],
+                            explanation: "The \"Three Ps\" of ERP implementation: People, Process, Platform. The most common point of failure is People (Change Management). Best practices: (1) Thorough user training (not just teaching operations, but also explaining the \"why\") (2) Key User program (power users in each department) (3) Management support and leading by example (4) Rapid response to user issues (5) Regular Health Checks and continuous improvement. SAP's famous saying: \"SAP is not an IT project, it's a business transformation.\"",
+                            frameworkTip: "Three keys to ERP success: People (training + change management) > Process (process design) > Platform (system technology)"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 59,
+            name: "Supply Chain Data Analytics",
+            emoji: "📊",
+            description: "Data-driven supply chain decision-making: KPI Dashboards, analytical methods, and AI applications",
+            quests: [
+                Quest(
+                    id: "59-1",
+                    name: "Supply Chain KPIs & Dashboards",
+                    description: "Learn to design supply chain Dashboards, pick the right KPIs, and tell the right story.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "SCOR Model Metrics",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Which set of KPIs best represents the five SCOR processes?",
+                            scenario: Challenge.Scenario(
+                                title: "The Boss Wants a One-Page Report",
+                                narrative: "The CEO says: \"Give me one page that shows the health of the entire supply chain.\" You decide to organize KPIs around SCOR's five core processes:\n\nPlan → Source → Make → Deliver → Return\n\nYou need to select the most representative KPI for each process.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Plan=Forecast Accuracy, Source=Supplier OTD, Make=Yield Rate, Deliver=OTIF, Return=Return Rate", explanation: "Correct! Forecast Accuracy measures planning accuracy. Supplier OTD measures supplier on-time delivery. Yield Rate measures production quality. OTIF measures delivery performance. Return Rate measures returns. These five KPIs cover the complete supply chain cycle from planning to returns. SCOR (Supply Chain Operations Reference) is the most widely used supply chain performance framework globally."),
+                                Challenge.Option(id: "B", text: "Just use Revenue for all five — revenue is what matters most", explanation: "Revenue is an outcome metric, not a process metric. You need to see the efficiency of each link to identify problems."),
+                                Challenge.Option(id: "C", text: "Plan=Inventory Quantity, Source=Procurement Spend, Make=Output Volume, Deliver=Shipment Volume, Return=Refund Amount", explanation: "These are \"volumes,\" not \"efficiencies.\" KPIs should measure ratios and efficiency, not absolute numbers. High output doesn't mean good production (yield rate might be very low)."),
+                                Challenge.Option(id: "D", text: "Plan and Source don't need KPIs — just looking at Deliver is enough", explanation: "Only looking at delivery is looking at the result without the cause. If Deliver has problems, the root cause might be in Plan (inaccurate forecasts) or Source (supplier delays)."),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["SCOR's five processes: Plan-Source-Make-Deliver-Return. Each process needs its own KPI.", "KPIs should measure efficiency and quality (ratios), not just absolute quantities."],
+                            explanation: "SCOR (Supply Chain Operations Reference) is the supply chain performance standard framework developed by ASCM. Common KPIs by process: Plan (Forecast Accuracy, Inventory Days of Supply), Source (Supplier OTD, Material Quality), Make (Yield Rate, Cycle Time), Deliver (OTIF, Order Cycle Time), Return (Return Rate, Cost of Returns). Top-level metrics: Perfect Order Rate, Cash-to-Cash Cycle Time, Supply Chain Cost as % of Revenue.",
+                            frameworkTip: "SCOR: Plan→Source→Make→Deliver→Return. At least one KPI per process"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Dashboard Design Principles",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "When redesigning the Dashboard, which principle is most important?",
+                            scenario: Challenge.Scenario(
+                                title: "The First Dashboard Draft Got Rejected",
+                                narrative: "You built a supply chain Dashboard, but your manager is not satisfied:\n\n\"There are too many numbers — I don't know what to focus on. And the red/green indicators only show red or green — I can't tell if it just turned red or has been red for a long time.\"\n\nYour first version had 25 KPIs, all displayed flat on a single screen.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "The more KPIs the better — more complete information", explanation: "Information overload actually reduces efficiency. The human brain can only process a limited number of metrics at once. The CEO wants insights, not data."),
+                                Challenge.Option(id: "B", text: "Layered design: Executive Summary (5-7 KPIs) → Drill-down details → Trend comparisons", explanation: "Correct! Good Dashboards follow the \"Overview → Zoom → Filter → Details on Demand\" principle. The first layer shows executives the 5-7 most critical KPIs (with trend arrows and red/yellow/green indicators). Clicking allows drill-down into details. Adding trend lines lets people see \"direction\" rather than just \"numbers.\" This is exactly why the manager wanted to know whether something \"just turned red or has been red for a long time.\""),
+                                Challenge.Option(id: "C", text: "Present everything in tables — numbers are the most precise", explanation: "Tables are good for precise lookups but not for quickly grasping the big picture. Dashboards need to show trends and anomalies at a glance."),
+                                Challenge.Option(id: "D", text: "Use the flashiest charts to grab attention", explanation: "Charts should serve information delivery, not showcase technical skills. Simple line charts and KPI cards are often more effective than 3D charts."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Managers have limited time. They need to see the most important things at first glance, then drill down if interested.", "Trends matter more than absolute numbers — \"is it getting better or worse\" is more useful than \"what's the current value.\""],
+                            explanation: "Dashboard design best practices: (1) Layering: Executive → Operational → Tactical (2) 5-7 Rule: no more than 7 KPIs per layer (3) Trends > Numbers: add sparklines and trend arrows (4) Red/Yellow/Green grading: Red = immediate action needed, Yellow = attention required, Green = normal (5) Context: add Targets and Benchmarks for comparison. Tools: Power BI and Tableau are the most popular Dashboard tools. The 2025 trend is AI-powered Analytics — automatically discovering anomalies and recommending actions.",
+                            frameworkTip: "Dashboard three layers: Overview (executives) → Drill-down (managers) → Detail (analysts). 5-7 KPIs per layer"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Data-Driven Decision Making",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "How should the decision be made?",
+                            scenario: Challenge.Scenario(
+                                title: "Intuition vs. Data",
+                                narrative: "The inventory manager (20 years of experience) says: \"My gut tells me this product will be a big seller this winter — we need to stock 50% more inventory right now.\"\n\nYour data analysis results:\n• Winter sales over the past 3 years were only 15-20% higher than normal\n• There are 2 new competitors in the market this year\n• Social media sentiment analysis shows consumer interest in this product category has dropped 8%\n• However, weather forecasts indicate this could be the coldest winter in 10 years",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Listen to the manager — 20 years of experience must be more accurate than data", explanation: "Experience is valuable but can be biased (confirmation bias). Historical increases were only 15-20%; stocking 50% more is too aggressive."),
+                                Challenge.Option(id: "B", text: "Follow the data exactly and only stock 15% more", explanation: "Data is the foundation, but weather forecasts and new variables should also be considered. Completely ignoring qualitative factors is not comprehensive enough."),
+                                Challenge.Option(id: "C", text: "Combine data and experience: use the historical 15-20% as a baseline, adjust upward for extreme weather, but adjust downward for competition and declining sentiment — stock 25-30% more", explanation: "Correct! The best decisions combine Quantitative (historical data, trend analysis) and Qualitative (experiential judgment, market intelligence). This is the spirit of Consensus Forecasting — use data as the baseline and human judgment for adjustments. But adjustments must be evidence-based, not guesswork. Record the reasoning for adjustments so you can review which ones were effective afterward."),
+                                Challenge.Option(id: "D", text: "Delay the decision and wait for more data", explanation: "Supply chains have Lead Time constraints. Waiting too long could mean not having enough time to stock up. Making reasonable decisions amid uncertainty is an everyday reality in supply chain management."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["Data and experience are not opposing forces — they complement each other.", "Use data as the baseline and judgment for adjustments. But adjustments must be evidence-based."],
+                            explanation: "Data-driven decision making is not \"only look at data\" — it's \"make judgments based on data.\" Framework: (1) Collect quantitative data (historical, trends, external signals) (2) Incorporate qualitative factors (experience, market intelligence, special events) (3) Make a decision and document the reasoning (4) Post-review accuracy (Forecast Value Added). In 2025, AI Demand Sensing can automatically integrate external signals like weather, social media, and economic data, but final decisions still require human judgment.",
+                            frameworkTip: "Decision = data baseline + human adjustment. Document adjustment rationale and review for learning afterward"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "59-2",
+                    name: "AI-Driven Supply Chain",
+                    description: "Explore 2026 AI applications in supply chain: Control Tower, Digital Twin, and Agentic AI.",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "AI Control Tower",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "Which understanding of Control Tower is most accurate?",
+                            scenario: Challenge.Scenario(
+                                title: "The Central Command Tower for Supply Chains",
+                                narrative: "Your company is evaluating the adoption of an AI-powered Supply Chain Control Tower. The vendor claims it can:\n\n• Integrate ERP + WMS + TMS + external data (weather, news, ocean freight tracking) in real time\n• Automatically detect anomalies (e.g., an earthquake in a supplier's region)\n• Predict impact (which orders could be affected, how much revenue is at risk)\n• Recommend alternatives (which backup supplier to source from, which shipping route to use)\n\nA 2025 SCM Review report notes that leading companies have shifted from \"reactive response\" to \"predictive coordination.\"",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "It's just a prettier Dashboard", explanation: "A Dashboard is static display. A Control Tower provides proactive monitoring + prediction + recommended actions, with AI performing analysis in the background. The two are fundamentally different."),
+                                Challenge.Option(id: "B", text: "A Control Tower integrates multi-source data to provide end-to-end visibility, predictive analytics, and decision support", explanation: "Correct! The three core capabilities of a Control Tower: (1) Visibility — end-to-end visibility integrating internal and external data (2) Predictive — forecasting disruptions and their impact (3) Prescriptive — recommending optimal courses of action. The 2026 evolution adds Agentic AI — not just recommending, but automatically executing low-risk decisions (e.g., automatically re-routing shipments). BCG data shows Agentic AI accounted for 17% of total AI value in 2025, projected to reach 29% by 2028."),
+                                Challenge.Option(id: "C", text: "With a Control Tower, people are no longer needed to manage the supply chain", explanation: "Currently, Control Towers serve as \"decision support,\" not \"decision replacement.\" High-risk decisions still require human approval. Agentic AI is evolving toward autonomous decision-making, but guardrails need to be defined."),
+                                Challenge.Option(id: "D", text: "Only very large enterprises need one", explanation: "As SaaS and Cloud lower the barrier to entry, mid-sized enterprises are also adopting them. Solutions from project44, FourKites, and others offer relatively easy-to-implement options."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["A Control Tower doesn't just see (Visibility) — it can also predict (Predictive) and recommend actions (Prescriptive).", "The key term for 2026 is Agentic AI — not just recommending, but autonomously executing."],
+                            explanation: "Supply Chain Control Tower is the hottest supply chain technology for 2025-2026. Evolution: Reactive (deal with problems after they occur) → Proactive (predict problems) → Autonomous (handle problems automatically). Agentic AI is the latest trend — autonomous agents can re-route shipments, reallocate inventory, and automatically contact backup suppliers, all in seconds. Deloitte research shows that enterprises adopting AI can achieve double-digit efficiency improvements.",
+                            frameworkTip: "Control Tower evolution: Reactive → Proactive → Predictive → Autonomous (Agentic)"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Digital Supply Chain Twin",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "What is the greatest value of a Digital Supply Chain Twin?",
+                            scenario: Challenge.Scenario(
+                                title: "Testing Decisions in a Virtual World",
+                                narrative: "Your company is building a Digital Supply Chain Twin. The CTO explains: \"This is a virtual replica of the entire supply chain that can be used to simulate various what-if scenarios.\"\n\nFor example:\n• If a Taiwan semiconductor fab shuts down for 2 weeks, what is the impact on global capacity?\n• If we move 30% of production capacity from China to Vietnam, how will lead times and costs change?\n• If ocean freight rates increase by 50%, which shipping routes should we adjust?\n\nGE Aviation already uses Digital Twin to ensure replacement parts are ready before components fail.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Replacing the ERP system", explanation: "A Digital Twin does not replace ERP — it is built on top of ERP data. It is a simulation and analysis tool; ERP is the execution system."),
+                                Challenge.Option(id: "B", text: "Testing the impact of decisions without affecting real operations, turning uncertainty into competitive advantage", explanation: "Correct! The core value of a Digital Twin is \"zero-cost risk simulation.\" You can test extreme scenarios (earthquakes, tariff changes, demand surges) in a virtual environment, review the results, and then decide on strategy. This turns \"uncertainty\" from a threat into an opportunity — because you've already simulated and prepared response plans. Dataiku notes that DSCT became a critical strategic decision-making tool in 2026."),
+                                Challenge.Option(id: "C", text: "Just a toy for the tech team — business departments won't use it", explanation: "The users of a Digital Twin are business decision-makers — supply chain planning, risk management, and network optimization. Technology is just the means of implementation."),
+                                Challenge.Option(id: "D", text: "Build it once and use it forever", explanation: "A Digital Twin needs continuously updated data to remain valuable. Simulations from an outdated model produce unreliable results. A dedicated team is needed for maintenance."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Imagine you can \"fast-forward\" one year into the future in a virtual world and see the results of your decisions.", "Cost of simulation ≈ 0. Cost of a real-world decision mistake = enormous."],
+                            explanation: "Digital Supply Chain Twin (DSCT) is a virtual replica of the entire supply chain, integrating ERP, WMS, TMS, market data, and more. Use cases: (1) What-if Scenario Analysis (2) Network Optimization (3) Risk Assessment (4) Capacity Planning. Driving factors: increasing supply chain complexity + need for cross-functional transparency + regulatory and regional differences. Building blocks: a unified data layer (ERP + PLM + market intelligence), semantic models, and incremental construction (don't aim for perfection).",
+                            frameworkTip: "Digital Twin = zero-cost simulation. Test decisions in the virtual world → act with confidence in the real world"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Analytics Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "Which analysis and recommendation is most compelling?",
+                            scenario: Challenge.Scenario(
+                                title: "Your Analysis Changed the Decision",
+                                narrative: "You are a Supply Chain Analyst and have prepared an inventory analysis report. You discovered:\n\n• The company's SKU count has grown from 2,000 three years ago to 5,000\n• But 80% of revenue comes from 500 SKUs\n• The 3,000 newly added SKUs have an average Turnover of 1.5 (sold only 1.5 times per year)\n• These low-Turnover SKUs occupy 40% of warehouse space\n• Meanwhile, the stockout rate for the Top 500 SKUs has risen from 2% to 7%\n• Holding costs have increased 35% year-over-year\n\nYou need to present recommendations to management.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Recommend cutting all low-Turnover SKUs", explanation: "Too extreme. Some low-Turnover SKUs may be accessories that customers need — cutting them would impact service. A more granular classification is required."),
+                                Challenge.Option(id: "B", text: "Use ABC-XYZ analysis to classify → optimize inventory strategy for A-class items → evaluate exit or transfer for C/Z-class items → use freed-up space and capital to fix Top 500 stockout issues", explanation: "Correct! Complete analytical logic: (1) ABC classification identifies high and low value (2) XYZ analysis assesses demand variability (3) For CZ-class items (low value, high variability), evaluate exit, switch to MTO (make-to-order), or move to a lower-cost warehouse (4) Redirect freed-up resources to improve A-class stockouts. Speak with data: \"If we halve inventory for low-Turnover SKUs, we can free up 20% of warehouse space and $XM in cash — enough to increase Safety Stock for the Top 500 SKUs to a 98% Fill Rate level.\""),
+                                Challenge.Option(id: "C", text: "Recommend expanding the warehouse to accommodate all SKUs", explanation: "Treats the symptom, not the cause. The problem isn't that the warehouse is too small — it's that too many SKUs are consuming resources they shouldn't."),
+                                Challenge.Option(id: "D", text: "Recommend a blanket reduction of safety stock to lower holding costs", explanation: "A blanket reduction would make Top 500 SKU stockouts even worse (already up from 2% to 7%). A differentiated strategy is needed."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Key insight: low-value SKUs are crowding out resources for high-value SKUs.", "Shifting resources from low-value to high-value = same resources, greater output."],
+                            explanation: "This is the typical work of a supply chain analyst: use data to discover insights → propose actionable recommendations → quantify the impact. Core analytical tools: ABC-XYZ Analysis, Inventory Segmentation, Pareto Chart. Key communication skills: (1) Speak with numbers (2) Quantify the ROI of recommendations (3) Present risks and mitigations. This also demonstrates the combined power of Supply Chain + Data + IT — you simultaneously understand supply chain logic, can perform data analysis, and know what systems can support.",
+                            frameworkTip: "Analyst value chain: Data → Insight → Recommendation → Impact Quantification"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 60,
+            name: "Process Improvement & Operations Management",
+            emoji: "🔧",
+            description: "From Process Mapping to Lean/Six Sigma — learn to identify problems and improve processes",
+            quests: [
+                Quest(
+                    id: "60-1",
+                    name: "Process Analysis Tools",
+                    description: "Learn fundamental analysis tools like Process Mapping and Root Cause Analysis.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Process Mapping",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Where is the biggest improvement opportunity in this process?",
+                            scenario: Challenge.Scenario(
+                                title: "Order Processing Is Too Slow",
+                                narrative: "The customer service manager complains that order processing time has gone from 2 hours to 8 hours. You decide to first map out the order processing flow and discover:\n\n1. Customer service receives order (5 min)\n2. Manual entry into ERP (15 min)\n3. Wait for supervisor approval (3 hrs avg wait)\n4. Warehouse confirms inventory (30 min)\n5. Picking and packing (45 min)\n6. Arrange shipment (15 min)\n\nYou label each step by type: Value-Added (VA), Business Non-Value-Added (BNVA), or Waste (NVA).",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Speed up picking and packing (45 min is the longest operation)", explanation: "Picking at 45 min is actual operational time (VA), while the 3-hour approval wait is pure waiting (NVA). You should eliminate the wait first."),
+                                Challenge.Option(id: "B", text: "Eliminate the wait time in step 3 — set up auto-approval rules so small orders skip approval", explanation: "Correct! The 3-hour wait accounts for 66% of total time and is a non-value-added activity (NVA). Solutions: (1) Set a dollar threshold so small orders are auto-approved (2) Assign multiple approvers to avoid waiting on one person (3) Push mobile approval notifications. This is the power of Value Stream Mapping — once you map out the process, waits and waste become immediately visible."),
+                                Challenge.Option(id: "C", text: "Automate all steps", explanation: "Full automation is too costly and impractical. You should first eliminate the biggest waste (wait time), then consider which steps are worth automating."),
+                                Challenge.Option(id: "D", text: "Add more customer service staff to speed up step 1", explanation: "Step 1 only takes 5 minutes and is not the bottleneck. Adding staff will not improve the 3-hour wait."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Which step takes the longest? Is it \"doing work\" or \"waiting\"?", "VA = Value-Added, BNVA = Business Non-Value-Added, NVA = Waste. Waiting is typically NVA."],
+                            explanation: "Process Mapping is the first step in improvement: draw out the process and label each step's type and duration. Value Stream Mapping (VSM) is the advanced version that distinguishes VA/BNVA/NVA. Typical finding: actual value-added time usually accounts for only 5-10% of total time; the rest is waiting, transport, and rework. Improvement priority: first eliminate NVA (waste) -> then reduce BNVA -> finally optimize VA.",
+                            frameworkTip: "VSM: Map the process -> Label VA/NVA -> Eliminate waits and waste -> Typically reduces time by 50%+"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Root Cause Analysis",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "What is the root cause? How should it be addressed?",
+                            scenario: Challenge.Scenario(
+                                title: "Why Do Shipments Keep Going Wrong?",
+                                narrative: "The warehouse's shipping error rate spiked from 1% to 5% last month. You use the 5 Whys method to investigate:\n\nWhy 1: Why did the shipping error rate increase? -> Pickers grabbed the wrong products\nWhy 2: Why did they grab the wrong ones? -> Two new products have very similar packaging\nWhy 3: Why is the packaging similar? -> Warehouse identification needs were not considered during design\nWhy 4: Why were they not considered? -> The warehouse team was not involved in the packaging design process\nWhy 5: Why were they not involved? -> The company has no cross-departmental design review process",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "The root cause is careless pickers — training should be strengthened", explanation: "Pickers grabbing the wrong item is a symptom (Why 1), not the root cause. If packaging looks identical, even the most careful person can make mistakes."),
+                                Challenge.Option(id: "B", text: "The root cause is the lack of a cross-departmental design review process — establish an SOP requiring warehouse team sign-off on packaging designs", explanation: "Correct! The 5 Whys trace back to: the company has no cross-departmental design review. The fix: establish an SOP requiring new product packaging designs to be reviewed by the warehouse team to ensure warehouse identifiability. Short-term fix: add colored labels to easily confused products. This is the spirit of Root Cause Analysis — solve the root cause, not the symptom."),
+                                Challenge.Option(id: "C", text: "The root cause is packaging design — redesign all product packaging", explanation: "Redesigning is one improvement direction, but the root cause is not just this batch of packaging — it is that the design process lacks a warehouse perspective. Without establishing the process, future new products will have the same problem."),
+                                Challenge.Option(id: "D", text: "This is not a root cause issue — just install a barcode verification system", explanation: "Barcode verification can be a short-term countermeasure (Poka-Yoke error-proofing), but it does not address the design process issue. Both the root cause and countermeasures need to be addressed."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["The last Why in 5 Whys typically points to the root cause — usually a process or system issue, not a people issue.", "Solving the root cause = preventing the problem from recurring. Treating only symptoms = the problem will keep coming back."],
+                            explanation: "Root Cause Analysis (RCA) tools: 5 Whys (ask \"why\" five times consecutively), Fishbone Diagram (Ishikawa diagram, categorized by Man/Machine/Method/Material/Measurement/Environment), Pareto Chart (80/20 rule to find primary causes). RCA principles: (1) Root causes are usually process/system issues, not people issues (2) Address both short-term countermeasures and long-term root causes (3) Establish error-proofing mechanisms (Poka-Yoke) to prevent recurrence.",
+                            frameworkTip: "Follow 5 Whys until you reach the process/system level — that is the root cause. Short-term: treat symptoms + Long-term: fix root cause"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Lean Seven Wastes",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "From a Lean perspective, which pairing is most correct?",
+                            scenario: Challenge.Scenario(
+                                title: "Spotting Waste in the Warehouse",
+                                narrative: "You spent a day observing the warehouse and recorded the following:\n\n1. Pickers walk the same route three times (because orders are processed one at a time)\n2. 200 boxes from last week's delivery are piled in the receiving area, still not shelved\n3. Packers at the packing station are idle, waiting for picking to finish\n4. QC inspectors check each item twice (once before dispatch and once before loading)\n5. Returned goods are piled in a corner, untouched for six months\n6. Pickers walk an extra 2 km per day on average because they cannot find products",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "1=Overproduction, 2=Inventory, 3=Waiting, 4=Over-processing, 5=Defects, 6=Transport", explanation: "1 is not overproduction — it is motion waste (walking the same route repeatedly). 5 is not defects — it is inventory waste."),
+                                Challenge.Option(id: "B", text: "1=Motion waste, 2=Inventory waste, 3=Waiting waste, 4=Over-processing, 5=Inventory waste, 6=Transport waste", explanation: "Correct! The Lean Seven Wastes — TIMWOOD: Transport, Inventory, Motion, Waiting, Over-production, Over-processing, Defects. 1 = Repetitive walking = Motion. 2 = Unshelved goods = Inventory. 3 = Idle waiting = Waiting. 4 = Duplicate inspection = Over-processing. 5 = Piled-up returns = Inventory. 6 = Extra walking distance = Transport."),
+                                Challenge.Option(id: "C", text: "These are all normal warehouse operations, not waste", explanation: "If you consider these \"normal,\" that is exactly why Lean thinking is needed. Any activity that does not add value for the customer is waste."),
+                                Challenge.Option(id: "D", text: "Only 3 is waste; the rest are necessary", explanation: "Repetitive walking, unprocessed returns, and duplicate QC checks are all non-value-added activities that can be eliminated or reduced."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Lean Seven Wastes mnemonic: TIMWOOD (Transport, Inventory, Motion, Waiting, Over-production, Over-processing, Defects).", "For each observation, ask yourself: Is this adding value for the customer? If not, it is waste."],
+                            explanation: "Lean Seven Wastes — TIMWOOD (some add S for Skills, making it TIMWOODS). Methods to eliminate waste: Batch Picking (eliminates 1), Cross-docking (reduces 2), Line Balancing (eliminates 3), Consolidate Inspection Points (eliminates 4), Returns Processing SOP (eliminates 5), Improve Warehouse Layout (eliminates 6). The core philosophy of Lean: continuously eliminate activities that do not create value for the customer.",
+                            frameworkTip: "TIMWOOD + S: Transport, Inventory, Motion, Waiting, Over-production, Over-processing, Defects, Skills waste"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "60-2",
+                    name: "KPI Design & Continuous Improvement",
+                    description: "Learn to design KPIs using the SMART framework and the DMAIC continuous improvement methodology.",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "SMART KPI Design",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Using the SMART framework, which KPIs are acceptable?",
+                            scenario: Challenge.Scenario(
+                                title: "The Manager's KPIs Have Problems",
+                                narrative: "The manager has set three KPIs:\n\nKPI 1: \"Improve warehouse efficiency\"\nKPI 2: \"Reduce order processing time from 8 hours to 4 hours by year-end\"\nKPI 3: \"Achieve 99.5% monthly picking accuracy, with the warehouse manager exporting a report from WMS every Friday\"",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "All three are acceptable", explanation: "KPI 1 is not specific enough. What is \"efficiency\"? How is it measured? When should it be achieved?"),
+                                Challenge.Option(id: "B", text: "Only KPI 2 and KPI 3 are acceptable. KPI 1 is not Specific or Measurable enough", explanation: "Correct! SMART = Specific, Measurable, Achievable, Relevant, Time-bound. KPI 1 \"Improve warehouse efficiency\" is too vague — it does not define what efficiency means, how to measure it, or what the target value is. KPI 2 has a specific metric (processing time), target value (4 hours), and deadline (year-end). KPI 3 is the most complete: metric (accuracy rate), target (99.5%), frequency (monthly), owner (warehouse manager), and data source (WMS)."),
+                                Challenge.Option(id: "C", text: "Only KPI 3 is acceptable", explanation: "KPI 2 also meets SMART criteria: Specific (order processing time), Measurable (8 to 4 hours), Time-bound (year-end)."),
+                                Challenge.Option(id: "D", text: "None of the three are acceptable", explanation: "Both KPI 2 and KPI 3 have clear measurement standards and targets."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["SMART: Specific, Measurable, Achievable, Relevant, Time-bound.", "\"Improve efficiency\" — what efficiency? How do you measure it? What is the benchmark?"],
+                            explanation: "A good KPI should include: What (what to measure), How (how to calculate), Target (target value), When (deadline and frequency), Who (owner), Source (data source). Common mistakes: too vague (\"improve quality\"), no baseline (setting a target without knowing the current state), too many KPIs (loss of focus). Recommended: 5-7 KPIs per role, with a mix of Leading (predictive) and Lagging (outcome) indicators.",
+                            frameworkTip: "KPI six elements: What + How + Target + When + Who + Source. Vague goals are not KPIs"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "DMAIC Improvement Methodology",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "What is the correct DMAIC order?",
+                            scenario: Challenge.Scenario(
+                                title: "Shipping Error Rate Improvement Project",
+                                narrative: "You have been assigned to lead an improvement project: reduce the shipping error rate from 5% to 1%.\n\nYou decide to use the Six Sigma DMAIC method:\n\nD = Define -> M = Measure -> A = Analyze -> I = Improve -> C = Control\n\nBelow are the tasks your team performed, but the order has been scrambled:\n\n1. Install a barcode verification system and train staff\n2. Define the problem scope: which production lines and which products have the most errors\n3. Collect 3 months of shipping error data and categorize the statistics\n4. Use a Fishbone Diagram and Pareto Chart to identify the main causes\n5. Establish a Control Chart for monitoring and set SOPs for anomalies",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "2 -> 3 -> 4 -> 1 -> 5", explanation: "Correct! D=2 Define the problem -> M=3 Collect data and measure -> A=4 Analyze root causes -> I=1 Implement improvements -> C=5 Establish control mechanisms. DMAIC ensures improvements are data-driven (not guesswork), and that there is a continuous monitoring mechanism (not a fix-and-forget approach)."),
+                                Challenge.Option(id: "B", text: "1 -> 2 -> 3 -> 4 -> 5", explanation: "Installing the system before defining the problem? Implementing without data analysis might solve the wrong problem."),
+                                Challenge.Option(id: "C", text: "3 -> 4 -> 2 -> 1 -> 5", explanation: "You should define the problem scope (2) before collecting data (3). Starting data collection without knowing what to analyze is a waste of time."),
+                                Challenge.Option(id: "D", text: "2 -> 4 -> 3 -> 1 -> 5", explanation: "You should collect data (3 Measure) before analyzing (4 Analyze). Performing analysis without data is \"guessing,\" not \"analyzing.\""),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["DMAIC: Define -> Measure -> Analyze -> Improve -> Control. Define before measuring, analyze before improving.", "Each step must be completed before moving to the next. You cannot skip Measure and go directly to Improve."],
+                            explanation: "DMAIC is the core methodology of Six Sigma. Define (define the problem and objectives) -> Measure (collect data to establish a baseline) -> Analyze (find root causes) -> Improve (implement improvements) -> Control (establish monitoring to ensure sustainability). C (Control) is most often neglected — many projects complete improvements but no one follows up, and the problem gradually returns. Lean Six Sigma combines the strengths of Lean (eliminate waste) and Six Sigma (reduce variation).",
+                            frameworkTip: "DMAIC: Each step builds on the previous one. The most important and most often neglected step is C (Control)"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Process Improvement Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "Which answer best demonstrates your capabilities?",
+                            scenario: Challenge.Scenario(
+                                title: "Interview Question: How Would You Improve a Process?",
+                                narrative: "The interviewer asks: \"Suppose you are a newly hired Supply Chain Analyst and you discover the company's Perfect Order Rate is only 78% (industry average is 90%). What would you do in your first 90 days?\"\n\nPerfect Order Rate = the percentage of orders that simultaneously meet on-time delivery + complete quantity + no damage + correct documentation.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Immediately implement a new system to fix it", explanation: "Implementing a system without knowing the problem is a blind investment. Understand the current state first, then decide on action."),
+                                Challenge.Option(id: "B", text: "First 30 days: collect data and find root causes -> Days 30-60: propose an improvement plan -> Days 60-90: execute the highest-impact quick wins", explanation: "Correct! The ideal 90-day plan:\n\nDays 1-30 (Understand and Measure): Break down the four components of Perfect Order Rate (OTD, Fill Rate, Damage, Documentation) and identify which one is dragging performance down the most. Interview key stakeholders to collect qualitative insights.\n\nDays 30-60 (Analyze and Plan): Use Pareto analysis to find the Top 3 root causes, design improvement solutions, and quantify expected ROI.\n\nDays 60-90 (Execute Quick Wins): Start with Quick Wins (low cost, high impact), build a dashboard to track progress, and demonstrate early results to build trust."),
+                                Challenge.Option(id: "C", text: "Learn from industry benchmarks and replicate their practices", explanation: "Benchmarking has value, but every company has different problems. Copying others without understanding your own root causes may solve the wrong problem."),
+                                Challenge.Option(id: "D", text: "Tell the boss that 78% is fine and does not need improvement", explanation: "Being 12 percentage points below the industry average clearly indicates room for improvement."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["In an interview, what you need to demonstrate is your thinking methodology, not a specific answer. A structured response scores the highest.", "90-day plan: Understand -> Analyze -> Act. Do not jump straight into changes."],
+                            explanation: "This interview question tests: (1) Structured thinking (having a plan, not acting randomly) (2) Data-driven approach (measure before acting) (3) Root cause analysis (not treating symptoms) (4) Prioritization (Quick Wins first) (5) Communication skills (presenting results to management). This is also one of the most commonly asked interview questions: \"How do you identify problems? How do you improve them? What metrics do you use to measure results?\" Answering with a DMAIC mindset is the way to go.",
+                            frameworkTip: "Universal interview answer framework: Understand current state (30 days) -> Analyze root causes (30 days) -> Execute quick wins (30 days)"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 61,
+            name: "Risk Management & Sustainability",
+            emoji: "🌍",
+            description: "Supply chain risk types, resilience strategies, ESG compliance, and sustainable procurement",
+            quests: [
+                Quest(
+                    id: "61-1",
+                    name: "Supply Chain Risk Management",
+                    description: "Understand risk types, assessment methods, and resilience strategies.",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Risk Type Identification",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Which risk classification is most accurate?",
+                            scenario: Challenge.Scenario(
+                                title: "Risk Map",
+                                narrative: "You are asked to build the company's Supply Chain Risk Register. Here are events that have recently occurred or could occur:\n\nA: A major earthquake in Taiwan shuts down a wafer fab\nB: A key supplier's CEO suddenly resigns, leaving the company's direction unclear\nC: The US imposes a 50% tariff on Chinese rare earth exports\nD: A European heatwave causes Rhine River water levels to drop too low, disrupting inland shipping\nE: Hackers attack your ERP system and encrypt your data for ransom",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A=Natural disaster, B=Operational, C=Political, D=Natural disaster, E=Operational", explanation: "B is not an operational risk — it is a supplier risk (Supplier Risk). E is not a general operational risk — it is a cybersecurity risk (Cyber Risk). The classification needs to be more granular."),
+                                Challenge.Option(id: "B", text: "A=Natural disaster, B=Supplier risk, C=Geopolitical risk, D=Climate risk, E=Cybersecurity risk", explanation: "Correct! Precise risk classification matters because different types of risk require different response strategies. Natural disasters -> backup locations and safety stock. Supplier risk -> Dual Sourcing and regular assessments. Geopolitical risk -> diversify sourcing regions. Climate risk -> alternative transportation routes. Cybersecurity -> IT protection and backups. In 2026, Everstream Analytics rated geopolitical risk at 97% and extreme weather at 93%."),
+                                Challenge.Option(id: "C", text: "These are all external risks that the company cannot control", explanation: "While they are all external risks, the company can reduce their impact through preparation. Risk management is not about \"avoiding risk\" but about \"reducing impact.\""),
+                                Challenge.Option(id: "D", text: "Only A and D are real risks; the others are business decisions", explanation: "Tariff changes and cyberattacks are real supply chain risks that have already caused billions of dollars in losses."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["The purpose of risk classification is to apply the right remedy. Different types require different strategies.", "The biggest supply chain risks in 2025-2026: geopolitics, extreme weather, and cybersecurity."],
+                            explanation: "Supply chain risk types: Natural Disasters (earthquakes, typhoons), Geopolitical (tariffs, sanctions, war), Supplier (bankruptcy, quality issues), Climate (extreme weather, water resources), Cyber (hackers, ransomware), Demand (sudden spikes or drops), Regulatory (regulatory changes). Risk management framework: Identify -> Assess -> Mitigate -> Monitor. In 2025, the average cost of a global supply chain disruption was $184M per incident (McKinsey).",
+                            frameworkTip: "Risk management: Identify -> Assess -> Mitigate -> Monitor"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Risk Assessment Matrix",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Which risk should be prioritized for resource allocation?",
+                            scenario: Challenge.Scenario(
+                                title: "Which Risk Should Be Addressed First?",
+                                narrative: "You assessed four risks using a risk matrix (Probability x Impact):",
+                                data: [
+                                    ["risk": "Chip supplier shutdown", "probability": "Medium", "impact": "Very High", "score": "High"],
+                                    ["risk": "Office supplies vendor delay", "probability": "High", "impact": "Low", "score": "Medium"],
+                                    ["risk": "Major market pandemic outbreak", "probability": "Low", "impact": "Very High", "score": "Medium-High"],
+                                    ["risk": "Raw material price fluctuation of 10%", "probability": "High", "impact": "Medium", "score": "Medium-High"],
+                                ],
+                                dataCaption: "Risk Assessment Matrix Results"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Office supplies delay — because it has the highest probability", explanation: "High probability but low impact — even if it occurs, it will not significantly affect operations."),
+                                Challenge.Option(id: "B", text: "Chip supplier shutdown — medium probability but very high impact, and there are concrete mitigation actions available", explanation: "Correct! Risk management priority: (1) High probability x High impact -> Immediate action (2) Medium probability x Very high impact -> Priority preparation. Although a chip shutdown has \"medium\" probability, its impact is \"very high\" and there are clear action plans (Dual Sourcing, Safety Stock, alternative designs). By comparison, a pandemic also has high impact but low probability and is difficult to prevent. Raw material price fluctuation can be managed through futures contract hedging."),
+                                Challenge.Option(id: "C", text: "Pandemic — it has the greatest impact", explanation: "The impact is indeed large, but the probability is low and it is very difficult to prevent a specific event. It is better to allocate resources to risks where you can take concrete action."),
+                                Challenge.Option(id: "D", text: "Address all four simultaneously", explanation: "Resources are limited and priorities are needed. Address the risk with the highest Risk Score and clearest mitigation options first."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Risk priority = Probability x Impact x Actionability. Look beyond the score to what you can actually do.", "Risks with concrete actions (e.g., Dual Sourcing) are more worth investing in than risks that are difficult to prevent (e.g., pandemics)."],
+                            explanation: "The risk assessment matrix is the most fundamental risk management tool. But prioritization should consider more than just Probability x Impact: (1) Mitigation Feasibility (what can be done) (2) Speed of Onset (how quickly the impact arrives) (3) Recovery Time (how long it takes to recover). Advanced methods: Monte Carlo Simulation to quantify the financial impact of risks, and Scenario Planning to simulate multiple scenarios. The 2025 trend is using AI to integrate external signals (satellite imagery, news, social media) for real-time risk scoring.",
+                            frameworkTip: "Priority = Probability x Impact x Actionability. Invest first in risks where action is possible"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Resilience Strategies",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "Which resilience strategy combination is most comprehensive?",
+                            scenario: Challenge.Scenario(
+                                title: "Lessons Learned from COVID",
+                                narrative: "Your company is working on a post-COVID supply chain resilience enhancement plan. The CEO asks: \"How do we ensure the next large-scale disruption does not cause another $50M loss?\"\n\nYou analyzed the problems during COVID:\n- 70% of components had only a single supply source\n- No real-time visibility into supplier status\n- Safety stock covered only 2 weeks (6 weeks needed)\n- Decisions relied entirely on manual judgment, with 2-3 week response times",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Increase safety stock across the board to 6 months", explanation: "Holding costs would be too high. And inventory can only buffer, not prevent disruptions. A more comprehensive strategy is needed."),
+                                Challenge.Option(id: "B", text: "Dual Sourcing + Control Tower + Flexible inventory strategy + Scenario Planning", explanation: "Correct! Four-layer resilience strategy: (1) Dual/Multi Sourcing to diversify supply risk (addresses the 70% single-source issue) (2) Supply Chain Control Tower for real-time visibility (addresses the lack of visibility) (3) Differentiated inventory strategy — increase safety stock for critical parts while keeping non-critical items lean (addresses insufficient inventory without over-investing) (4) Scenario Planning / Digital Twin to simulate extreme scenarios and prepare response plans in advance (addresses slow reaction times). This is \"Resilience by Design\" — resilience is not something you think about after an incident; it is designed into the supply chain architecture."),
+                                Challenge.Option(id: "C", text: "Move all production back domestically (Reshoring)", explanation: "Costs could increase by 30-50%, and domestic locations also face natural disasters or labor shortages. Full reshoring is impractical; Nearshoring offers a better balance."),
+                                Challenge.Option(id: "D", text: "Just buy supply chain insurance", explanation: "Insurance can compensate for some financial losses, but it cannot prevent business disruption and customer attrition. The goal of resilience is \"business continuity,\" not \"post-incident compensation.\""),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Resilience is not a single strategy — it is multi-layered protection. Like a fire safety system: detection + alarm + suppression + backup.", "Each problem experienced during COVID needs a corresponding solution."],
+                            explanation: "Supply Chain Resilience framework: Anticipate -> Prepare -> Respond -> Recover -> Learn. Best practices for resilience in 2025-2026: (1) Diversified sourcing (Dual/Multi Source + Nearshoring) (2) End-to-end visibility (Control Tower) (3) Flexible capacity (Flexible Manufacturing) (4) Digital simulation (Digital Twin + Scenario Planning) (5) Agentic AI to automatically respond to low-risk disruptions. Gartner predicts that by 2026, 50% of large enterprises will incorporate \"resilience\" into their supply chain KPIs.",
+                            frameworkTip: "Resilience in five steps: Anticipate -> Prepare -> Respond -> Recover -> Learn. Resilience is designed, not improvised"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "61-2",
+                    name: "ESG & Sustainable Supply Chain",
+                    description: "Understand CSRD, Scope 3 emissions, sustainable procurement, and the latest 2025 compliance requirements.",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Scope 3 Emissions & CSRD",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "For the supply chain, what is the biggest challenge with Scope 3?",
+                            scenario: Challenge.Scenario(
+                                title: "The CFO Comes Knocking",
+                                narrative: "The CFO urgently finds you: \"The EU's CSRD regulation requires us to disclose Scope 3 emissions. Finance says the supply chain typically accounts for 70-90% of our carbon footprint. Can you explain what Scope 1, 2, and 3 are? What do we need to do?\"\n\nYou quickly summarize:\n- Scope 1: Direct emissions from the company (own factories, vehicles)\n- Scope 2: Indirect emissions (purchased electricity, steam)\n- Scope 3: Value chain emissions (supplier manufacturing, product transportation, customer use, end-of-life disposal)\n\nCSRD requires companies operating in the EU to provide comprehensive sustainability reports starting from 2025.",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "The calculation is too simple — Excel can handle it", explanation: "Scope 3 involves the entire supply chain (hundreds or even thousands of suppliers), making data collection extremely complex. This is not something Excel can handle at scale."),
+                                Challenge.Option(id: "B", text: "The data comes from suppliers, and you cannot control it directly. You need to establish supplier carbon emissions data collection mechanisms and estimation methods", explanation: "Correct! The biggest challenge with Scope 3 is data accessibility — emissions data is in the hands of suppliers, and many suppliers (especially Tier 2 and 3) lack carbon tracking capabilities altogether. Solutions: (1) Require large suppliers to provide actual emissions data (2) Use industry averages for small and medium suppliers (3) Embed carbon requirements into RFQs and contracts (4) Use AI platforms (e.g., Ecoinvent, Watershed) to automate carbon calculations. Under CSRD, non-compliance may result in fines and market access restrictions."),
+                                Challenge.Option(id: "C", text: "Not important — only EU companies need to care", explanation: "Any company doing business in the EU is affected by CSRD, including non-EU companies. Moreover, the US SEC is pushing similar requirements. ESG compliance is a global trend."),
+                                Challenge.Option(id: "D", text: "Ignore it for now and deal with it when fined", explanation: "The risk of non-compliance goes beyond fines: loss of EU market access, loss of major clients (many large enterprises require suppliers to meet ESG standards), and investor withdrawal."),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Scope 3 = emissions you cannot directly control but are responsible for disclosing. The data is in your suppliers' hands.", "70-90% of carbon footprint falls under Scope 3. That is why the supply chain is the key battleground for sustainability."],
+                            explanation: "CSRD (Corporate Sustainability Reporting Directive) took full effect starting in 2025, requiring disclosure of Environmental, Social, and Governance (ESG) data. Scope 3 emissions typically account for 70-90% of a company's carbon footprint, representing both the biggest challenge and the greatest decarbonization opportunity. Four major ESG reporting frameworks: GRI (most widely used), SASB (industry-specific), TCFD (climate risk), ISSB (new global standard). The EU CBAM (Carbon Border Adjustment Mechanism) further transfers carbon costs to imported goods, giving low-carbon suppliers a price advantage.",
+                            frameworkTip: "Scope 3 strategy: Large suppliers -> require actual data; Small suppliers -> use industry estimates; All -> embed in contracts"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Sustainable Procurement Practices",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Which action plan is most practical and effective?",
+                            scenario: Challenge.Scenario(
+                                title: "A Green Supply Chain Is More Than a Slogan",
+                                narrative: "You have been tasked with driving the company's sustainable supply chain initiative. Your manager has set three goals:\n\n1. Reduce Scope 3 emissions by 30% by 2030\n2. 100% of critical suppliers pass ESG audits\n3. 80% of packaging materials use recyclable materials",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Send an email notifying all suppliers to comply with ESG standards", explanation: "A single email will not change anything. Concrete actions, timelines, and incentive mechanisms are needed."),
+                                Challenge.Option(id: "B", text: "Immediately replace all non-compliant suppliers", explanation: "Too fast and too aggressive. Switching suppliers carries costs and risks. Existing suppliers should be given the opportunity and support to improve."),
+                                Challenge.Option(id: "C", text: "Phased approach: Establish a carbon baseline -> Embed ESG into supplier evaluations -> Co-develop decarbonization roadmaps with key suppliers -> Conduct regular audits and reporting", explanation: "Correct! A pragmatic sustainability plan: (1) Establish a Baseline — measure first so you know where to cut (carbon baseline calculation) (2) Embed into Processes — incorporate ESG scores into Supplier Scorecards and RFQ evaluations (look beyond price) (3) Collaborative Decarbonization — co-develop roadmaps with key suppliers and provide technical support (not just demands) (4) Monitor and Report — conduct regular ESG audits, track progress, and report to management and regulators. Research shows that \"collaborating\" with suppliers achieves 3-5x greater emissions reductions than \"demanding.\""),
+                                Challenge.Option(id: "D", text: "Only focus on packaging improvements (Goal 3), since results are easiest to see", explanation: "Packaging is only a small part. The bulk of Scope 3 emissions comes from raw material manufacturing and transportation. Focusing only on packaging avoids the real issue."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["\"You can't manage what you can't measure.\" Start by establishing a carbon baseline.", "Sustainability is not about \"demanding\" suppliers to act, but about working \"together.\" Collaboration is far more effective than pressure."],
+                            explanation: "Practical sustainable supply chain framework: Measure (establish carbon baseline) -> Integrate (embed into procurement processes) -> Collaborate (partner with suppliers) -> Report (compliance reporting) -> Improve (continuous improvement). Key tools: LCA (Life Cycle Assessment), Carbon Accounting platforms, Supplier ESG Scorecard. Success cases: Apple requires its top 200 suppliers to achieve carbon neutrality by 2030 and provides technical and financial support. IKEA partnered with suppliers to switch to renewable energy, reducing supply chain carbon emissions by 15%.",
+                            frameworkTip: "Sustainability in five steps: Measure -> Integrate -> Collaborate -> Report -> Improve. Collaboration > Pressure"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Risk & Sustainability Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "Which 2030 vision is most forward-looking?",
+                            scenario: Challenge.Scenario(
+                                title: "What Will the Supply Chain Look Like in 2030?",
+                                narrative: "You are preparing a strategy report for the board: \"2030 Supply Chain Vision.\"\n\nYou have compiled the trends from 2025-2026:\n- AI/Agentic AI shifting from assistive to autonomous decision-making\n- Digital Twin becoming standard for strategic planning\n- ESG moving from \"nice-to-have\" to \"legal requirement\"\n- Geopolitical fragmentation driving supply chain regionalization\n- Extreme weather event frequency doubling every 5 years\n- Labor shortages driving warehouse automation\n- Scope 3 carbon emissions becoming a key factor in supplier selection",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Full automation — a zero-human supply chain", explanation: "A completely zero-human supply chain is impractical. Humans remain irreplaceable for high-complexity decisions, relationship management, and innovation. The future is \"human-machine collaboration,\" not \"machines replacing humans.\""),
+                                Challenge.Option(id: "B", text: "Return to localized production — abandon global supply chains", explanation: "Full localization would sacrifice comparative advantage and economies of scale. The trend is \"regionalization\" and \"diversification,\" not \"complete localization.\""),
+                                Challenge.Option(id: "C", text: "The trinity of Intelligent, Resilient, and Sustainable: AI-driven decisions + distributed resilience networks + carbon-neutral supply chains", explanation: "Correct! Three pillars of the 2030 supply chain:\n\n(1) Intelligent: Agentic AI autonomously handles 80% of routine decisions, while humans focus on strategy and exceptions. Digital Twin enables real-time simulation. Control Tower provides predictive management.\n\n(2) Resilient: Diversified supply networks (Nearshoring + Multi-sourcing), flexible capacity, and real-time visibility. Risk is not about avoidance but about rapid recovery.\n\n(3) Sustainable: Carbon neutrality is not a goal but a baseline. Carbon emissions become part of cost (CBAM). Circular Economy reduces waste. ESG is embedded in every decision.\n\nThese three are not separate — they reinforce each other."),
+                                Challenge.Option(id: "D", text: "Same as today, just faster", explanation: "2025-2030 is a period of fundamental transformation for supply chains. AI, ESG regulations, and geopolitics are reshaping the entire industry. \"Just faster\" vastly underestimates the scale of change."),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["The future supply chain is not about a single directional change — it is the convergence of multiple trends.", "Intelligent (AI) + Resilient (Risk) + Sustainable (ESG) — these three reinforce each other rather than being independent."],
+                            explanation: "The supply chain is undergoing its most profound transformation. The three pillars — Intelligent x Resilient x Sustainable — reinforce each other: AI enables precise calculation of carbon emissions and risk; resilient distributed networks also reduce concentrated emissions; sustainable short-chain strategies also enhance resilience. Your competitive advantage lies at the intersection of Supply Chain + Data + IT — this is exactly the talent profile most needed for the 2030 supply chain. By mastering the knowledge from these 8 worlds, you have the foundation to understand and drive this transformation.",
+                            frameworkTip: "2030 supply chain three pillars: Intelligent (AI) x Resilient (Resilience) x Sustainable (Sustainability). Your positioning: SC + Data + IT"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+    ]
+}

@@ -6,6 +6,7 @@ struct DIQuestApp: App {
     @StateObject private var authManager = AuthManager()
     @Environment(\.scenePhase) private var scenePhase
     @State private var isLocked = false
+    @State private var pendingInviteUserId: String?
 
     var body: some Scene {
         WindowGroup {
@@ -13,6 +14,7 @@ struct DIQuestApp: App {
                 Group {
                     if authManager.isAuthenticated {
                         MainTabView()
+                            .environment(\.pendingInvite, $pendingInviteUserId)
                     } else {
                         LoginView()
                     }
@@ -30,7 +32,34 @@ struct DIQuestApp: App {
                     isLocked = true
                 }
             }
+            .onOpenURL { url in
+                handleDeepLink(url)
+            }
         }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        // Handle: https://...di-quest/friends?invite=USER_ID
+        // or custom scheme: com.diquest.app://friends?invite=USER_ID
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+        if let inviteId = components.queryItems?.first(where: { $0.name == "invite" })?.value {
+            if inviteId != authManager.currentUserId {
+                pendingInviteUserId = inviteId
+            }
+        }
+    }
+}
+
+// MARK: - Pending Invite Environment Key
+
+private struct PendingInviteKey: EnvironmentKey {
+    static let defaultValue: Binding<String?> = .constant(nil)
+}
+
+extension EnvironmentValues {
+    var pendingInvite: Binding<String?> {
+        get { self[PendingInviteKey.self] }
+        set { self[PendingInviteKey.self] = newValue }
     }
 }
 

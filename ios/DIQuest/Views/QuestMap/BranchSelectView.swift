@@ -3,6 +3,7 @@ import SwiftUI
 struct BranchSelectView: View {
     @EnvironmentObject var progressVM: QuestProgressViewModel
     @State private var showSettings = false
+    @State private var showSearch = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -36,6 +37,14 @@ struct BranchSelectView: View {
             }
             .navigationTitle("DI Quest")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showSearch = true
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.white)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showSettings = true
@@ -47,6 +56,9 @@ struct BranchSelectView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+            }
+            .fullScreenCover(isPresented: $showSearch) {
+                SearchView()
             }
         }
     }
@@ -62,13 +74,13 @@ struct BranchCardView: View {
             Text(branch.emoji)
                 .font(.system(size: 40))
 
-            Text(branch.name)
+            Text(branch.localizedName)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
 
-            Text("\(branch.worldIds.count) 個世界")
+            Text("\(branch.worldIds.count) \(LanguageManager.shared.string("branch.worlds"))")
                 .font(.caption)
                 .foregroundStyle(DIQuestTheme.textTertiary)
         }

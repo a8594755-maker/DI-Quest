@@ -12,6 +12,9 @@ enum DIQuestTheme {
     static let textSecondary = Color.white.opacity(0.7)
     static let textTertiary = Color.white.opacity(0.5)
 
+    // UIColor variants for AttributedString
+    static let textSecondaryColor = textSecondary
+
     // MARK: - Gradients
 
     static let accentGradient = LinearGradient(

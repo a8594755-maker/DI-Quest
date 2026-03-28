@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class CacheService: ObservableObject {
-    @Published var cacheSize: String = "計算中..."
+    @Published var cacheSize: String = LanguageManager.shared.string("cache.calculating")
 
     func calculateCacheSize() async {
         let cacheURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first

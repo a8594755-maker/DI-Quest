@@ -116,7 +116,7 @@ enum SupabaseError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .requestFailed: return "伺服器請求失敗"
+        case .requestFailed: return "Request failed"
         }
     }
 }

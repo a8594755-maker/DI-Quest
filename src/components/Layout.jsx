@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
-import { Map, BarChart3, MessageCircle, Briefcase, RotateCcw, Search, Users, LogOut, LogIn, ChevronDown, Settings } from 'lucide-react'
+import { Map, BarChart3, MessageCircle, Briefcase, RotateCcw, Search, Users, LogOut, LogIn, ChevronDown, Settings, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -194,6 +194,15 @@ function Layout() {
                       >
                         <Settings className="w-4 h-4" />
                         {t('auth:profile.editProfile', 'Edit Profile')}
+                      </button>
+                    )}
+                    {profile?.role === 'admin' && (
+                      <button
+                        onClick={() => { setProfileMenuOpen(false); navigate('/di-quest/admin') }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-slate-700 flex items-center gap-2"
+                      >
+                        <Shield className="w-4 h-4" />
+                        Admin Dashboard
                       </button>
                     )}
                     <button

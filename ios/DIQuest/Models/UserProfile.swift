@@ -5,6 +5,7 @@ struct UserProfile: Codable {
     var username: String?
     var displayName: String?
     var avatarUrl: String?
+    var role: String?
     var createdAt: String?
 
     enum CodingKeys: String, CodingKey {
@@ -12,6 +13,11 @@ struct UserProfile: Codable {
         case username
         case displayName = "display_name"
         case avatarUrl = "avatar_url"
+        case role
         case createdAt = "created_at"
+    }
+
+    var isPremium: Bool {
+        role == "premium" || role == "admin"
     }
 }

@@ -1,0 +1,1695 @@
+import Foundation
+
+enum SupplyChainWorlds {
+    static let worlds: [World] = [
+        World(
+            id: 54,
+            name: "供應鏈全貌",
+            emoji: "🔗",
+            description: "搞懂整條供應鏈在做什麼：從原料到消費者的完整流程",
+            quests: [
+                Quest(
+                    id: "54-1",
+                    name: "供應鏈角色與流向",
+                    description: "認識供應鏈上每個角色的定位，以及物流、資訊流、金流怎麼跑。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "辨別供應鏈角色",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "④ 是什麼角色？出問題最直接影響的下游是？",
+                            scenario: Challenge.Scenario(
+                                title: "新人第一天的困惑",
+                                narrative: "你剛加入一家消費品公司的 Supply Chain 部門。主管給你一張流程圖，上面有六個節點：\n\n① 提供原物料 ② 加工成成品 ③ 大量存放成品 ④ 分送到各地區 ⑤ 店面銷售 ⑥ 購買使用\n\n主管問你：「④ 出了問題，直接影響誰？」",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "④ 是 Manufacturer，影響 Warehouse", explanation: "Manufacturer 是 ②（加工）。④ 是「分送到各地區」的角色。"),
+                                Challenge.Option(id: "B", text: "④ 是 Distributor，影響 Retailer", explanation: "正確！Distributor 負責配送到零售商。出問題時 Retailer 收不到貨，店面就缺貨。"),
+                                Challenge.Option(id: "C", text: "④ 是 Retailer，影響 Customer", explanation: "Retailer 是 ⑤（店面銷售）。④ 是配送角色。"),
+                                Challenge.Option(id: "D", text: "④ 是 3PL，影響 Manufacturer", explanation: "3PL 是服務供應商，不是供應鏈的固定節點。④ 更符合 Distributor。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["「分送到各地區」是 Distribute 的意思。", "供應鏈順序：Supplier → Manufacturer → Warehouse → Distributor → Retailer → Customer"],
+                            explanation: "供應鏈六大角色：Supplier → Manufacturer → Warehouse → Distributor → Retailer → Customer。Distributor 連結倉庫和零售端，效率直接影響零售供貨穩定度。",
+                            frameworkTip: "記住 S → M → W → D → R → C，每個角色出問題都影響下游"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "三大流向：物流、資訊流、金流",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "付款流程太慢、出貨資訊不同步、交期資訊不即時，分別對應哪三種 flow？",
+                            scenario: Challenge.Scenario(
+                                title: "跨部門會議上的爭論",
+                                narrative: "供應鏈改善會議上，三個問題被提出：\n• 財務部：付款流程太慢\n• 物流部：出貨資訊不同步導致延遲\n• 採購部：供應商交期資訊不即時\n\n主管問你：「這三個問題分別對應哪種 flow？」",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "金流、物流、資訊流", explanation: "「出貨資訊不同步」關鍵字是「資訊」，不是物流本身。"),
+                                Challenge.Option(id: "B", text: "金流、資訊流、資訊流", explanation: "正確！付款 = 金流。出貨「資訊」不同步和交期「資訊」不即時都是資訊流問題。資訊流是最常見的瓶頸。"),
+                                Challenge.Option(id: "C", text: "物流、資訊流、金流", explanation: "付款是金流不是物流，交期資訊是資訊流不是金流。"),
+                                Challenge.Option(id: "D", text: "三個都是資訊流", explanation: "付款流程慢是實際金錢流動問題，不只是資訊問題。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["每個問題的核心是什麼在流動——錢？東西？還是資料？", "「出貨資訊」和「交期資訊」關鍵字都是「資訊」。"],
+                            explanation: "供應鏈三大流向：Physical Flow（貨物移動）、Information Flow（訂單、預測、庫存等資料）、Financial Flow（付款、發票等金錢流動）。資訊流品質往往決定另外兩個流向的效率。",
+                            frameworkTip: "三大流向：Physical（貨動）、Information（資料動）、Financial（錢動）"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Push vs Pull 供應鏈",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "從供應鏈策略角度，以下哪個描述最準確？",
+                            scenario: Challenge.Scenario(
+                                title: "ZARA 的秘密",
+                                narrative: "你在研究不同供應鏈策略。傳統服飾品牌提前 6-9 個月大量生產再推到門市。但 ZARA：\n• 設計到上架只要 2-3 週\n• 每週小批量補貨，根據門市數據調整\n• 庫存周轉率是業界 2 倍\n• 季末折扣品只佔 15%（業界 30-40%）",
+                                data: [
+                                    ["metric": "設計到上架", "traditional": "6-9 個月", "zara": "2-3 週"],
+                                    ["metric": "補貨頻率", "traditional": "季度", "zara": "每週"],
+                                    ["metric": "庫存周轉率", "traditional": "3-4 次/年", "zara": "6-8 次/年"],
+                                    ["metric": "季末折扣比例", "traditional": "30-40%", "zara": "15%"],
+                                ],
+                                dataCaption: "傳統品牌 vs ZARA 比較"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "ZARA 是純 Pull 策略，完全根據需求生產", explanation: "ZARA 仍需預先備料和基本款提前生產，不是 100% Pull。"),
+                                Challenge.Option(id: "B", text: "ZARA 在原料端用 Push，成品端用 Pull，是 Push-Pull 混合策略", explanation: "正確！ZARA 提前備好布料（Push），但成衣根據門市銷售數據決定（Pull）。分界點叫 Decoupling Point，讓 ZARA 兼得規模經濟和市場回應速度。"),
+                                Challenge.Option(id: "C", text: "ZARA 是 Push 策略，只是速度更快", explanation: "Push 核心是預測驅動，但 ZARA 是需求驅動——根據實際銷售數據決定生產什麼。"),
+                                Challenge.Option(id: "D", text: "跟 Push/Pull 無關，純粹是物流比較快", explanation: "ZARA 的成功是整個策略設計——資訊流回饋到生產決策，不只是物流快。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Push = 根據預測提前生產；Pull = 根據實際需求決定生產。", "ZARA 的布料提前備好（Push），衣服款式根據銷售數據決定（Pull）。"],
+                            explanation: "Push 靠預測驅動（make-to-stock），Pull 靠需求驅動（make-to-order）。現實中多數公司採 Push-Pull 混合策略，Decoupling Point 之前備料（Push），之後回應需求（Pull）。ZARA 的 Decoupling Point 在布料階段，是快時尚成功關鍵。",
+                            frameworkTip: "Push-Pull Decoupling Point：之前靠預測備料，之後靠需求拉動"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "54-2",
+                    name: "供應鏈關鍵概念",
+                    description: "掌握 Lead Time、Bottleneck、Bullwhip Effect 等核心觀念。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Lead Time 分析",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "原料有現貨時，Lead Time 是幾天？",
+                            scenario: Challenge.Scenario(
+                                title: "客戶在催貨",
+                                narrative: "大客戶下了緊急訂單，你查了各環節時間：\n• 原料採購：5 天\n• 生產：3 天\n• 品檢：1 天\n• 包裝：1 天\n• 運輸：2 天\n\n但你發現原料已有現貨在倉庫。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "12 天（全部加總）", explanation: "原料有現貨不需等採購 5 天。Lead Time 是實際所需時間。"),
+                                Challenge.Option(id: "B", text: "7 天（扣掉採購時間）", explanation: "正確！3+1+1+2 = 7 天。Lead Time 的關鍵是看「實際還要等什麼」。"),
+                                Challenge.Option(id: "C", text: "5 天（只看最長環節）", explanation: "Lead Time 不是只看最長單一環節，是所有必要環節加總。"),
+                                Challenge.Option(id: "D", text: "6 天（漏算包裝）", explanation: "每個串聯環節都要計入：生產3 + 品檢1 + 包裝1 + 運輸2 = 7。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Lead Time = 從訂單到交付的總時間。已有現貨的環節不用算。", "生產3 + 品檢1 + 包裝1 + 運輸2 = ?"],
+                            explanation: "Lead Time 是從訂單觸發到交付完成的總時間。子類型：Procurement LT、Manufacturing LT、Delivery LT。縮短方法：備安全庫存、並行處理、改善瓶頸環節。",
+                            frameworkTip: "Lead Time = 所有串聯環節時間加總。要縮短就找最長環節下手"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "找出瓶頸 Bottleneck",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "整條產線最大產出是多少？瓶頸在哪？",
+                            scenario: Challenge.Scenario(
+                                title: "產線為什麼慢？",
+                                narrative: "一條組裝產線有四個工站：",
+                                data: [
+                                    ["station": "A：零件準備", "capacity": "60 件/hr", "utilization": "75%"],
+                                    ["station": "B：焊接組裝", "capacity": "40 件/hr", "utilization": "98%"],
+                                    ["station": "C：功能測試", "capacity": "55 件/hr", "utilization": "72%"],
+                                    ["station": "D：包裝出貨", "capacity": "70 件/hr", "utilization": "57%"],
+                                ],
+                                dataCaption: "各工站產能與利用率"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "60 件/hr，瓶頸在 A", explanation: "瓶頸不是看排在前面的站，是看產能最低的站。"),
+                                Challenge.Option(id: "B", text: "40 件/hr，瓶頸在 B", explanation: "正確！串聯產線最大產出 = 產能最低的工站。B 只能 40 件/hr，利用率 98% 已滿載。"),
+                                Challenge.Option(id: "C", text: "56 件/hr（四站平均）", explanation: "串聯產線不能取平均，整體受限於最慢的站。"),
+                                Challenge.Option(id: "D", text: "70 件/hr，用最快的當基準", explanation: "相反，最慢的才是基準。D 的利用率最低(57%)正是因為在等前面。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["串聯系統產出 = 最慢環節速度，像高速公路最窄處決定車流量。", "利用率最高的工站（98%）通常就是瓶頸。"],
+                            explanation: "Bottleneck 是產能最低的環節，決定整體最大產出。識別方法：(1) 找產能最低 (2) 看利用率最高 (3) 看 WIP 堆積最多。改善瓶頸的 ROI 最高。",
+                            frameworkTip: "Theory of Constraints：系統產出 = 瓶頸產能。改善非瓶頸不提升整體產出"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Bullwhip Effect 長鞭效應",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "為什麼需求波動在上游被放大？最有效對策是？",
+                            scenario: Challenge.Scenario(
+                                title: "啤酒遊戲的教訓",
+                                narrative: "供應鏈模擬遊戲結果：",
+                                data: [
+                                    ["role": "消費者需求", "fluctuation": "±10%"],
+                                    ["role": "零售商訂貨", "fluctuation": "±25%"],
+                                    ["role": "批發商訂貨", "fluctuation": "±45%"],
+                                    ["role": "製造商生產", "fluctuation": "±80%"],
+                                ],
+                                dataCaption: "各層級需求波動放大情況"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "上游離消費者太遠，每個角色都多備庫存", explanation: "多備庫存是治標，反而可能惡化波動。"),
+                                Challenge.Option(id: "B", text: "每層獨立預測並加安全量，應共享真實消費者數據", explanation: "正確！Bullwhip Effect 主因：各層獨立預測、批量訂貨、加安全量、促銷囤貨。最有效對策是 Information Sharing——讓上游看到 POS 數據。"),
+                                Challenge.Option(id: "C", text: "製造商反應太慢，應加快生產", explanation: "問題是資訊失真，不是生產速度。"),
+                                Challenge.Option(id: "D", text: "零售商故意多訂，應限制訂購量", explanation: "零售商多訂不是故意的，是看不到真實需求才加安全量。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["如果每一層都能直接看到消費者購買數據，還需要「猜」嗎？", "四大成因：demand signal processing、order batching、price fluctuation、shortage gaming。"],
+                            explanation: "Bullwhip Effect 是需求變異在上游逐層放大的經典現象。對策：VMI、CPFR、POS 數據共享。2025 年趨勢是用 AI Control Tower 整合即時數據抑制此效應。",
+                            frameworkTip: "對策優先級：1. 共享數據 2. 縮短 Lead Time 3. 減少批量訂貨 4. 穩定價格"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "54-3",
+                    name: "供應鏈績效指標",
+                    description: "學會用 Service Level、Fill Rate、TCO 衡量供應鏈表現。",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Service Level vs Fill Rate",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "Order Fill Rate 和 Line Fill Rate 分別是多少？",
+                            scenario: Challenge.Scenario(
+                                title: "主管要的數字",
+                                narrative: "食品配送公司上月數據：\n• 總訂單：1,000 筆\n• 完整交付訂單：920 筆\n• 總訂購品項：5,000 項\n• 實際交付品項：4,700 項",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Order 92%, Line 94%", explanation: "正確！Order = 920/1000 = 92%，Line = 4700/5000 = 94%。Line 較高因為有些訂單只缺 1-2 項。"),
+                                Challenge.Option(id: "B", text: "Order 94%, Line 92%", explanation: "反了。Order 用訂單數算(920/1000)，Line 用品項數算(4700/5000)。"),
+                                Challenge.Option(id: "C", text: "兩個都是 93%", explanation: "不同指標不能取平均。"),
+                                Challenge.Option(id: "D", text: "Order 92%, Line 92%", explanation: "Line Fill Rate = 4700/5000 = 94%，不是 92%。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["Order Fill Rate = 完整交付訂單數 / 總訂單數", "Line Fill Rate = 實際交付品項數 / 總訂購品項數"],
+                            explanation: "Order Fill Rate 衡量完整交付訂單比例（標準嚴格），Line Fill Rate 衡量品項交付比例。企業同時追蹤兩者：Order FR 看客戶體驗，Line FR 找改善方向。",
+                            frameworkTip: "Order Fill Rate 看客戶體驗，Line Fill Rate 找改善方向"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Total Cost of Ownership",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "從 TCO 角度，哪個判斷最合理？",
+                            scenario: Challenge.Scenario(
+                                title: "便宜的供應商真的便宜嗎？",
+                                narrative: "你評估兩個供應商：",
+                                data: [
+                                    ["item": "單價", "a": "$10/件", "b": "$8/件"],
+                                    ["item": "最低訂購量", "a": "500 件", "b": "2,000 件"],
+                                    ["item": "交貨時間", "a": "7 天", "b": "30 天（海運）"],
+                                    ["item": "不良率", "a": "1%", "b": "5%"],
+                                    ["item": "運費", "a": "含在單價", "b": "$0.5/件"],
+                                    ["item": "驗貨成本", "a": "不需要", "b": "$500/批"],
+                                ],
+                                dataCaption: "供應商 A vs B 比較"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "選 B，單價便宜 20%", explanation: "只看單價是最常見的錯誤。加上運費、品質損失、庫存成本後 B 不一定便宜。"),
+                                Challenge.Option(id: "B", text: "選 A，雖然單價高但 TCO 可能更低", explanation: "正確！TCO 含：單價 + 運費 + 品質成本(5% vs 1%) + 庫存成本(MOQ 2000 vs 500) + 驗貨 + 缺貨風險(30天 vs 7天)。加總後 A 很可能更低。"),
+                                Challenge.Option(id: "C", text: "差不多，選哪個都行", explanation: "TCO 分析會揭示隱藏成本的巨大差異。"),
+                                Challenge.Option(id: "D", text: "資訊不夠無法判斷", explanation: "從給定資訊已可判斷趨勢。5% 不良率和 2000 件 MOQ 的隱藏成本很可觀。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["TCO 不只看單價。運費、品質損失、庫存持有成本都要算。", "B 的 5% 不良率 = 每 2000 件有 100 件要退換。"],
+                            explanation: "TCO 包含：直接成本（單價、運費）+ 間接成本（品質損失、驗貨、庫存持有）+ 風險成本（交期不穩的緊急空運）。採購價通常只佔 TCO 的 50-70%。2026 年趨勢是用 AI 計算 TCO 並納入碳排放和地緣政治風險。",
+                            frameworkTip: "TCO = 採購價 + 物流 + 品質 + 庫存 + 管理 + 風險成本"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "供應鏈全貌 Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "用供應鏈概念分析，哪個最全面？",
+                            scenario: Challenge.Scenario(
+                                title: "全球電子公司的供應鏈危機",
+                                narrative: "你是 Supply Chain Analyst，公司遇到多重問題：\n1. 晶片供應商（台灣）因颱風停工兩週\n2. 海運費暴漲 3 倍（紅海危機）\n3. 歐洲客戶交期從 4 週變 8 週\n4. 美國客戶轉向競爭對手\n5. 倉庫堆滿上季滯銷品",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "是 Bullwhip Effect，解法是共享數據", explanation: "問題更多是供應端中斷，不只是需求訊號失真。"),
+                                Challenge.Option(id: "B", text: "晶片是 Bottleneck，解決它就好", explanation: "問題還有物流成本、舊庫存、客戶流失，只看一個點不夠。"),
+                                Challenge.Option(id: "C", text: "多重問題交織：供應中斷→物流受阻→服務水準下降→客戶流失。同時有滯銷庫存問題。需分短中長期對策", explanation: "正確！短期：替代來源或空運。中期：分散供應商、建安全庫存。長期：Nearshoring、Digital Twin 模擬風險。這是 2024-2026 年真實發生的供應鏈挑戰。"),
+                                Challenge.Option(id: "D", text: "主要是海運費問題，等降價就好", explanation: "海運費只是其一，等待不是策略。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["真實供應鏈問題通常不是單一原因。把每個問題跟學過的概念連起來。", "想想短期、中期、長期分別能做什麼。"],
+                            explanation: "整合所有概念：角色（供應商、物流、客戶）、Bottleneck（晶片）、Lead Time（交期倍增）、Bullwhip Effect、Service Level（客戶流失）、TCO（緊急空運成本）。2024-2026 年紅海危機、地緣政治、極端氣候讓 Resilience 成為最重要關鍵字。",
+                            frameworkTip: "分析框架：1. 辨識受影響環節 2. 找根因 vs 症狀 3. 分短中長期對策 4. 評估 trade-off"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 55,
+            name: "需求預測與庫存管理",
+            emoji: "📦",
+            description: "學會預測需求、計算安全庫存、掌握 EOQ 等庫存決策模型",
+            quests: [
+                Quest(
+                    id: "55-1",
+                    name: "需求預測基礎",
+                    description: "了解預測方法的分類與準確度衡量。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "預測方法的選擇",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "這兩個任務該分別用什麼預測方法？",
+                            scenario: Challenge.Scenario(
+                                title: "新產品 vs 老產品",
+                                narrative: "你是 Demand Planner，手上兩個任務：\n\n任務 A：預測暢銷洗髮精明年月銷量（已賣 5 年，有完整歷史資料）\n任務 B：預測下月上市新口味能量飲料銷量（無歷史資料）",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "都用時間序列分析（Quantitative）", explanation: "任務 B 沒有歷史數據，時間序列無法使用。"),
+                                Challenge.Option(id: "B", text: "A 用量化方法，B 用質化方法", explanation: "正確！A 有 5 年資料，適合 Moving Average、Exponential Smoothing。B 無歷史數據，需 Market Research、Expert Opinion、Delphi Method。新品也可參考類似產品銷售曲線（analogous forecasting）。"),
+                                Challenge.Option(id: "C", text: "都用專家意見（Qualitative）", explanation: "有完整歷史資料卻不用太浪費。量化方法在資料充足時通常更準確。"),
+                                Challenge.Option(id: "D", text: "A 用 AI，B 用 Excel", explanation: "工具不是重點，方法論才是。不管工具，A 需量化方法，B 需質化方法。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["量化方法需要歷史數據，質化方法靠判斷和調研。", "新產品沒歷史數據，能用時間序列嗎？"],
+                            explanation: "預測分兩大類：Quantitative（基於歷史數據：Time Series、Causal Models）和 Qualitative（基於判斷：Expert Opinion、Market Research、Delphi）。2025 年趨勢是 AI-based Demand Sensing，結合 POS、社群媒體、天氣等外部訊號做短期預測。",
+                            frameworkTip: "有數據 → Quantitative；沒數據 → Qualitative；兩者結合 = Consensus Forecasting"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Moving Average 計算",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "用 3 個月 SMA，7 月預測值是多少？若實際 160，誤差多少？",
+                            scenario: Challenge.Scenario(
+                                title: "算下個月的預測值",
+                                narrative: "你用 Simple Moving Average 預測零食月銷量：",
+                                data: [
+                                    ["month": "1月", "sales": "100"],
+                                    ["month": "2月", "sales": "120"],
+                                    ["month": "3月", "sales": "110"],
+                                    ["month": "4月", "sales": "130"],
+                                    ["month": "5月", "sales": "140"],
+                                    ["month": "6月", "sales": "150"],
+                                ],
+                                dataCaption: "過去 6 個月銷售"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "預測 140，誤差 20", explanation: "正確！SMA(3) = (130+140+150)/3 = 140。誤差 = |160-140| = 20。SMA 對所有期數權重相同，有滯後性。"),
+                                Challenge.Option(id: "B", text: "預測 125，誤差 35", explanation: "你可能算了 6 個月平均。3 個月 SMA 只用最近 3 個月。"),
+                                Challenge.Option(id: "C", text: "預測 150，誤差 10", explanation: "只用了最後一個月。SMA(3) 要取最近 3 個月平均。"),
+                                Challenge.Option(id: "D", text: "預測 145，誤差 15", explanation: "(130+140+150)/3 = 420/3 = 140，不是 145。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["SMA(3) = 最近 3 個月加總 ÷ 3", "最近 3 個月：4月130、5月140、6月150。"],
+                            explanation: "SMA 是最基本的預測法。缺點：所有期數權重相同、有滯後性。改進版：Weighted Moving Average（近期權重高）、Exponential Smoothing（自動調整權重）。N 越大越平滑但越滯後。",
+                            frameworkTip: "SMA(N) = 最近 N 期平均。N 大→穩定但滯後；N 小→敏感但波動"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "預測準確度 MAE",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "用 MAE 比較，哪個模型較準確？",
+                            scenario: Challenge.Scenario(
+                                title: "哪個模型比較好？",
+                                narrative: "兩個預測模型的表現：",
+                                data: [
+                                    ["month": "1月", "actual": "100", "model_a": "110", "model_b": "95"],
+                                    ["month": "2月", "actual": "120", "model_a": "115", "model_b": "130"],
+                                    ["month": "3月", "actual": "90", "model_a": "100", "model_b": "85"],
+                                    ["month": "4月", "actual": "130", "model_a": "125", "model_b": "140"],
+                                ],
+                                dataCaption: "預測 vs 實際"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A: MAE=7.5, B: MAE=7.5，一樣準", explanation: "正確！A:(10+5+10+5)/4=7.5，B:(5+10+5+10)/4=7.5。但 Bias 不同——A 傾向高估，B 正負交替。實務上還要看偏差方向。"),
+                                Challenge.Option(id: "B", text: "A: MAE=10，比 B 差", explanation: "MAE 是絕對值後再平均，不是取最大誤差。"),
+                                Challenge.Option(id: "C", text: "B: MAE=5，比 A 好", explanation: "重新計算：B 的絕對誤差 5+10+5+10=30，30/4=7.5。"),
+                                Challenge.Option(id: "D", text: "資料太少無法比較", explanation: "4 個月已可計算 MAE 做初步比較。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["MAE = Σ|預測-實際| / n。先算每月絕對誤差再平均。", "A 的誤差：|10|,|5|,|10|,|5|；B 的：|5|,|10|,|5|,|10|"],
+                            explanation: "常用指標：MAE（絕對誤差平均）、MAPE（百分比誤差，可跨品比較）、Bias（看偏差方向）。即使 MAE 相同 Bias 可能不同。2025 年業界用 Forecast Value Added (FVA) 衡量每步調整是否真的改善準確度。",
+                            frameworkTip: "MAE 看誤差大小，MAPE 跨品比較，Bias 看偏差方向"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "55-2",
+                    name: "庫存控制模型",
+                    description: "學會 Safety Stock、Reorder Point、EOQ 的計算與應用。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Safety Stock 概念",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "500 件（50×10 天）為何還缺貨？怎麼改善？",
+                            scenario: Challenge.Scenario(
+                                title: "為什麼還是缺貨？",
+                                narrative: "某產品平均日銷 50 件，供應商交貨 10 天。庫存降到 500 件時補貨。\n\n但上月兩次缺貨：\n• 銷量突飆到每天 70 件，補貨沒到就缺了\n• 供應商延遲 3 天交貨，也缺了",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "500 不夠，設更高如 1000 件", explanation: "隨意加高增加持有成本。正確做法是計算 Safety Stock。"),
+                                Challenge.Option(id: "B", text: "500 只覆蓋平均情況，沒考慮波動。要加 Safety Stock", explanation: "正確！Reorder Point = 平均需求×LT + Safety Stock。500 只是基本量，沒有緩衝。SS 取決於需求標準差、交期標準差、目標 Service Level。"),
+                                Challenge.Option(id: "C", text: "問題在供應商，應該換", explanation: "即使好的供應商也偶爾延遲。Safety Stock 就是應對不確定性。"),
+                                Challenge.Option(id: "D", text: "改成每天補貨", explanation: "增加運輸和處理成本。正確做法是算合適的 ROP。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["50×10=500 是「一切正常」時的量。現實會有波動。", "Safety Stock 應對「不正常」：需求比預期高、交期比預期久。"],
+                            explanation: "Safety Stock 公式概念：SS = Z × σ × √LT。Z=服務水準對應值（95%→1.65），σ=需求標準差，LT=Lead Time。Reorder Point = (Avg Demand × LT) + SS。",
+                            frameworkTip: "ROP = (Avg Demand × LT) + Safety Stock。SS 由波動性和目標服務水準決定"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "EOQ 經濟訂購量",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "EOQ 是多少？每年訂幾次？",
+                            scenario: Challenge.Scenario(
+                                title: "訂多少最划算？",
+                                narrative: "辦公用品採購：\n• 年需求 D = 10,000 件\n• 每次訂購成本 S = $50\n• 每件年持有成本 H = $2\n\n同事說一次多訂比較省，你決定用 EOQ 算。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "EOQ ≈ 707 件，每年約 14 次", explanation: "正確！EOQ = √(2×10000×50/2) = √500000 ≈ 707。年次數 = 10000/707 ≈ 14。EOQ 在訂購成本和持有成本間找平衡。"),
+                                Challenge.Option(id: "B", text: "EOQ = 5000 件，每年 2 次", explanation: "一次訂太多，持有成本很高。"),
+                                Challenge.Option(id: "C", text: "EOQ = 100 件，每年 100 次", explanation: "訂太頻繁，100次×$50=$5000 訂購成本太高。"),
+                                Challenge.Option(id: "D", text: "EOQ = 10000 件，一年 1 次", explanation: "平均庫存 5000 件×$2=$10,000 持有成本，遠非最優。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["EOQ = √(2DS/H)。代入 D=10000, S=50, H=2。", "2×10000×50/2 = 500,000。√500,000 ≈ 707。"],
+                            explanation: "EOQ 平衡 Ordering Cost 和 Holding Cost。公式 Q* = √(2DS/H)。在 EOQ 點兩者相等，總成本最低。限制：假設需求穩定、無數量折扣。實務搭配 Safety Stock 使用。",
+                            frameworkTip: "EOQ = √(2DS/H)。訂太多→庫存成本高；訂太少→訂購成本高"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "ABC 分析法",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "根據 ABC 分析，哪個庫存策略最合理？",
+                            scenario: Challenge.Scenario(
+                                title: "3000 個 SKU 怎麼管？",
+                                narrative: "你做了 ABC 分析：",
+                                data: [
+                                    ["category": "A 類（前 20% SKU）", "count": "600 個", "revenue": "佔營收 80%"],
+                                    ["category": "B 類（中間 30%）", "count": "900 個", "revenue": "佔營收 15%"],
+                                    ["category": "C 類（後 50%）", "count": "1,500 個", "revenue": "佔營收 5%"],
+                                ],
+                                dataCaption: "SKU 的 ABC 分類"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "所有品項都用 EOQ，公平管理", explanation: "公平不等於有效。A 類需更精細管理，C 類用簡單方式就好。"),
+                                Challenge.Option(id: "B", text: "A：嚴格管控、精確預測、頻繁盤點；B：中等；C：簡化管理、較高安全庫存", explanation: "正確！ABC 精神是「資源花在刀口上」。A 類營收佔比最高值得投入。C 類可設較高 SS（持有成本佔比低），減少管理頻率。這是 Pareto 80/20 法則的應用。"),
+                                Challenge.Option(id: "C", text: "C 類太多，全部淘汰", explanation: "C 類可能是客戶需要的配件，不能隨便淘汰。"),
+                                Challenge.Option(id: "D", text: "A 類賣很好不用管，資源放 C 類", explanation: "A 類不能缺貨，缺了營收損失最大。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["80/20 法則：20% 品項貢獻 80% 營收，應得最多關注。", "C 類營收 5%，花太多心力不划算。"],
+                            explanation: "ABC 分析基於 Pareto 法則。進階版 ABC-XYZ 加入波動性（X=穩定、Y=中等、Z=高波動）。AX 最好管（高價值穩定），CZ 最難管（低價值高波動）。",
+                            frameworkTip: "ABC 分類 + XYZ 波動性 = 差異化庫存策略"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "55-3",
+                    name: "庫存策略與平衡",
+                    description: "理解 Inventory Turnover、Stockout vs Overstock 的 trade-off。",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Inventory Turnover 分析",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "三家 Inventory Turnover 各是多少？誰最好？",
+                            scenario: Challenge.Scenario(
+                                title: "三家公司誰管得好？",
+                                narrative: "比較三家零售公司：",
+                                data: [
+                                    ["company": "A（超市）", "cogs": "$50M", "avg_inv": "$5M"],
+                                    ["company": "B（家具店）", "cogs": "$20M", "avg_inv": "$10M"],
+                                    ["company": "C（電子產品）", "cogs": "$80M", "avg_inv": "$16M"],
+                                ],
+                                dataCaption: "年度數據（COGS=銷貨成本）"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A=10, B=2, C=5。A 最好", explanation: "正確！Turnover = COGS/Avg Inv。A:50/5=10, B:20/10=2, C:80/16=5。但不同產業合理值不同——超市本該高周轉，家具本來低周轉。跨產業比要小心。"),
+                                Challenge.Option(id: "B", text: "C 最好因為營收最高", explanation: "營收最高≠庫存管理最好。Turnover 看的是效率。"),
+                                Challenge.Option(id: "C", text: "B 最差應立刻改善", explanation: "家具業本來低周轉（大件、長週期）。需跟同業比較。"),
+                                Challenge.Option(id: "D", text: "產業不同無法判斷", explanation: "可以計算和比較，但解讀時要考慮產業特性。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["Inventory Turnover = COGS ÷ Avg Inventory。越高越快。", "不同產業的合理範圍不同。"],
+                            explanation: "Inventory Turnover 衡量庫存轉化為銷售的速度。相關指標 DOI = 365/Turnover（庫存能賣幾天）。A 的 DOI=36.5 天，B=182.5 天。Gartner 報告指出供應鏈領導企業的 Turnover 比同業高 30-50%。",
+                            frameworkTip: "Turnover = COGS/Avg Inv。DOI = 365/Turnover。同業比較才有意義"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Newsvendor：缺貨 vs 滯銷",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "利潤最大化應備多少？",
+                            scenario: Challenge.Scenario(
+                                title: "冬季外套該備多少？",
+                                narrative: "季節性商品備貨決策：\n• 賣出利潤：$30/件\n• 滯銷虧損：$15/件\n• 缺貨隱性成本：$10/件\n\n需求機率分佈：",
+                                data: [
+                                    ["demand": "8,000 件", "probability": "20%"],
+                                    ["demand": "10,000 件", "probability": "50%"],
+                                    ["demand": "12,000 件", "probability": "30%"],
+                                ],
+                                dataCaption: "需求機率"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "8,000——保守不滯銷", explanation: "80% 機率需求≥10,000，高機率缺貨。缺貨損失可能大於滯銷風險。"),
+                                Challenge.Option(id: "B", text: "10,000——跟著預測走", explanation: "沒考慮成本不對稱。缺貨$40 > 滯銷$15，應偏向多備。"),
+                                Challenge.Option(id: "C", text: "12,000——缺貨成本($40)遠高於滯銷($15)，應多備", explanation: "正確！Newsvendor 核心：Cu=$40, Co=$15。Critical Ratio = 40/55≈73%。需求≤10,000 累積機率=70% < 73%，≤12,000=100% > 73%。最適在 10k-12k 間，12,000 是合理偏高策略。"),
+                                Challenge.Option(id: "D", text: "15,000——寧多不少", explanation: "多出的滯銷品造成 $45k-$105k 虧損，過度。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["缺貨成本 = 利潤$30 + 隱性$10 = $40。滯銷 = $15。哪個貴？", "Critical Ratio = Cu/(Cu+Co)。缺貨成本越高應越多備。"],
+                            explanation: "Newsvendor Model 處理一次性庫存決策。Critical Ratio = Cu/(Cu+Co)，備貨量讓需求累積機率 ≥ CR。2025 年企業用 Monte Carlo 模擬搭配 ML 做更精細優化。",
+                            frameworkTip: "Newsvendor: CR = Cu/(Cu+Co)。缺貨成本越高→備越多"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "庫存管理 Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "優先處理什麼？什麼順序？",
+                            scenario: Challenge.Scenario(
+                                title: "倉庫裡的危機",
+                                narrative: "你是新 Inventory Manager，發現：\n• Turnover 從 8 降到 5\n• A 類 Fill Rate 從 97% 降到 88%\n• C 類佔 45% 倉庫空間\n• 200 個 SKU 超過 6 個月零銷量\n• 安全庫存設定兩年沒更新",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "先清 200 個死庫存→騰空間→再處理其他", explanation: "死庫存重要但不最緊急。A 類缺貨對營收影響更大。"),
+                                Challenge.Option(id: "B", text: "更新安全庫存→改善 A 類 Fill Rate→清死庫存→優化 C 類", explanation: "正確！(1) 更新 SS 是根因（兩年沒更新可能導致 A 缺貨 + C 過剩）(2) 救 A 類（營收影響最大）(3) 清死庫存（釋放空間資金）(4) 優化 C 類。先修根因、再救重要的、再清理、再優化。"),
+                                Challenge.Option(id: "C", text: "導入新 WMS 系統解決所有問題", explanation: "系統是中長期計畫，不解決眼前 Fill Rate 下降。"),
+                                Challenge.Option(id: "D", text: "全面增加安全庫存避免缺貨", explanation: "會惡化 Turnover（已從 8 降到 5），C 類也會佔更多空間。需要差異化策略。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["安全庫存兩年沒更新——這可能是很多問題的根因。", "A 類品項缺貨對營收衝擊最大，應優先處理。"],
+                            explanation: "庫存管理的改善優先級：(1) 更新基礎參數（SS、ROP）(2) 優先解決高價值品項問題 (3) 清理死庫存釋放資源 (4) 優化分類策略。這就是 ABC 分析 + 根因分析的實務應用。",
+                            frameworkTip: "改善順序：修根因→救 A 類→清死庫存→優化策略。永遠先問「為什麼」"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 56,
+            name: "採購與供應商管理",
+            emoji: "🤝",
+            description: "從 Sourcing 到供應商評估，掌握現代採購的核心流程與策略",
+            quests: [
+                Quest(
+                    id: "56-1",
+                    name: "採購流程與文件",
+                    description: "搞懂 RFI、RFQ、RFP 的差異，以及採購流程的每一步。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "RFI vs RFQ vs RFP",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "三個任務分別應該用什麼文件？",
+                            scenario: Challenge.Scenario(
+                                title: "主管要你發文件給供應商",
+                                narrative: "你在採購部門，主管丟了三個任務給你：\n\n任務 A：公司想導入新的倉儲管理系統，先了解市場上有哪些廠商、能提供什麼方案\n任務 B：要採購 10,000 個標準螺絲，規格已經確定，只需要比價\n任務 C：要找一家物流公司負責全國配送，需要廠商提出完整的服務方案和報價",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A=RFP, B=RFQ, C=RFI", explanation: "任務 A 只是想了解市場，還沒到請廠商提案的階段，應該用 RFI。"),
+                                Challenge.Option(id: "B", text: "A=RFI, B=RFQ, C=RFP", explanation: "正確！RFI (Request for Information) = 收集資訊，了解市場和廠商能力。RFQ (Request for Quotation) = 規格明確只需報價。RFP (Request for Proposal) = 需要廠商提出完整方案含價格。流程通常是 RFI → RFP → RFQ。"),
+                                Challenge.Option(id: "C", text: "三個都用 RFP 就好", explanation: "買標準螺絲不需要「提案」，只需要報價（RFQ）。用錯文件會浪費供應商和自己的時間。"),
+                                Challenge.Option(id: "D", text: "A=RFQ, B=RFI, C=RFP", explanation: "RFQ 是報價用的，不適合「了解市場」。RFI 是收集資訊用的，不適合「只需比價」。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["RFI = 我想了解你；RFQ = 告訴我價格；RFP = 給我完整方案。", "規格已確定的標準品只需要比價，用哪個文件？"],
+                            explanation: "RFI（了解市場）→ RFP（請廠商提案）→ RFQ（最終比價）。實務中不一定每次都走完三步。標準品直接 RFQ，複雜服務才需要 RFP。2025 年趨勢是用 AI 自動化 RFQ 流程——自動發送、收集、比較報價，大幅縮短採購週期。",
+                            frameworkTip: "RFI=探索市場 → RFP=請求方案 → RFQ=最終比價。視需求跳過不必要的步驟"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Single vs Multi-Sourcing",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "考量成本、風險和可行性，哪個方案最合理？",
+                            scenario: Challenge.Scenario(
+                                title: "COVID 後的教訓",
+                                narrative: "2020 年疫情期間，你的公司 100% 依賴中國某工廠生產關鍵零組件。工廠因封城停工 3 個月，公司產線全面停擺，損失超過 $5M。\n\n現在主管要你重新規劃供應商策略。目前有三個方案：\n\nA：繼續 Single Source（原供應商品質最好、價格最低）\nB：Dual Source（原供應商 70% + 越南新供應商 30%）\nC：Multi Source（三家以上供應商分散在不同地區）",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "方案 A，品質和價格最重要", explanation: "經歷過 $5M 損失後還不分散風險？單一來源的成本節省可能遠小於一次中斷造成的損失。"),
+                                Challenge.Option(id: "B", text: "方案 B，Dual Source 平衡成本與風險", explanation: "正確！Dual Sourcing 是最常見的分散策略。70/30 分配讓原供應商保持規模經濟，同時培養備援來源。新供應商在不同地區可降低地緣風險。2025 年後 Dual/Multi Sourcing 已成為業界標準，特別是關鍵零組件。"),
+                                Challenge.Option(id: "C", text: "方案 C，越分散越安全", explanation: "理論上最安全，但管理成本最高。三家以上意味著更多品質管控、合約管理、關係維護。對關鍵零組件來說 Dual Source 通常就夠了。"),
+                                Challenge.Option(id: "D", text: "不換供應商，改為多備 6 個月庫存", explanation: "6 個月庫存的持有成本非常高，而且零組件可能過時。庫存不能替代供應商分散。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Single Source 風險太高（已經證明了）。Multi Source 管理成本太高。中間呢？", "70/30 的分配讓主力供應商維持規模經濟，備援供應商隨時可以接手。"],
+                            explanation: "Single Sourcing 成本最低但風險最高。Multi Sourcing 風險最低但管理複雜。Dual Sourcing 是主流平衡策略。2025-2026 年因地緣政治（中美關係、紅海危機）和氣候風險加劇，Nearshoring（近岸生產）和 China+1 策略成為全球趨勢。許多企業正在將部分產能從中國轉移到越南、印度、墨西哥。",
+                            frameworkTip: "Single=低成本高風險；Multi=低風險高成本；Dual=最佳平衡。關鍵零件至少 Dual Source"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Procure-to-Pay 流程",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "Procure-to-Pay (P2P) 的正確順序是？",
+                            scenario: Challenge.Scenario(
+                                title: "採購流程的正確順序",
+                                narrative: "新同事問你：「從發現需求到付款給供應商，中間有哪些步驟？」\n\n你列出了以下步驟，但順序被打亂了：\n\n① 三方核對（PO、收貨單、發票）\n② 建立採購需求 (Purchase Requisition)\n③ 供應商出貨，倉庫收貨驗收\n④ 核准後發出採購訂單 (Purchase Order)\n⑤ 付款給供應商\n⑥ 選定供應商並議價",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "② → ⑥ → ④ → ③ → ① → ⑤", explanation: "正確！需求 → 選商議價 → 發 PO → 收貨驗收 → 三方核對（Three-Way Match）→ 付款。Three-Way Match 確認 PO 內容、收貨數量、發票金額三者一致，是採購內控的關鍵步驟。"),
+                                Challenge.Option(id: "B", text: "⑥ → ② → ④ → ③ → ⑤ → ①", explanation: "應該先有需求（PR）才去選供應商。核對應在付款之前，不是之後。"),
+                                Challenge.Option(id: "C", text: "② → ④ → ⑥ → ③ → ① → ⑤", explanation: "應該先選定供應商（⑥）才發 PO（④），不是先發 PO 再選供應商。"),
+                                Challenge.Option(id: "D", text: "② → ⑥ → ④ → ③ → ⑤ → ①", explanation: "付款（⑤）應該在三方核對（①）之後，確認無誤才能付款。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["採購一定是先有「需求」，最後才「付款」。", "付款前要做什麼確認？PO、收貨單、發票要三方核對。"],
+                            explanation: "P2P (Procure-to-Pay) 是採購的端到端流程。Three-Way Match（PO + Goods Receipt + Invoice 三方核對）是內控關鍵，防止超額付款或未收貨就付款。在 ERP 系統中（如 SAP），每一步都有對應的交易碼和文件。自動化 P2P 是企業數位轉型的重點之一。",
+                            frameworkTip: "P2P: PR → Sourcing → PO → Receipt → 3-Way Match → Payment"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "56-2",
+                    name: "供應商評估與績效",
+                    description: "學會用 Scorecard 評估供應商，理解 QCD 框架。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "供應商計分卡",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "用加權計分法，哪家供應商總分最高？",
+                            scenario: Challenge.Scenario(
+                                title: "誰才是最佳供應商？",
+                                narrative: "你用 Supplier Scorecard 評估三家供應商（各項滿分 100）：",
+                                data: [
+                                    ["criteria": "品質 (30%)", "s1": "95", "s2": "80", "s3": "90"],
+                                    ["criteria": "交期 (25%)", "s1": "85", "s2": "95", "s3": "75"],
+                                    ["criteria": "價格 (25%)", "s1": "70", "s2": "90", "s3": "95"],
+                                    ["criteria": "服務 (20%)", "s1": "90", "s2": "75", "s3": "80"],
+                                ],
+                                dataCaption: "供應商 S1、S2、S3 的評分"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "S1: 85.75 分最高", explanation: "正確！S1: 95×0.3+85×0.25+70×0.25+90×0.2 = 28.5+21.25+17.5+18 = 85.25。S2: 80×0.3+95×0.25+90×0.25+75×0.2 = 24+23.75+22.5+15 = 85.25。S3: 90×0.3+75×0.25+95×0.25+80×0.2 = 27+18.75+23.75+16 = 85.5。實際上 S3 最高！計算要仔細。"),
+                                Challenge.Option(id: "B", text: "S2: 85.25 分最高", explanation: "S2 = 24+23.75+22.5+15 = 85.25。但需要跟其他兩家的加權分比較。"),
+                                Challenge.Option(id: "C", text: "S3: 85.5 分最高", explanation: "正確！S1=85.25, S2=85.25, S3=85.5。S3 以微幅差距勝出，主要因為品質（第二高）和價格（最高）的加權得分有優勢。但三家非常接近，實務上可能需要看更多維度。"),
+                                Challenge.Option(id: "D", text: "三家差不多，看價格最低的就好", explanation: "價格只佔 25% 權重。加權計分卡的目的就是不只看價格。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["加權分 = Σ(各項分數 × 權重)。記得每項都要乘以權重再加總。", "S3: 90×0.3 + 75×0.25 + 95×0.25 + 80×0.2 = ?"],
+                            explanation: "Supplier Scorecard 是用加權計分法評估供應商的標準工具。常見維度（QCD+S）：Quality、Cost、Delivery、Service。權重反映公司的策略優先級。進階做法是加入 Risk 和 Sustainability 維度。2025 年趨勢是 AI 自動化 Supplier Scoring，整合外部信號（新聞、財報、ESG 評級）動態更新評分。",
+                            frameworkTip: "Supplier Scorecard = 加權計分。QCD+S 是基本維度，權重反映策略優先級"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "供應商績效追蹤",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "面對這種持續惡化的趨勢，最合適的行動是？",
+                            scenario: Challenge.Scenario(
+                                title: "供應商季度檢討",
+                                narrative: "你在做 Q3 供應商績效報告，發現一家關鍵供應商的表現惡化：",
+                                data: [
+                                    ["metric": "On-Time Delivery", "q1": "96%", "q2": "92%", "q3": "84%", "target": "95%"],
+                                    ["metric": "Defect Rate", "q1": "0.5%", "q2": "0.8%", "q3": "2.1%", "target": "<1%"],
+                                    ["metric": "Response Time", "q1": "4 hrs", "q2": "6 hrs", "q3": "12 hrs", "target": "<8 hrs"],
+                                ],
+                                dataCaption: "供應商 X 近三季績效（含目標值）"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "立刻終止合約換供應商", explanation: "太衝動。關鍵供應商不能說換就換——轉換成本高、新供應商需要磨合期。應該先找根因。"),
+                                Challenge.Option(id: "B", text: "發 Corrective Action Request (CAR)，要求限期改善並安排備援", explanation: "正確！CAR 是供應商管理的標準做法：(1) 正式通知問題 (2) 要求根因分析和改善計畫 (3) 設定期限複查 (4) 同時開始評估備援供應商。三項指標同時惡化可能代表供應商有系統性問題（產能、管理、財務），需要深入了解。"),
+                                Challenge.Option(id: "C", text: "等 Q4 看看會不會自己好轉", explanation: "三個季度連續惡化，自己好轉的機率很低。等待意味著 Q4 可能更糟。"),
+                                Challenge.Option(id: "D", text: "派人去供應商工廠駐廠監督", explanation: "駐廠是極端手段，通常是 CAR 之後效果不佳才考慮。先走正式程序。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["三個指標同時惡化 = 系統性問題，不是偶發事件。", "關鍵供應商不能說換就換。正式的改善流程是什麼？"],
+                            explanation: "供應商績效管理流程：Monitor → Alert → CAR → Review → Escalate/Exit。CAR (Corrective Action Request) 要求供應商提出 Root Cause Analysis 和 Corrective Action Plan。如果 CAR 後仍未改善，才考慮 Business Review 和最終的 Exit Strategy。同時要啟動備援計畫（Contingency Plan）。",
+                            frameworkTip: "績效管理：Monitor → Alert → CAR → Review → Escalate。永遠要有 Plan B"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "2026 採購新趨勢",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "以下哪個策略組合最能應對 2025-2026 年的採購環境？",
+                            scenario: Challenge.Scenario(
+                                title: "關稅風暴下的決策",
+                                narrative: "2025 年你的公司從中國進口電子零組件，但面臨以下情況：\n\n• 美國對中國加徵 25% 關稅\n• 歐盟 CBAM（碳邊境調整機制）開始課徵碳關稅\n• 紅海危機讓海運時間從 30 天延長到 45 天\n• Everstream Analytics 的 2026 預測：地緣政治碎片化風險等級 97%\n\n主管要你提出供應鏈重組建議。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "全面轉移到東南亞，完全脫離中國", explanation: "完全脫離不切實際——中國在許多領域仍有不可替代的產業群聚優勢。而且全部轉移到同一區域等於換一個風險集中點。"),
+                                Challenge.Option(id: "B", text: "維持現狀，用庫存緩衝所有風險", explanation: "關稅是持續性成本（不是一次性衝擊），靠庫存無法解決。海運延長和碳關稅也是結構性變化。"),
+                                Challenge.Option(id: "C", text: "China+1 策略 + Nearshoring + 供應商碳足跡評估", explanation: "正確！(1) China+1：保留中國供應商但在越南/印度培養替代來源 (2) Nearshoring：部分產能移到離消費市場更近的地方（如墨西哥供應北美）降低運輸時間和碳排 (3) 碳足跡評估：因應 CBAM，選擇低碳供應商可避免碳關稅。這是 2025-2026 年全球供應鏈重組的主流方向。"),
+                                Challenge.Option(id: "D", text: "跟中國供應商談降價 25% 來抵消關稅", explanation: "25% 降價對供應商來說幾乎不可能，而且沒有處理海運延長和碳關稅問題。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["China+1 = 不完全離開中國，但至少有一個替代來源。", "CBAM 代表碳排放高的供應商會讓你付更多關稅。這影響供應商選擇。"],
+                            explanation: "2025-2026 全球採購三大趨勢：(1) China+1/Nearshoring — 分散地緣風險，墨西哥和越南是最熱門目的地 (2) 碳邊境稅（EU CBAM）讓碳足跡成為供應商選擇的關鍵因素 (3) AI-driven Supplier Risk Management — 用機器學習整合新聞、天氣、貿易政策等外部信號即時評估供應商風險。Everstream Analytics 評估 2026 年地緣政治碎片化風險達 97%，極端天氣風險 93%。",
+                            frameworkTip: "2026 採購策略：China+1 分散風險 + Nearshoring 縮短距離 + ESG/碳評估合規"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "56-3",
+                    name: "採購策略實戰",
+                    description: "整合採購知識，處理複雜的供應商決策情境。",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Make vs Buy 決策",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "從財務和策略角度分析，應該 Make 還是 Buy？",
+                            scenario: Challenge.Scenario(
+                                title: "自己做還是外包？",
+                                narrative: "你的公司目前外包包裝作業給供應商，年費用 $800K。工廠有空間可以自建包裝線：\n\n• 設備投資：$1.5M（5 年折舊）\n• 年營運成本（人力+材料）：$500K\n• 品質可自行管控，不良率預計從 3% 降到 0.5%\n• 但需要招聘 5 位操作員，培訓期 3 個月\n• 目前外包商偶爾延遲影響出貨",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Buy — 繼續外包，$800K 比自建便宜", explanation: "表面上 $800K < $500K+$300K(折舊)=$800K 看似相同，但你沒算品質改善和交期可控的效益。"),
+                                Challenge.Option(id: "B", text: "Make — 自建成本相當，但品質和交期可控性是關鍵差異", explanation: "正確！年成本：$500K+$300K(折舊)=$800K，跟外包一樣。但自建有隱性效益：不良率從 3%→0.5%（省品質成本）、不再受外包商延遲影響（提升服務水準）、自有產能的彈性。Make vs Buy 不只看直接成本，還要看策略價值。"),
+                                Challenge.Option(id: "C", text: "Make — 因為自己做一定比外包好", explanation: "不一定。如果包裝不是核心能力，或人力市場緊張難招人，外包可能更好。要具體分析。"),
+                                Challenge.Option(id: "D", text: "混合 — 高峰期外包，平時自己做", explanation: "理論上不錯，但維持兩套系統的複雜度高。這題的情境下自建成本已經跟外包持平，混合反而更貴。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["先算直接成本：自建年成本 = $500K + $1.5M/5 = $800K。跟外包一樣？", "成本一樣的情況下，品質改善和交期可控就是決定因素。"],
+                            explanation: "Make vs Buy 分析框架：(1) 直接成本比較 (2) 品質與交期影響 (3) 核心能力評估（是否為公司核心業務）(4) 風險評估（依賴外部 vs 投資回收）(5) 策略彈性。如果成本接近，策略因素（品質、交期、彈性）就成為決策關鍵。",
+                            frameworkTip: "Make vs Buy: 成本只是一個維度。品質、交期、核心能力、風險都要考量"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "談判策略：BATNA",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "你的 BATNA 是什麼？談判時最合理的目標是？",
+                            scenario: Challenge.Scenario(
+                                title: "價格談判前的準備",
+                                narrative: "你要跟供應商談明年的合約續約，對方報價漲 15%（理由是原料上漲）。你的準備資料：\n\n• 目前合約價：$100/件\n• 供應商報價：$115/件\n• 你查到的備援供應商報價：$108/件（但品質未驗證，需 3 個月導入期）\n• 市場原料確實漲了 8%\n• 你的公司佔這家供應商 20% 的營收",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "BATNA 是 $108，目標壓到 $100 不漲", explanation: "完全不漲不合理——原料確實漲了 8%。這樣談可能傷害長期關係。"),
+                                Challenge.Option(id: "B", text: "BATNA 是 $108，目標在 $105-$108 之間", explanation: "正確！BATNA (Best Alternative to Negotiated Agreement) = 你的備援方案 $108。這代表超過 $108 你就該換供應商。但考慮原料確實漲 8%，合理價格 = $100×1.08 = $108。你可以利用佔對方 20% 營收的籌碼，爭取 $105-$108 之間的價格（只反映原料漲幅，不接受 15% 全漲）。"),
+                                Challenge.Option(id: "C", text: "沒有 BATNA，只能接受 $115", explanation: "你有備援供應商的報價 $108，這就是你的 BATNA。有替代方案就有談判籌碼。"),
+                                Challenge.Option(id: "D", text: "BATNA 是 $115，直接接受", explanation: "BATNA 是你的替代方案（$108），不是對方的出價。$115 超過你的 BATNA，不應該直接接受。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["BATNA = 如果談判破裂，你最好的替代方案是什麼？", "你的籌碼：有備援報價 $108 + 佔對方營收 20%。對方不會想輕易失去你。"],
+                            explanation: "BATNA (Best Alternative to Negotiated Agreement) 是談判的核心概念。知道自己的 BATNA 才能設定底線。談判技巧：(1) 永遠帶著 BATNA 上桌 (2) 用數據支持你的立場（原料漲幅數據）(3) 強調長期合作關係 (4) 提出 win-win 方案（如承諾更大訂單量換取更好價格）。",
+                            frameworkTip: "BATNA = 你的底牌。知道替代方案才能不被對方牽著走"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "採購 Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "你應該怎麼處理？",
+                            scenario: Challenge.Scenario(
+                                title: "供應商審計報告的震撼",
+                                narrative: "你是跨國消費品公司的 Procurement Analyst。一份第三方審計報告揭露你的 Tier 2 供應商（你直接供應商的原料供應商）有以下問題：\n\n• 工人每週工時超過 70 小時（當地法規上限 48 小時）\n• 廢水直接排放未處理\n• 但該供應商的價格比替代方案低 30%\n• 你的直接供應商說：「這是他們的問題，不關我們的事」\n\n同時，歐盟 CSRD 法規要求你公司揭露整條供應鏈的 ESG 風險。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "這是 Tier 2 的問題，我們只管 Tier 1", explanation: "2025 年後這不再可行。歐盟 CSRD 和德國 LkSG 法規要求企業對整條供應鏈的人權和環保負責，包括 Tier 2 和更深層。"),
+                                Challenge.Option(id: "B", text: "立刻公開譴責並終止所有相關合約", explanation: "太極端且不負責任。突然斷約可能讓問題工人失去工作，也會中斷你的供應。應該用建設性方式處理。"),
+                                Challenge.Option(id: "C", text: "要求 Tier 1 對 Tier 2 提出改善計畫，設定時限，納入合約 ESG 條款，同時評估替代來源", explanation: "正確！(1) 要求直接供應商承擔 Tier 2 管理責任 (2) 設定改善計畫和期限 (3) 將 ESG 條款納入合約（不合規 = 違約）(4) 同步評估替代來源以防改善失敗。這符合 2025 CSRD 合規要求，也是負責任供應鏈管理的標準做法。"),
+                                Challenge.Option(id: "D", text: "30% 的成本優勢太大了，先維持現狀", explanation: "違反 CSRD 可面臨罰款、合約取消、品牌損害。ESG 合規已不是選項，是法律要求。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["CSRD 要求揭露整條供應鏈的 ESG 風險——不只 Tier 1。", "既不能忽視，也不能衝動斷約。建設性改善 + 備援計畫。"],
+                            explanation: "2025 年起供應鏈 ESG 合規成為法律要求。EU CSRD 要求揭露 Scope 3 排放（供應鏈排放通常佔企業碳足跡 70-90%）。德國 LkSG 讓企業對供應鏈人權問題負法律責任。GRI、SASB、ISSB 等四大 ESG 框架提供報告標準。企業必須建立 Supplier Code of Conduct、定期審計、持續監控，並將 ESG 條款嵌入合約中。",
+                            frameworkTip: "ESG 供應鏈管理：審計→改善計畫→合約條款→持續監控→備援方案"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 57,
+            name: "物流與倉儲",
+            emoji: "🚛",
+            description: "運輸模式選擇、倉儲作業流程、最後一哩配送與倉庫自動化",
+            quests: [
+                Quest(
+                    id: "57-1",
+                    name: "運輸模式與物流",
+                    description: "了解不同運輸方式的特性、成本結構和 Incoterms。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "運輸模式選擇",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "三批貨分別最適合哪種運輸模式？",
+                            scenario: Challenge.Scenario(
+                                title: "三批貨怎麼運？",
+                                narrative: "你是物流協調員，手上有三批貨需要安排運輸：\n\n貨 A：500 公斤晶片，價值 $2M，客戶 3 天內要收到（從台灣到美國）\n貨 B：20 個貨櫃家具，不急，2 個月內到就好（從越南到歐洲）\n貨 C：50 噸鋼材，國內運輸 800 公里到工廠",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A=空運, B=海運, C=鐵路或公路", explanation: "正確！A 高價值+緊急 → 空運（快但貴，適合輕量高值急件）。B 大量+不急 → 海運（慢但便宜，適合大宗貨物）。C 國內中距離重物 → 鐵路或公路（鐵路適合大宗長距離，公路靈活門到門）。"),
+                                Challenge.Option(id: "B", text: "三批都用海運最便宜", explanation: "貨 A 價值 $2M 且 3 天要到，海運要 2-3 週，會延誤。緊急高值貨不適合海運。"),
+                                Challenge.Option(id: "C", text: "A=海運, B=空運, C=空運", explanation: "完全反過來了。B 是 20 個貨櫃家具，空運成本會是天文數字。"),
+                                Challenge.Option(id: "D", text: "全部公路運輸最靈活", explanation: "跨國運輸（台灣到美國、越南到歐洲）沒辦法純走公路。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["選運輸模式考量：速度、成本、貨物特性（重量/體積/價值）、距離。", "空運：快但貴，適合輕量高值急件。海運：慢但便宜，適合大宗。"],
+                            explanation: "四大運輸模式特性：Air（最快最貴，適合高值急件）、Ocean（最便宜但最慢，適合大量低時效性貨物）、Rail（中距離大宗，成本介於海運和公路之間）、Road/Truck（最靈活，門到門，短中距離首選）。Intermodal（多式聯運）結合不同模式的優勢。選擇依據：urgency、value-to-weight ratio、volume、distance。",
+                            frameworkTip: "運輸選擇矩陣：緊急+高值→空運；大量+不急→海運；中距離→鐵路/公路；靈活→公路"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Incoterms 基礎",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "以下關於這三個 Incoterms 的理解，哪個正確？",
+                            scenario: Challenge.Scenario(
+                                title: "誰負責運費和風險？",
+                                narrative: "你在處理一筆國際採購，供應商在德國，你的公司在台灣。供應商報了三種價格：\n\n• EXW（Ex Works）：$10,000\n• FOB Hamburg（Free On Board 漢堡港）：$11,500\n• CIF Kaohsiung（Cost, Insurance, Freight 高雄港）：$14,000\n\n你要決定用哪個 Incoterm。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "EXW 最便宜所以最好，選它就對了", explanation: "EXW 報價最低，但你要自己負責從德國工廠到高雄的所有運輸、保險、清關。總成本可能超過 CIF。而且你不熟悉德國當地物流，安排起來很困難。"),
+                                Challenge.Option(id: "B", text: "FOB 代表供應商負責到漢堡港上船，之後風險和運費由買方承擔", explanation: "正確！FOB (Free On Board) = 供應商負責將貨物送上船並完成出口清關。貨物上船後，風險和費用轉移給買方。CIF = 供應商多負責海運費和保險到目的港。EXW = 買方負責一切，從工廠取貨開始。實務上 FOB 和 CIF 是國際貿易最常用的 Incoterms。"),
+                                Challenge.Option(id: "C", text: "CIF 代表供應商負責到高雄港，包含關稅", explanation: "CIF 包含運費和保險到目的港，但不包含進口關稅和目的港之後的運輸。進口清關和關稅是買方責任。"),
+                                Challenge.Option(id: "D", text: "三個 Incoterm 的總到岸成本應該一樣", explanation: "理論上如果雙方效率相同可能接近，但實際上供應商安排出口端物流通常更有效率（FOB/CIF），而買方安排進口端更有效率。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Incoterms 決定買賣雙方的責任分界點：誰付運費、誰承擔風險、到哪裡為止。", "FOB = 貨物上船後責任轉移。CIF = 供應商多包海運費和保險。"],
+                            explanation: "Incoterms（國際貿易條件）是國際貿易的通用語言，定義買賣雙方的風險和成本分界點。常用的：EXW（買方全包）、FOB（上船後轉移）、CIF（含運費保險到目的港）、DDP（供應商全包到門）。選擇建議：如果你有好的國際物流商 → FOB 可能較省。如果你不熟悉出口國物流 → CIF 讓供應商處理。",
+                            frameworkTip: "Incoterms 風險轉移點：EXW=工廠 → FOB=上船 → CIF=目的港 → DDP=買方門口"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "物流 KPI",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "三個 KPI 未達標，應該優先處理哪個？",
+                            scenario: Challenge.Scenario(
+                                title: "物流部門的績效報告",
+                                narrative: "你在準備月度物流 KPI 報告：",
+                                data: [
+                                    ["kpi": "On-Time Delivery (OTD)", "value": "89%", "target": "95%", "status": "❌"],
+                                    ["kpi": "Order Accuracy", "value": "97%", "target": "99%", "status": "❌"],
+                                    ["kpi": "Freight Cost per Unit", "value": "$3.20", "target": "<$3.00", "status": "❌"],
+                                    ["kpi": "Damage Rate", "value": "0.3%", "target": "<0.5%", "status": "✅"],
+                                ],
+                                dataCaption: "本月物流 KPI"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "先改善運費（$3.20 vs $3.00），因為直接影響成本", explanation: "運費超標 7% 重要但不是最緊急的。OTD 89% 代表超過 10% 的訂單延遲交付，直接影響客戶滿意度和訂單流失。"),
+                                Challenge.Option(id: "B", text: "先改善 OTD（89% vs 95%），因為客戶感受最直接", explanation: "正確！OTD 落後最多（差距 6 個百分點），而且準時交付直接影響客戶滿意度、續約率和品牌信譽。物流的首要任務是「準時把對的東西送到」。改善 OTD 的過程中（優化路線、改善排程），運費也可能連帶改善。"),
+                                Challenge.Option(id: "C", text: "先改善 Order Accuracy（97% vs 99%），2% 錯誤率太高", explanation: "97% 看似不錯但確實有改善空間。不過 OTD 的差距更大（6pp vs 2pp），而且延遲交付通常比送錯品項的客訴更多。"),
+                                Challenge.Option(id: "D", text: "三個一起處理，全面改善", explanation: "資源有限的情況下不可能同時改善所有指標。聚焦客戶影響最大的先處理。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["OTIF (On-Time In-Full) 被認為是物流最重要的 KPI。", "哪個指標落後最多？哪個對客戶影響最直接？"],
+                            explanation: "物流核心 KPI：OTD/OTIF（準時完整交付率）、Order Accuracy（訂單正確率）、Freight Cost per Unit（單位運費）、Damage Rate（破損率）、Warehouse Utilization（倉庫使用率）。OTIF 通常被視為物流最重要的 KPI——因為它直接反映客戶體驗。2025 年大型零售商（如 Walmart）對供應商的 OTIF 要求高達 98%，未達標會被罰款。",
+                            frameworkTip: "OTIF 是物流之王。「準時把對的東西完整送到」= 物流的核心使命"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "57-2",
+                    name: "倉儲作業與自動化",
+                    description: "學會倉庫作業流程、揀貨策略，以及 2026 年倉庫自動化趨勢。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "倉庫作業流程",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "為什麼揀貨（Picking）是倉庫最花人力的環節？",
+                            scenario: Challenge.Scenario(
+                                title: "電商倉庫的一天",
+                                narrative: "你參觀一家電商倉庫，觀察到以下作業區域：\n\n• 收貨區：卡車到站，卸貨、清點、品檢\n• 上架區：將商品放到指定儲位\n• 揀貨區：根據訂單從儲位取出商品\n• 包裝區：將揀好的商品裝箱、貼標\n• 出貨區：按配送路線分類，裝車出發\n\n主管說：「揀貨作業佔了倉庫 55% 的人力成本。」",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "因為揀貨員要走很遠的路找商品", explanation: "正確！揀貨員約 60% 的時間花在「走路」而非「拿貨」。倉庫越大、SKU 越多、走的路越遠。這就是為什麼揀貨策略和倉庫佈局這麼重要——目標是減少走路距離。常見優化：Zone Picking（分區揀貨）、Batch Picking（批次揀貨）、Wave Picking（波次揀貨）、Goods-to-Person（貨到人）。"),
+                                Challenge.Option(id: "B", text: "因為揀貨需要最多的專業技能", explanation: "揀貨不需要太多專業技能，但需要準確和速度。人力成本高是因為「行走距離」佔了大部分時間。"),
+                                Challenge.Option(id: "C", text: "因為揀貨機器還沒發明", explanation: "揀貨機器人（如 AMR）已經廣泛使用。但很多倉庫仍以人力為主，成本確實最高。"),
+                                Challenge.Option(id: "D", text: "因為收貨和出貨都已經自動化了", explanation: "不一定。很多倉庫的收貨和出貨也是人力作業。揀貨佔比高是因為每筆訂單都要揀、而且走路距離長。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["想像在一個足球場大小的倉庫裡，每張訂單要從不同貨架取 5-10 樣東西。", "「走路」佔揀貨時間的 60%。怎麼減少走路距離？"],
+                            explanation: "倉庫五大作業流程：Receiving → Put-away → Picking → Packing → Shipping。Picking 佔人力成本最高（約 55%），主因是行走距離。優化策略：Zone Picking（分區，減少範圍）、Batch Picking（合併多單同時揀，減少重複路線）、Wave Picking（按時段批次處理）。2026 年趨勢是 Goods-to-Person（用 AMR 機器人把貨架送到揀貨員面前），徹底消除走路時間。",
+                            frameworkTip: "倉庫流程：Receive → Put-away → Pick → Pack → Ship。Pick 是最大成本優化機會"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "倉庫自動化趨勢 2026",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "考量你的情況，最適合的起步方案是？",
+                            scenario: Challenge.Scenario(
+                                title: "自動化投資決策",
+                                narrative: "你的倉庫面臨挑戰：\n• 電商訂單年增 25%\n• 勞動力短缺，招不到足夠的揀貨員\n• 旺季（雙11、黑五）人力缺口達 40%\n• MHI/Deloitte 2025 報告指出 55% 供應鏈領導者正在增加自動化投資\n\n你在評估三種自動化方案：\nA：AMR 自主移動機器人（貨到人）— 投資 $500K，12 個月 ROI\nB：全自動 AS/RS 立體倉庫 — 投資 $5M，3 年 ROI\nC：語音揀貨系統（Voice Picking）— 投資 $100K，6 個月 ROI",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "方案 B，一步到位做全自動化", explanation: "$5M 投資和 3 年 ROI 對多數企業來說風險太高。而且全自動系統需要大幅改造倉庫結構，導入期長。"),
+                                Challenge.Option(id: "B", text: "方案 A，AMR 是 2026 年最主流的倉庫自動化方向", explanation: "正確！AMR（Autonomous Mobile Robots）是目前成長最快的倉庫自動化技術。優勢：(1) 不需改造倉庫結構 (2) 可彈性擴充（旺季加機器人，淡季減少）(3) 12 個月 ROI 合理 (4) 直接解決「行走距離」的最大痛點。全球倉庫自動化市場預計 2034 年達 $907 億（年複合成長率 15.1%）。"),
+                                Challenge.Option(id: "C", text: "方案 C，投資最小最安全", explanation: "Voice Picking 確實是低成本入門選擇，但它只提升揀貨效率 10-15%，無法解決勞動力短缺問題。旺季 40% 的人力缺口需要更根本的解決方案。"),
+                                Challenge.Option(id: "D", text: "先不投資，用臨時工解決旺季問題", explanation: "勞動力短缺是結構性問題，臨時工越來越難找且培訓成本高。MHI 報告顯示 55% 的領導者已在投資自動化，不行動會落後。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["AMR 可以彈性擴充——旺季多開幾台，淡季關掉——這解決了季節性波動問題。", "投資要考慮：ROI 期間、導入複雜度、能否解決核心問題。"],
+                            explanation: "2026 倉庫自動化趨勢：(1) AMR 是增長最快的技術，預計佔新倉庫投資的主力 (2) Goods-to-Person 模式取代傳統 Person-to-Goods (3) 協作型機器人（Cobot）與人類並肩作業 (4) AI 視覺辨識提升分揀準確度。MHI/Deloitte 報告指出倉庫自動化市場到 2034 年將達 $907 億。關鍵驅動力：勞動力短缺 + 電商增長 + 消費者對次日達的期望。",
+                            frameworkTip: "自動化投資：從 ROI 快的開始（AMR/Voice）→ 驗證效果 → 再擴大投資"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "最後一哩配送",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "以下哪個策略組合最能改善最後一哩效率？",
+                            scenario: Challenge.Scenario(
+                                title: "最後一哩的成本難題",
+                                narrative: "你是電商物流經理。數據顯示：\n\n• 最後一哩（從配送中心到消費者家門口）佔整體物流成本的 53%\n• 客戶越來越期待「當日達」甚至「小時達」\n• 配送失敗率（人不在家）高達 12%\n• 退貨率 15%，逆向物流成本是正向的 2-3 倍\n\n你在評估改善方案。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "全部改用自有車隊，控制品質", explanation: "自有車隊固定成本高，而且配送需求有波動。大部分企業用 3PL + crowdsourced delivery 的彈性組合。"),
+                                Challenge.Option(id: "B", text: "設置 Micro-Fulfillment Center + 智慧路線規劃 + 自提點/智能櫃", explanation: "正確！(1) Micro-FC（微型履約中心）靠近消費者，縮短配送距離 (2) AI 路線規劃優化配送順序，減少空跑 (3) 自提點/智能櫃解決「人不在家」問題（配送失敗率從 12% 降到近 0%）。Dark Store（暗店）也是類似概念——不對外營業的小型倉庫，專門處理線上訂單。"),
+                                Challenge.Option(id: "C", text: "提高運費讓客戶自己去門市取貨", explanation: "這會降低客戶體驗和轉換率。配送便利性是電商競爭力的核心。"),
+                                Challenge.Option(id: "D", text: "只接受大額訂單，小額訂單不配送", explanation: "會流失大量客戶。應該用策略降低小額訂單的配送成本，而不是拒絕服務。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["最後一哩最大的成本來自「距離」和「配送失敗」。怎麼縮短距離？怎麼避免白跑？", "Micro-Fulfillment = 把小倉庫設在離消費者更近的地方。"],
+                            explanation: "最後一哩佔物流成本 53%（Capgemini 研究），是物流最大的成本挑戰。2025-2026 趨勢：(1) Micro-Fulfillment Center / Dark Store 靠近需求端 (2) AI 路線優化（如 Google OR-Tools）(3) 自提點/Locker 網絡 (4) 無人機/自駕車試點 (5) Crowdsourced Delivery（彈性配送力）。Amazon、Walmart 都在積極佈局城市微型倉庫。",
+                            frameworkTip: "最後一哩三大策略：靠近客戶（Micro-FC）+ 智慧路線 + 替代交付（自提/Locker）"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "57-3",
+                    name: "物流實戰與 OTIF",
+                    description: "整合物流知識處理跨國物流情境。",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "OTIF 計算",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "OTIF 是多少？會被罰款嗎？",
+                            scenario: Challenge.Scenario(
+                                title: "Walmart 的 OTIF 要求",
+                                narrative: "你的公司是 Walmart 的供應商。Walmart 的 OTIF 標準：\n• On-Time：在指定交貨窗口（±1 天）內到達\n• In-Full：訂購數量 100% 交付\n• OTIF 目標：98%\n• 未達標罰款：3% of COGS\n\n你上個月的 100 筆訂單結果：\n• 92 筆準時且完整交付\n• 4 筆準時但數量短缺\n• 3 筆完整但遲到 2 天\n• 1 筆既遲到又短缺",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "OTIF = 92%，會被罰款", explanation: "正確！OTIF = 同時準時且完整的訂單 / 總訂單 = 92/100 = 92%。低於 98% 目標，會被罰款。注意：即使準時但數量不足（4 筆）或數量足但遲到（3 筆），都不算 OTIF 達標。OTIF 是最嚴格的物流 KPI——兩個條件都要同時滿足。"),
+                                Challenge.Option(id: "B", text: "OTIF = 96%（準時的有 93 筆，完整的有 93 筆，取較高的）", explanation: "OTIF 不是分開算再取較高的。必須「同時」準時且完整才算。兩個條件要同時滿足。"),
+                                Challenge.Option(id: "C", text: "OTIF = 99%（只有 1 筆完全失敗）", explanation: "不對。4 筆短缺 + 3 筆遲到 + 1 筆兩者皆有 = 8 筆未達標。只有 92 筆同時滿足兩個條件。"),
+                                Challenge.Option(id: "D", text: "OTIF = 95%（92+3 筆準時的）", explanation: "3 筆完整但遲到的不能算 OTIF 達標。「On-Time」和「In-Full」都是必要條件。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["OTIF = On-Time AND In-Full。兩個條件都要同時滿足。", "只有 92 筆同時準時且完整。92/100 = ?"],
+                            explanation: "OTIF 是零售業最重要的供應商績效指標。Walmart、Target 等大型零售商都有嚴格的 OTIF 要求（通常 95-98%），未達標直接罰款。OTIF 之所以嚴格，是因為零售商的貨架空間有限——如果你的貨遲到或數量不足，貨架就空了，損失的是零售商的銷售。提升 OTIF 的方法：精確預測 → 充足安全庫存 → 可靠物流 → 即時追蹤。",
+                            frameworkTip: "OTIF = 同時準時+完整。最嚴格的物流 KPI，大零售商的硬指標"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "逆向物流",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "降低退貨率最有效的方式是？",
+                            scenario: Challenge.Scenario(
+                                title: "退貨潮來了",
+                                narrative: "你管理的電商平台退貨率從 10% 升到 18%。分析發現：\n\n• 40% 退貨原因：尺寸不合\n• 25% 退貨原因：實物與圖片不符\n• 20% 退貨原因：商品損壞\n• 15% 退貨原因：改變心意\n\n每筆退貨的處理成本是正向物流的 2.5 倍。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "提高退貨門檻（收退貨運費、縮短退貨期）", explanation: "會降低客戶購買意願和滿意度。研究顯示寬鬆的退貨政策反而增加購買轉換率。"),
+                                Challenge.Option(id: "B", text: "改善商品資訊（尺寸指南、360°實拍、AR試穿），佔 65% 退貨可因此預防", explanation: "正確！尺寸不合(40%) + 圖片不符(25%) = 65% 的退貨原因都跟「購買前資訊不足」有關。改善產品頁資訊、加入 AI 尺寸推薦、AR 虛擬試穿可以從源頭減少退貨。這比處理退貨的逆向物流便宜得多。2025 年 ASOS 用 AI 尺寸推薦降低了 30% 的尺寸相關退貨。"),
+                                Challenge.Option(id: "C", text: "加強包裝減少損壞", explanation: "損壞只佔 20%，改善空間有限。65% 的退貨原因是資訊不足，從源頭解決效果更大。"),
+                                Challenge.Option(id: "D", text: "不接受退貨", explanation: "不切實際。退貨是電商的必要成本，關鍵是降低退貨率而非拒絕退貨。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["看退貨原因的佔比：40%+25% = 65% 都跟「買之前不知道實際情況」有關。", "從源頭減少退貨 vs 優化退貨處理——哪個更根本？"],
+                            explanation: "Reverse Logistics（逆向物流）是電商的重大成本挑戰。處理退貨的成本是正向的 2-3 倍（運輸+檢驗+重新上架/處分+客服）。最佳策略是「預防勝於處理」：改善產品資訊減少退貨發生。已經發生的退貨則要有效分類：可重新銷售 vs 需要翻新 vs 報廢。2025 年 AI 正在改變退貨管理：智慧尺寸推薦、退貨預測、自動分類處理。",
+                            frameworkTip: "逆向物流：預防 > 處理。從退貨原因下手，65% 以上可在源頭預防"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "物流 Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "最合理的佈局策略是？",
+                            scenario: Challenge.Scenario(
+                                title: "跨國電商的物流佈局",
+                                narrative: "你的電商公司目前在美國有一個中央倉庫（Kansas City），服務全美客戶。現在面臨：\n\n• 西岸客戶平均 5 天才收到貨（競爭對手 2 天）\n• 東岸客戶 3 天（可接受）\n• 運輸成本因為長距離居高不下\n• 明年計劃拓展到加拿大市場\n• 預算有限，不能一次建太多倉庫\n\n你需要提出物流網絡優化方案。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "在 LA 加一個西岸倉庫，加拿大用跨境直送", explanation: "西岸倉庫可以改善交期，但 LA 地價和人力成本全美最高。而且只解決了一個問題。"),
+                                Challenge.Option(id: "B", text: "在 Reno/Phoenix（西部低成本區）設第二倉 + Toronto 附近設加拿大倉或用 3PL", explanation: "正確！(1) 西部倉庫不一定要在 LA，Reno（Nevada 免稅）或 Phoenix 成本更低且覆蓋西岸 (2) 兩倉策略：Kansas City 覆蓋中部+東岸，西部倉覆蓋西岸，平均交期可降到 2 天 (3) 加拿大可先用 3PL 測試市場再決定是否自建。這是 Network Optimization（網絡優化）的標準做法。"),
+                                Challenge.Option(id: "C", text: "全國改用空運，保證 2 天到貨", explanation: "空運成本是陸運的 5-10 倍。電商的利潤率不足以支撐全面空運。"),
+                                Challenge.Option(id: "D", text: "維持一個倉庫，承諾 5 天到貨就好", explanation: "競爭對手已經做到 2 天，5 天會持續流失客戶。物流速度是電商核心競爭力。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["增加倉庫不一定要選大城市。低成本地區 + 良好交通網絡可能更好。", "新市場（加拿大）可以先用 3PL 測試，不需要馬上自建倉庫。"],
+                            explanation: "Network Optimization（物流網絡優化）是物流策略的核心。決策因素：(1) 客戶分佈和交期需求 (2) 倉庫位置的成本（地價、人力、稅務）(3) 運輸成本和覆蓋範圍 (4) 服務水準要求。工具：Center of Gravity Model（重心法）找最佳位置。新市場策略：先 3PL → 驗證需求 → 再自建。Amazon 的成功就是靠全美 200+ 個 FC 實現次日達覆蓋。",
+                            frameworkTip: "物流網絡：用 Center of Gravity 找位置 + 低成本區域 + 新市場先用 3PL 測試"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 58,
+            name: "ERP 與系統流程",
+            emoji: "⚙️",
+            description: "了解 ERP、WMS、TMS、MRP 等企業系統如何支撐供應鏈運作",
+            quests: [
+                Quest(
+                    id: "58-1",
+                    name: "ERP 基礎與模組",
+                    description: "認識 ERP 系統的核心概念和主要模組。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "什麼是 ERP？",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "導入 ERP 最核心的價值是什麼？",
+                            scenario: Challenge.Scenario(
+                                title: "為什麼公司要用 ERP？",
+                                narrative: "你加入一家中型製造公司，發現各部門用不同系統：\n\n• 財務部用 Excel 記帳\n• 倉庫用紙本記錄庫存\n• 業務用自己的 CRM 管客戶\n• 採購用 Email 跟供應商溝通\n\n問題：月底要結帳時，財務要花 3 天跟各部門要數字。庫存數字常常對不上。業務答應客戶的交期跟實際不符。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "讓每個部門都有漂亮的系統畫面", explanation: "UI 只是表面。ERP 的核心價值不在畫面漂亮。"),
+                                Challenge.Option(id: "B", text: "建立 Single Source of Truth——所有部門用同一套數據", explanation: "正確！ERP (Enterprise Resource Planning) 的核心是「一個資料庫，多個模組」。財務、倉庫、業務、採購都在同一個系統上操作，數據即時同步。訂單一建立，庫存自動扣、財務自動記、採購需求自動觸發。不再有「版本不一致」的問題。"),
+                                Challenge.Option(id: "C", text: "自動化所有工作，不需要人了", explanation: "ERP 不是取代人，而是讓人的工作更有效率。它自動化的是數據流動和流程規則，但決策仍需要人。"),
+                                Challenge.Option(id: "D", text: "只是為了合規要求才需要", explanation: "合規是好處之一，但不是核心價值。數據一致性和流程效率才是。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["各部門數據不一致是最大的痛點。怎麼解決？", "ERP = Enterprise Resource Planning。「Planning」建立在「統一的資料」上。"],
+                            explanation: "ERP 是企業核心系統，整合所有業務流程到一個平台。主流 ERP：SAP S/4HANA（大型企業首選）、Oracle ERP Cloud、Microsoft Dynamics 365、NetSuite（中小企業）。核心模組：Financial (FI)、Controlling (CO)、Materials Management (MM)、Sales & Distribution (SD)、Production Planning (PP)、Warehouse Management (WM)。ERP 市場預計 2025 年達 $500B+。",
+                            frameworkTip: "ERP 核心價值 = Single Source of Truth。一個資料庫 + 多個模組 = 數據一致"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Master Data 主檔資料",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "為什麼 Master Data 品質這麼重要？",
+                            scenario: Challenge.Scenario(
+                                title: "系統上線前的大工程",
+                                narrative: "ERP 導入專案中，顧問說：「Master Data 的品質決定系統成敗。」\n\n你需要整理以下資料：\n• Material Master：所有物料的基本資訊（品號、描述、單位、倉位…）\n• Customer Master：客戶資訊（名稱、地址、付款條件…）\n• Vendor Master：供應商資訊（名稱、採購條件、交期…）\n• Bill of Materials (BOM)：產品的材料清單\n• Routing：生產步驟和工時\n\n但各部門給你的資料格式都不同，有很多重複和錯誤。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "只是為了系統畫面好看", explanation: "Master Data 影響的是所有業務流程的正確性，不只是畫面。"),
+                                Challenge.Option(id: "B", text: "因為所有交易都參照 Master Data——如果物料資訊錯，訂單、庫存、財務全都會錯", explanation: "正確！Master Data 是所有交易資料的基礎。如果 Material Master 的單位設錯（把「箱」設成「件」），所有採購數量、庫存、成本都會錯。如果 BOM 錯了，MRP 算出來的原料需求就不對。業界統計，60% 的 ERP 導入問題來自 Master Data 品質不佳。"),
+                                Challenge.Option(id: "C", text: "因為老闆說要整理就整理", explanation: "Master Data 整理有明確的商業理由，不是為了交差。"),
+                                Challenge.Option(id: "D", text: "只有上線前要整理，之後就不用管了", explanation: "Master Data 需要持續維護。新品上市、供應商變更、客戶資訊更新都需要及時更新。Data Governance 是長期工作。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["ERP 裡每筆交易都參照 Master Data。交易 = 訂單、收貨、發票、付款…", "Garbage In, Garbage Out。基礎資料錯，所有報表和決策都會錯。"],
+                            explanation: "Master Data 是 ERP 的地基。種類：Material Master（物料）、Customer Master（客戶）、Vendor Master（供應商）、BOM（物料清單）、Routing（工藝路線）。品質要求：完整性、一致性、準確性、及時性。Data Governance（數據治理）是確保 Master Data 品質的持續性工作，包含 Data Owner（資料負責人）、Data Standards（標準）、Change Process（變更流程）。",
+                            frameworkTip: "Master Data = ERP 的地基。GIGO（Garbage In, Garbage Out）——基礎資料品質決定一切"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "MRP 物料需求規劃",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "MRP 會產生什麼採購建議？",
+                            scenario: Challenge.Scenario(
+                                title: "MRP 跑出來的結果",
+                                narrative: "你的公司生產一款產品 A，BOM 如下：\n\n產品 A = 2 個零件 B + 1 個零件 C\n\n已知資訊：\n• 產品 A 的需求：100 個（2 週後交貨）\n• 零件 B 現有庫存：50 個，Lead Time 1 週\n• 零件 C 現有庫存：30 個，Lead Time 2 週\n• 組裝 A 需要 1 天",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "B 要買 200 個，C 要買 100 個（不扣庫存）", explanation: "需求是毛需求。MRP 會扣掉現有庫存（Net Requirements = Gross - On Hand）。"),
+                                Challenge.Option(id: "B", text: "B 要買 150 個（現在下單），C 要買 70 個（現在下單）", explanation: "正確！B 毛需求 = 100×2 = 200，扣庫存 50 = 淨需求 150。C 毛需求 = 100×1 = 100，扣庫存 30 = 淨需求 70。時間安排：A 要在第 2 週交，組裝需 1 天，所以零件要在第 2 週初到。B 的 LT=1 週，所以第 1 週下單。C 的 LT=2 週，所以現在就要下單！C 比較緊急。"),
+                                Challenge.Option(id: "C", text: "B 要買 150 個，C 不用買（庫存 30 夠了）", explanation: "C 的需求是 100 個，庫存只有 30 個，還需要 70 個。"),
+                                Challenge.Option(id: "D", text: "等到第 2 週再一起下單", explanation: "C 的 Lead Time 是 2 週！如果第 2 週才下單，第 4 週才會到，延遲 2 週。MRP 的價值就是根據 LT 倒推下單時間。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["MRP 邏輯：(1) 算毛需求（BOM 展開）(2) 扣庫存（淨需求）(3) 根據 Lead Time 倒推下單時間。", "產品 A 需要 2 個 B 和 1 個 C。100 個 A = 需要多少 B 和 C？"],
+                            explanation: "MRP (Material Requirements Planning) 是製造業的核心計劃引擎。邏輯：(1) Master Production Schedule 決定要生產什麼 (2) BOM Explosion 展開物料需求 (3) 扣除現有庫存和在途量 (4) 根據 Lead Time 倒推下單時間。MRP 的輸入：MPS + BOM + Inventory Status + Lead Times。輸出：Planned Purchase Orders 和 Planned Production Orders。ERP 中的 MRP 會自動執行這個計算。",
+                            frameworkTip: "MRP: 需要什麼(BOM) × 需要多少(MPS) - 有什麼(庫存) = 要買什麼(計劃訂單)"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "58-2",
+                    name: "供應鏈系統生態",
+                    description: "認識 WMS、TMS 以及 Order-to-Cash 和 Procure-to-Pay 的系統流程。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "WMS vs TMS",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "這兩套系統分別是什麼？",
+                            scenario: Challenge.Scenario(
+                                title: "倉庫和運輸的系統需求",
+                                narrative: "物流主管說：「我們需要兩套系統，一套管倉庫裡面的作業，一套管貨出了倉庫之後的配送。」\n\n倉庫需求：管理儲位、指派揀貨任務、追蹤庫存位置、管理收貨和出貨\n運輸需求：規劃配送路線、選擇承運商、追蹤在途貨物、計算運費",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "倉庫用 WMS，運輸用 TMS", explanation: "正確！WMS (Warehouse Management System) 管理倉庫內部作業：儲位管理、揀貨路線優化、庫存追蹤、收發貨管理。TMS (Transportation Management System) 管理運輸：路線規劃、承運商選擇、運費管理、在途追蹤。兩者通常跟 ERP 整合，形成完整的供應鏈系統生態。"),
+                                Challenge.Option(id: "B", text: "都用 ERP 就好", explanation: "ERP 有基本的倉庫和運輸功能，但通常不夠深入。專業的 WMS 和 TMS 提供更強大的優化功能。很多企業是 ERP + 專業 WMS/TMS 的組合。"),
+                                Challenge.Option(id: "C", text: "倉庫用 TMS，運輸用 WMS", explanation: "反了。WMS = Warehouse Management System（倉庫），TMS = Transportation Management System（運輸）。"),
+                                Challenge.Option(id: "D", text: "倉庫用 CRM，運輸用 SCM", explanation: "CRM 管客戶關係，不管倉庫。SCM 是大概念不是具體系統。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["WMS 的 W = Warehouse。TMS 的 T = Transportation。", "倉庫裡面的事 → WMS。出了倉庫的運輸 → TMS。"],
+                            explanation: "供應鏈系統生態：ERP（核心骨幹）+ WMS（倉庫優化）+ TMS（運輸優化）+ MES（製造執行）+ SCP（供應鏈計劃）。主流 WMS：Manhattan Associates、Blue Yonder、SAP EWM。主流 TMS：Oracle TMS、SAP TM、project44。2025 年趨勢是 Cloud-native 系統和 AI-powered 優化。",
+                            frameworkTip: "系統生態：ERP(核心) + WMS(倉庫) + TMS(運輸) + MES(生產) + SCP(計劃)"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Order-to-Cash 流程",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "如果步驟 ② 發現客戶信用額度不足，系統應該怎麼處理？",
+                            scenario: Challenge.Scenario(
+                                title: "一張訂單在系統裡怎麼跑？",
+                                narrative: "客戶在你的 B2B 平台下了一張訂單。你追蹤這張訂單在 ERP 系統中的旅程：\n\n① Sales Order 建立 → ② 系統檢查庫存和信用額度 → ③ 倉庫收到揀貨指令 → ④ 出貨並產生 Delivery Note → ⑤ 開立發票 (Invoice) → ⑥ 客戶付款 → ⑦ 收款確認並結案\n\n這就是 Order-to-Cash (O2C) 流程。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "自動取消訂單", explanation: "太激進。客戶可能只是暫時超額，直接取消會損失生意和客戶關係。"),
+                                Challenge.Option(id: "B", text: "系統產生 Credit Block，訂單暫停，通知信用管理團隊審批", explanation: "正確！ERP 的 Credit Management 功能會在信用額度不足時自動凍結訂單（Credit Block），同時通知信用管理人員審查。審批通過（例如確認客戶即將付款）後才放行。這是內控的重要機制——既保護公司免於呆帳風險，又不會自動拒絕客戶。"),
+                                Challenge.Option(id: "C", text: "忽略信用檢查，繼續出貨", explanation: "沒有信用控制會導致呆帳風險。應收帳款失控是企業現金流的大敵。"),
+                                Challenge.Option(id: "D", text: "要求客戶先全額付款再處理", explanation: "可能是最終決策之一，但不應該由系統自動執行。需要人工判斷。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["ERP 的內控機制通常是「凍結 + 通知」，不是直接拒絕。", "Credit Block 讓人來做最終決策，系統只是把關。"],
+                            explanation: "O2C (Order-to-Cash) 是銷售端的端到端流程。關鍵控制點：Credit Check（信用檢查）、ATP Check（可用量承諾檢查）、Pricing（定價規則）、Billing（開票）。在 SAP 中對應：VA01(建立訂單) → VL01N(出貨) → VF01(開票) → F-28(收款)。O2C 的效率直接影響 DSO（Days Sales Outstanding）和現金循環。",
+                            frameworkTip: "O2C: Order → Credit Check → Pick/Pack/Ship → Invoice → Payment。每一步都是系統控制點"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "系統整合挑戰",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "最根本的問題出在哪？",
+                            scenario: Challenge.Scenario(
+                                title: "ERP 導入的第 18 個月",
+                                narrative: "公司導入 SAP 18 個月了，但問題不斷：\n\n• 倉庫人員抱怨系統操作太複雜，偷偷回去用 Excel\n• 庫存數字跟實際差異超過 15%\n• 財務月結從 3 天變成 7 天\n• 採購單位仍在用舊系統下單\n• 管理層看不到即時的 Dashboard\n\n主管問你：「我們花了 $2M 導入 SAP，為什麼還是一團亂？」",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "SAP 不好用，應該換成其他 ERP", explanation: "換系統不會解決問題——如果根因是流程和人的問題，換什麼系統都一樣。業界統計，ERP 導入失敗 70% 的原因是 Change Management 不足。"),
+                                Challenge.Option(id: "B", text: "系統設計有問題，需要大量客製化", explanation: "過度客製化反而是 ERP 導入的常見錯誤。應該調整流程適應系統最佳實踐，而不是把系統改成跟舊流程一樣。"),
+                                Challenge.Option(id: "C", text: "Change Management 不足——使用者沒被充分培訓和說服，流程沒有真正轉換", explanation: "正確！所有症狀都指向 Change Management 問題：(1) 倉庫回用 Excel = 培訓不足或系統沒配合實際工作流 (2) 庫存差異 = 有人不在系統上操作 (3) 月結變慢 = 新流程不熟悉 (4) 仍用舊系統 = 變革抵抗。解法：加強培訓、指派 Key Users（種子使用者）、強制系統使用（關閉舊系統）、管理層帶頭使用。"),
+                                Challenge.Option(id: "D", text: "需要更多 IT 人員來維護系統", explanation: "IT 維護不是瓶頸。問題在使用者不願意或不知道怎麼用。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["技術通常不是 ERP 失敗的主因。想想：系統有了，為什麼人不用？", "70% 的 ERP 導入問題來自 People 和 Process，不是 Technology。"],
+                            explanation: "ERP 導入的「三P」：People、Process、Platform。最常失敗的是 People（Change Management）。最佳實踐：(1) 充分的使用者培訓（不是只教操作，還要教「為什麼」）(2) Key User 制度（每個部門的超級使用者）(3) 管理層支持和帶頭 (4) 快速回應使用者問題 (5) 定期 Health Check 和持續改善。SAP 的名言：「SAP is not an IT project, it's a business transformation.」",
+                            frameworkTip: "ERP 成功三要素：People（培訓+變革管理）> Process（流程設計）> Platform（系統技術）"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 59,
+            name: "供應鏈數據分析",
+            emoji: "📊",
+            description: "用數據驅動供應鏈決策：KPI Dashboard、分析方法、AI 應用",
+            quests: [
+                Quest(
+                    id: "59-1",
+                    name: "供應鏈 KPI 與 Dashboard",
+                    description: "學會設計供應鏈 Dashboard，選對 KPI 說對故事。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "SCOR 模型指標",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "以下哪組 KPI 最能代表 SCOR 的五大流程？",
+                            scenario: Challenge.Scenario(
+                                title: "老闆要一頁式報告",
+                                narrative: "CEO 說：「給我一頁紙看懂整個供應鏈的健康度。」你決定用 SCOR 模型的五大流程來組織 KPI：\n\nPlan → Source → Make → Deliver → Return\n\n你需要為每個流程選一個最代表性的 KPI。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "Plan=Forecast Accuracy, Source=Supplier OTD, Make=Yield Rate, Deliver=OTIF, Return=Return Rate", explanation: "正確！Forecast Accuracy 衡量計劃的準確度。Supplier OTD 衡量供應商準時交付。Yield Rate 衡量生產良率。OTIF 衡量配送表現。Return Rate 衡量退貨。這五個 KPI 涵蓋了供應鏈從計劃到退貨的完整循環。SCOR (Supply Chain Operations Reference) 是全球最廣泛使用的供應鏈績效框架。"),
+                                Challenge.Option(id: "B", text: "五個都用 Revenue 就好，營收最重要", explanation: "Revenue 是結果指標，不是過程指標。你需要看每個環節的效率才能找到問題。"),
+                                Challenge.Option(id: "C", text: "Plan=庫存量, Source=採購金額, Make=產量, Deliver=出貨量, Return=退款金額", explanation: "這些是「量」而不是「效率」。KPI 要看比率和效率，不是絕對數字。產量高不代表生產好（良率可能很低）。"),
+                                Challenge.Option(id: "D", text: "Plan 和 Source 不需要 KPI，只看 Deliver 就夠了", explanation: "只看配送等於只看結果不看原因。如果 Deliver 出問題，根因可能在 Plan（預測不準）或 Source（供應商延遲）。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["SCOR 五大流程：Plan-Source-Make-Deliver-Return。每個流程需要自己的 KPI。", "KPI 要看效率和品質（比率），不是只看絕對數量。"],
+                            explanation: "SCOR (Supply Chain Operations Reference) 是 ASCM 開發的供應鏈績效標準框架。五大流程對應的常用 KPI：Plan（Forecast Accuracy、Inventory Days of Supply）、Source（Supplier OTD、Material Quality）、Make（Yield Rate、Cycle Time）、Deliver（OTIF、Order Cycle Time）、Return（Return Rate、Cost of Returns）。頂層指標：Perfect Order Rate、Cash-to-Cash Cycle Time、Supply Chain Cost as % of Revenue。",
+                            frameworkTip: "SCOR: Plan→Source→Make→Deliver→Return。每個流程至少一個 KPI"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Dashboard 設計原則",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "重新設計 Dashboard 時，以下哪個原則最重要？",
+                            scenario: Challenge.Scenario(
+                                title: "第一版 Dashboard 被退回了",
+                                narrative: "你做了一個供應鏈 Dashboard，但主管不滿意：\n\n「太多數字了，我不知道該看什麼。而且紅綠燈只有紅和綠，我不知道是剛變紅還是已經紅很久了。」\n\n你的第一版有 25 個 KPI，全部平鋪在一個畫面上。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "KPI 越多越好，資訊越完整", explanation: "資訊過載反而降低效率。人腦一次能處理的指標有限。CEO 要的是 insight 不是 data。"),
+                                Challenge.Option(id: "B", text: "分層設計：Executive Summary (5-7 KPI) → Drill-down 細節 → 趨勢比較", explanation: "正確！好的 Dashboard 遵循「Overview → Zoom → Filter → Details on Demand」原則。第一層給高管看最關鍵的 5-7 個 KPI（帶趨勢箭頭和紅黃綠燈）。點擊後可以 Drill-down 看細節。加入趨勢線讓人看到「方向」而非只是「數字」。這就是為什麼主管要知道是「剛變紅還是已經紅很久」。"),
+                                Challenge.Option(id: "C", text: "全部用表格呈現，數字最精確", explanation: "表格適合精確查詢，但不適合快速掌握全局。Dashboard 要的是一眼看出趨勢和異常。"),
+                                Challenge.Option(id: "D", text: "用最炫的圖表吸引注意", explanation: "圖表要服務資訊傳達，不是展示技術。簡單的折線圖和 KPI 卡片往往比 3D 圖表更有效。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["主管的時間有限。第一眼要看到最重要的，有興趣再往下鑽。", "趨勢比絕對數字更重要——「在變好還是變差」比「現在是多少」更有用。"],
+                            explanation: "Dashboard 設計最佳實踐：(1) 分層：Executive → Operational → Tactical (2) 5-7 Rule：每層不超過 7 個 KPI (3) 趨勢 > 數字：加入 sparklines、趨勢箭頭 (4) 紅黃綠分級：紅=需立即行動、黃=需注意、綠=正常 (5) Context：加入 Target 和 Benchmark 做比較。工具：Power BI、Tableau 是最主流的 Dashboard 工具。2025 年趨勢是 AI-powered Analytics——自動發現異常並推薦行動。",
+                            frameworkTip: "Dashboard 三層：Overview(高管) → Drill-down(經理) → Detail(分析師)。5-7 KPI per layer"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "數據驅動決策",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "應該怎麼做決策？",
+                            scenario: Challenge.Scenario(
+                                title: "直覺 vs 數據",
+                                narrative: "庫存經理（20 年經驗）說：「我的直覺告訴我，這款產品冬天一定大賣，現在就要多備 50% 庫存。」\n\n你的數據分析結果：\n• 過去 3 年冬季銷量只比平時高 15-20%\n• 今年市場上有 2 個新的競品\n• 社群媒體情緒分析顯示消費者對這類產品的興趣下降 8%\n• 但天氣預報顯示今年可能是 10 年來最冷的冬天",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "聽經理的，20 年經驗一定比數據準", explanation: "經驗很寶貴但可能有偏誤（confirmation bias）。歷史只漲 15-20%，備 50% 太激進。"),
+                                Challenge.Option(id: "B", text: "完全照數據走，只多備 15%", explanation: "數據是基礎，但天氣預報和新變數也要考慮。完全忽略質化因素不夠全面。"),
+                                Challenge.Option(id: "C", text: "結合數據和經驗：以歷史 15-20% 為基線，考慮極端天氣調高一些，但考慮競品和情緒下降調低一些，最終多備 25-30%", explanation: "正確！最好的決策結合 Quantitative（歷史數據、趨勢分析）和 Qualitative（經驗判斷、市場情報）。這就是 Consensus Forecasting 的精神——用數據當基線，用人的判斷做調整。但調整要有根據，不是拍腦袋。記錄調整理由，之後可以回顧哪些調整有效。"),
+                                Challenge.Option(id: "D", text: "延遲決策，等更多數據再說", explanation: "供應鏈有 Lead Time 限制。等太久可能來不及備貨。在不確定中做出合理決策是供應鏈的日常。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["數據和經驗不是對立的，是互補的。", "用數據做基線，用判斷做調整。但調整要有根據。"],
+                            explanation: "數據驅動決策不是「只看數據」，而是「以數據為基礎做判斷」。框架：(1) 收集量化數據（歷史、趨勢、外部信號）(2) 加入質化因素（經驗、市場情報、特殊事件）(3) 做出決策並記錄理由 (4) 事後回顧準確度（Forecast Value Added）。2025 年 AI Demand Sensing 可以自動整合天氣、社群、經濟等外部信號，但最終決策仍需要人的判斷。",
+                            frameworkTip: "決策 = 數據基線 + 人的調整。記錄調整理由，事後回顧學習"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "59-2",
+                    name: "AI 驅動的供應鏈",
+                    description: "了解 2026 年 AI 在供應鏈中的應用：Control Tower、Digital Twin、Agentic AI。",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "AI Control Tower",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "以下關於 Control Tower 的理解，哪個最準確？",
+                            scenario: Challenge.Scenario(
+                                title: "供應鏈的中央指揮塔",
+                                narrative: "你的公司在評估導入 AI-powered Supply Chain Control Tower。供應商說它能做到：\n\n• 即時整合 ERP + WMS + TMS + 外部數據（天氣、新聞、海運追蹤）\n• 自動偵測異常（如某供應商所在地區發生地震）\n• 預測影響（這次中斷可能影響哪些訂單、多少營收）\n• 推薦替代方案（改從哪個供應商調貨、走哪條航線）\n\n2025 年 SCM Review 報告指出，領先企業已從「被動反應」轉向「預測性協調」。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "就是一個更漂亮的 Dashboard", explanation: "Dashboard 是靜態展示。Control Tower 是主動監控 + 預測 + 建議行動，有 AI 在背後做分析。兩者本質不同。"),
+                                Challenge.Option(id: "B", text: "Control Tower 整合多來源數據，提供端到端可視性、預測性分析和決策支援", explanation: "正確！Control Tower 的三大能力：(1) Visibility — 整合內外部數據的端到端可視性 (2) Predictive — 預測中斷和影響 (3) Prescriptive — 推薦最佳行動方案。2026 年的進化是加入 Agentic AI——不只推薦，還能自動執行低風險決策（如自動重新路由出貨）。BCG 數據顯示 Agentic AI 2025 年已佔 AI 總價值的 17%，預計 2028 年達 29%。"),
+                                Challenge.Option(id: "C", text: "有了 Control Tower 就不需要人管供應鏈了", explanation: "目前 Control Tower 是「決策輔助」，不是「決策替代」。高風險決策仍需人類審批。Agentic AI 正在往自主決策發展，但需要定義 guardrails。"),
+                                Challenge.Option(id: "D", text: "只有超大型企業才需要", explanation: "隨著 SaaS 和 Cloud 降低門檻，中型企業也開始採用。project44、FourKites 等提供相對容易導入的解決方案。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Control Tower 不只是看（Visibility），還能預測（Predictive）和建議行動（Prescriptive）。", "2026 年的關鍵字是 Agentic AI——不只推薦，還能自動執行。"],
+                            explanation: "Supply Chain Control Tower 是 2025-2026 年最熱門的供應鏈技術。演進：Reactive（出問題才處理）→ Proactive（預測問題）→ Autonomous（自動處理）。Agentic AI 是最新趨勢——自主代理可以重新路由出貨、重新分配庫存、自動聯繫替代供應商，所有這些都在秒級完成。Deloitte 研究顯示，採用 AI 的企業可實現雙位數效率提升。",
+                            frameworkTip: "Control Tower 演進：Reactive → Proactive → Predictive → Autonomous (Agentic)"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Digital Supply Chain Twin",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "Digital Supply Chain Twin 最大的價值是什麼？",
+                            scenario: Challenge.Scenario(
+                                title: "在虛擬世界裡測試決策",
+                                narrative: "你的公司正在建構 Digital Supply Chain Twin（數位供應鏈雙胞胎）。CTO 解釋：「這是整個供應鏈的虛擬複製品，可以用來模擬各種 what-if 情境。」\n\n例如：\n• 如果台灣晶圓廠停工 2 週，對全球產能的影響是什麼？\n• 如果我們把 30% 產能從中國移到越南，交期和成本會怎麼變？\n• 如果海運費漲 50%，應該調整哪些航線？\n\nGE Aviation 已經用 Digital Twin 確保零件在故障前就備好替換品。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "取代 ERP 系統", explanation: "Digital Twin 不取代 ERP，而是建立在 ERP 數據之上。它是模擬和分析的工具，ERP 是執行的系統。"),
+                                Challenge.Option(id: "B", text: "在不影響真實營運的情況下測試決策的影響，把不確定性轉化為競爭優勢", explanation: "正確！Digital Twin 的核心價值是「風險零成本模擬」。你可以在虛擬環境中測試各種極端情境（地震、關稅變化、需求暴增），看結果後再決定策略。這把「不確定性」從威脅變成了機會——因為你已經模擬過並準備好了應對方案。Dataiku 指出 2026 年 DSCT 成為戰略決策的關鍵工具。"),
+                                Challenge.Option(id: "C", text: "只是技術團隊的玩具，業務部門用不到", explanation: "Digital Twin 的使用者是業務決策者——供應鏈規劃、風險管理、網絡優化。技術只是實現手段。"),
+                                Challenge.Option(id: "D", text: "建一次就可以永久使用", explanation: "Digital Twin 需要持續更新數據才有價值。過時的模型做出的模擬結果不可靠。需要專門團隊維護。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["想像你可以在虛擬世界裡「快轉」到一年後，看看你的決策結果。", "模擬的成本 ≈ 0。真實決策失誤的成本 = 巨大。"],
+                            explanation: "Digital Supply Chain Twin (DSCT) 是整個供應鏈的虛擬複製品，整合 ERP、WMS、TMS、市場數據等。用途：(1) What-if Scenario Analysis（情境模擬）(2) Network Optimization（網絡優化）(3) Risk Assessment（風險評估）(4) Capacity Planning（產能規劃）。驅動因素：供應鏈複雜度增加 + 需要跨部門透明度 + 監管和區域差異。建構需要的基礎：統一的數據層（ERP + PLM + 市場情報）、語義模型、增量式建構（不要追求完美）。",
+                            frameworkTip: "Digital Twin = 零成本模擬。在虛擬世界測試決策 → 在真實世界信心十足"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "分析 Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "以下哪個分析和建議最有說服力？",
+                            scenario: Challenge.Scenario(
+                                title: "你的分析改變了決策",
+                                narrative: "你是 Supply Chain Analyst，做了一份庫存分析報告。發現：\n\n• 公司 SKU 從 3 年前的 2,000 增加到 5,000\n• 但 80% 的營收來自 500 個 SKU\n• 新增的 3,000 個 SKU 平均 Turnover = 1.5（一年只賣 1.5 次）\n• 這些低 Turnover SKU 佔用了 40% 的倉庫空間\n• 同時 Top 500 SKU 的缺貨率從 2% 升到 7%\n• 持有成本年增 35%\n\n你要向管理層提出建議。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "建議砍掉所有低 Turnover SKU", explanation: "太極端。有些低 Turnover SKU 可能是客戶需要的配件，砍掉會影響服務。需要更精細的分類。"),
+                                Challenge.Option(id: "B", text: "用 ABC-XYZ 分析分類 → 優化 A 類庫存策略 → 對 C/Z 類評估退出或轉移 → 用釋放的空間和資金改善 Top 500 缺貨問題", explanation: "正確！完整的分析邏輯：(1) ABC 分類找出高低價值 (2) XYZ 分析需求波動性 (3) 對 CZ 類（低價值高波動）評估退出、轉為 MTO（接單生產）、或移到低成本倉庫 (4) 釋放的資源用於改善 A 類缺貨。用數據說話：「如果把低 Turnover SKU 的庫存減半，可釋放 20% 倉庫空間和 $XM 現金，足以讓 Top 500 SKU 的 Safety Stock 提升到 Fill Rate 98% 的水準。」"),
+                                Challenge.Option(id: "C", text: "建議擴建倉庫來容納所有 SKU", explanation: "治標不治本。問題不是倉庫不夠大，而是 SKU 太多佔用了不該佔的資源。"),
+                                Challenge.Option(id: "D", text: "建議全面降低安全庫存來減少持有成本", explanation: "全面降低會讓 Top 500 SKU 缺貨更嚴重（已經從 2% 升到 7% 了）。需要差異化策略。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["關鍵 insight：低價值 SKU 擠佔了高價值 SKU 的資源。", "把資源從低價值移到高價值 = 同樣的資源，更大的產出。"],
+                            explanation: "這是供應鏈分析師的典型工作：用數據發現 insight → 提出可行建議 → 量化影響。核心分析工具：ABC-XYZ Analysis、Inventory Segmentation、Pareto Chart。關鍵溝通技巧：(1) 用數字說話 (2) 量化建議的 ROI (3) 提出風險和 mitigation。這也展示了 Supply Chain + Data + IT 的組合威力——你同時理解供應鏈邏輯、會做數據分析、又懂系統能支援什麼。",
+                            frameworkTip: "分析師的價值鏈：Data → Insight → Recommendation → Impact Quantification"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 60,
+            name: "流程改善與營運管理",
+            emoji: "🔧",
+            description: "從 Process Mapping 到 Lean/Six Sigma，學會發現問題、改善流程",
+            quests: [
+                Quest(
+                    id: "60-1",
+                    name: "流程分析工具",
+                    description: "學會 Process Mapping、Root Cause Analysis 等基本分析工具。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Process Mapping",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "流程中最大的改善機會在哪？",
+                            scenario: Challenge.Scenario(
+                                title: "訂單處理太慢了",
+                                narrative: "客服主管抱怨訂單處理時間從 2 小時變成 8 小時。你決定先畫出訂單處理的流程圖，發現：\n\n① 客服收到訂單 (5 min)\n② 手動輸入 ERP (15 min)\n③ 等主管審批 (等待 3 hrs 平均)\n④ 倉庫確認庫存 (30 min)\n⑤ 揀貨包裝 (45 min)\n⑥ 安排出貨 (15 min)\n\n你標記了每個步驟的類型：加值(VA)、必要非加值(BNVA)、浪費(NVA)。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "加快揀貨包裝（45 min 最長的作業）", explanation: "揀貨 45 min 是實際作業時間(VA)，而等待審批 3 小時是純等待(NVA)。應該先消除等待。"),
+                                Challenge.Option(id: "B", text: "消除步驟 ③ 的等待時間——設定自動審批規則，小額訂單免審批", explanation: "正確！等待 3 小時佔了總時間的 66%，而且是非加值活動(NVA)。解法：(1) 設定金額門檻，小額自動放行 (2) 指定多位審批人避免等一個人 (3) 手機推播審批通知。這就是 Value Stream Mapping 的威力——畫出流程後，等待和浪費一目了然。"),
+                                Challenge.Option(id: "C", text: "把所有步驟自動化", explanation: "全部自動化成本太高且不切實際。應該先消除最大的浪費（等待時間），再考慮哪些步驟值得自動化。"),
+                                Challenge.Option(id: "D", text: "增加客服人員加快步驟 ①", explanation: "步驟 ① 只花 5 分鐘，不是瓶頸。增加人員不會改善 3 小時的等待。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["哪個步驟花最長時間？它是「在做事」還是「在等待」？", "VA=加值作業、BNVA=必要但不加值、NVA=浪費。等待通常是 NVA。"],
+                            explanation: "Process Mapping 是改善的第一步：把流程畫出來，標記每個步驟的類型和時間。Value Stream Mapping (VSM) 是進階版本，區分 VA/BNVA/NVA。典型發現：實際加值時間通常只佔總時間的 5-10%，其餘都是等待、搬運、重工。改善優先級：先消除 NVA（浪費）→ 再減少 BNVA → 最後優化 VA。",
+                            frameworkTip: "VSM: 畫出流程 → 標記 VA/NVA → 消除等待和浪費 → 通常可減少 50%+ 時間"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "Root Cause Analysis",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "根因（Root Cause）是什麼？應該怎麼改善？",
+                            scenario: Challenge.Scenario(
+                                title: "為什麼出貨一直出錯？",
+                                narrative: "倉庫上個月出貨錯誤率從 1% 飆到 5%。你用 5 Whys 方法追查：\n\nWhy 1：為什麼出貨錯誤率上升？→ 揀貨員拿錯商品\nWhy 2：為什麼拿錯？→ 兩款新商品的包裝長得很像\nWhy 3：為什麼包裝很像？→ 設計時沒考慮倉庫辨識需求\nWhy 4：為什麼沒考慮？→ 包裝設計流程沒有倉庫團隊參與\nWhy 5：為什麼沒參與？→ 公司沒有跨部門設計審查流程",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "根因是揀貨員不用心，應該加強訓練", explanation: "揀貨員拿錯是症狀(Why 1)，不是根因。如果包裝一模一樣，再用心的人也可能拿錯。"),
+                                Challenge.Option(id: "B", text: "根因是缺乏跨部門設計審查流程，應建立包裝設計需經倉庫團隊確認的 SOP", explanation: "正確！5 Whys 追到最後：公司沒有跨部門設計審查。修正方法：建立 SOP 要求新品包裝設計需經倉庫團隊審查，確保倉庫辨識性。同時短期解法：在易混淆商品上加貼彩色標籤。這就是 Root Cause Analysis 的精神——解決根因而非症狀。"),
+                                Challenge.Option(id: "C", text: "根因是包裝設計，重新設計所有產品包裝", explanation: "重新設計是一個改善方向，但根因不只是這批包裝——而是設計流程沒有倉庫視角。不建立流程，以後新品還是會有同樣問題。"),
+                                Challenge.Option(id: "D", text: "不是根因問題，直接裝掃碼驗證系統就好", explanation: "掃碼驗證可以是短期對策（防錯 Poka-Yoke），但不解決設計流程的問題。根因和對策都要處理。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["5 Whys 的最後一個 Why 通常指向根因——通常是流程或系統問題，不是人的問題。", "解決根因 = 防止問題再發生。只治症狀 = 問題會重複出現。"],
+                            explanation: "Root Cause Analysis (RCA) 工具：5 Whys（連問五次為什麼）、Fishbone Diagram（魚骨圖，分 Man/Machine/Method/Material/Measurement/Environment）、Pareto Chart（80/20 找主因）。RCA 的原則：(1) 根因通常是流程/系統問題，不是人的問題 (2) 同時處理短期對策和長期根因 (3) 建立防錯機制（Poka-Yoke）防止復發。",
+                            frameworkTip: "5 Whys 追到流程/系統層面才是根因。短期治症狀 + 長期修根因"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "Lean 七大浪費",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "用 Lean 的觀點，以下配對哪個最正確？",
+                            scenario: Challenge.Scenario(
+                                title: "找出倉庫裡的浪費",
+                                narrative: "你在倉庫觀察了一天，記錄了以下現象：\n\n① 揀貨員來回走同一條路線三次（因為訂單一張一張處理）\n② 收貨區堆了 200 箱上週到的貨還沒上架\n③ 包裝區有人在等揀貨完成，無事可做\n④ 品檢員檢查每件商品兩次（出庫前和裝車前）\n⑤ 退貨品堆在角落，半年沒有處理\n⑥ 揀貨員因為找不到商品，每天平均多走 2 公里",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "①=過度生產, ②=庫存, ③=等待, ④=過度加工, ⑤=瑕疵, ⑥=搬運", explanation: "① 不是過度生產，是動作浪費（重複走同一路線）。⑤ 不是瑕疵，是庫存浪費。"),
+                                Challenge.Option(id: "B", text: "①=動作浪費, ②=庫存浪費, ③=等待浪費, ④=過度加工, ⑤=庫存浪費, ⑥=搬運浪費", explanation: "正確！Lean 七大浪費 TIMWOOD：Transport（搬運）、Inventory（庫存）、Motion（動作）、Waiting（等待）、Over-production（過度生產）、Over-processing（過度加工）、Defects（瑕疵）。① 重複走路 = Motion。② 未上架的貨 = Inventory。③ 空等 = Waiting。④ 重複檢查 = Over-processing。⑤ 堆積退貨 = Inventory。⑥ 額外走路 = Transport。"),
+                                Challenge.Option(id: "C", text: "這些都是正常的倉庫作業，不算浪費", explanation: "如果你認為這些是「正常的」，那就是為什麼需要 Lean 思維。所有不增加客戶價值的活動都是浪費。"),
+                                Challenge.Option(id: "D", text: "只有 ③ 是浪費，其他都是必要的", explanation: "重複走路、未處理退貨、重複品檢——這些都是可以消除或減少的非加值活動。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Lean 七大浪費記法：TIMWOOD（Transport, Inventory, Motion, Waiting, Over-production, Over-processing, Defects）。", "每個現象問自己：這是在增加客戶價值嗎？如果不是，就是浪費。"],
+                            explanation: "Lean 七大浪費 TIMWOOD（有人加 S=Skills 變成 TIMWOODS）。消除浪費的方法：Batch Picking（消除 ①）、Cross-docking（減少 ②）、平衡產線（消除 ③）、合併檢查點（消除 ④）、退貨處理 SOP（消除 ⑤）、改善倉庫佈局（消除 ⑥）。Lean 的核心精神：持續消除不為客戶創造價值的活動。",
+                            frameworkTip: "TIMWOOD + S：Transport, Inventory, Motion, Waiting, Over-production, Over-processing, Defects, Skills waste"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "60-2",
+                    name: "KPI 設計與持續改善",
+                    description: "學會用 SMART 原則設計 KPI，以及 DMAIC 持續改善方法。",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "SMART KPI 設計",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "用 SMART 原則評估，哪些 KPI 合格？",
+                            scenario: Challenge.Scenario(
+                                title: "主管的 KPI 有問題",
+                                narrative: "主管設了三個 KPI：\n\nKPI 1：「提升倉庫效率」\nKPI 2：「年底前將訂單處理時間從 8 小時降到 4 小時」\nKPI 3：「每月揀貨準確率達到 99.5%，每週五由倉庫主管從 WMS 匯出報告」",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "三個都合格", explanation: "KPI 1 不夠明確。什麼是「效率」？怎麼衡量？什麼時候達成？"),
+                                Challenge.Option(id: "B", text: "只有 KPI 2 和 KPI 3 合格。KPI 1 不夠 Specific 和 Measurable", explanation: "正確！SMART = Specific, Measurable, Achievable, Relevant, Time-bound。KPI 1「提升倉庫效率」太模糊——沒有定義什麼是效率、怎麼量、目標值是多少。KPI 2 有具體指標(處理時間)、目標值(4小時)、期限(年底)。KPI 3 最完整：指標(準確率)、目標(99.5%)、頻率(每月)、負責人(倉庫主管)、數據來源(WMS)。"),
+                                Challenge.Option(id: "C", text: "只有 KPI 3 合格", explanation: "KPI 2 也符合 SMART：Specific(訂單處理時間)、Measurable(8→4小時)、Time-bound(年底)。"),
+                                Challenge.Option(id: "D", text: "三個都不合格", explanation: "KPI 2 和 3 都有明確的衡量標準和目標。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["SMART: Specific（具體）、Measurable（可衡量）、Achievable（可達成）、Relevant（相關）、Time-bound（有期限）。", "「提升效率」——什麼效率？怎麼衡量？衡量標準是什麼？"],
+                            explanation: "好的 KPI 要包含：What（衡量什麼）、How（怎麼計算）、Target（目標值）、When（期限和頻率）、Who（負責人）、Source（數據來源）。常見錯誤：太模糊（「改善品質」）、沒有 baseline（不知道現在多少就設目標）、太多 KPI（失焦）。建議每個角色 5-7 個 KPI，搭配 Leading（先行）和 Lagging（落後）指標。",
+                            frameworkTip: "KPI 六要素：What + How + Target + When + Who + Source。模糊的目標不是 KPI"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "DMAIC 改善方法",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "按 DMAIC 的正確順序排列是？",
+                            scenario: Challenge.Scenario(
+                                title: "出貨錯誤率改善專案",
+                                narrative: "你被指派領導一個改善專案：將出貨錯誤率從 5% 降到 1%。\n\n你決定用 Six Sigma 的 DMAIC 方法：\n\nD = Define → M = Measure → A = Analyze → I = Improve → C = Control\n\n以下是你團隊做的各項工作，但順序被打亂了：\n\n① 安裝掃碼驗證系統並培訓員工\n② 定義問題範圍：哪些產線、哪些品項出錯最多\n③ 收集 3 個月的出貨錯誤數據，分類統計\n④ 用魚骨圖和 Pareto 找出主要原因\n⑤ 建立 Control Chart 監控，設定異常時的 SOP",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "② → ③ → ④ → ① → ⑤", explanation: "正確！D=② 定義問題 → M=③ 收集數據量測 → A=④ 分析根因 → I=① 實施改善 → C=⑤ 建立控制機制。DMAIC 確保改善是基於數據的（不是拍腦袋），而且有持續監控機制（不是改完就丟）。"),
+                                Challenge.Option(id: "B", text: "① → ② → ③ → ④ → ⑤", explanation: "先安裝系統再定義問題？沒有數據分析就直接實施，可能解決錯誤的問題。"),
+                                Challenge.Option(id: "C", text: "③ → ④ → ② → ① → ⑤", explanation: "應該先定義問題範圍（②）再收集數據（③）。不知道分析什麼就開始收集是浪費時間。"),
+                                Challenge.Option(id: "D", text: "② → ④ → ③ → ① → ⑤", explanation: "應該先收集數據（③ Measure）再分析（④ Analyze）。沒有數據就做分析是「猜測」不是「分析」。"),
+                            ],
+                            correctAnswer: "A",
+                            hints: ["DMAIC：Define → Measure → Analyze → Improve → Control。先定義再量測，先分析再改善。", "每一步都要完成才能進到下一步。不能跳過 Measure 直接 Improve。"],
+                            explanation: "DMAIC 是 Six Sigma 的核心方法論。Define（定義問題和目標）→ Measure（收集數據建立 baseline）→ Analyze（找根因）→ Improve（實施改善）→ Control（建立監控確保持續）。C（Control）最常被忽略——很多專案改善完就沒人追蹤，問題又慢慢回來。Lean Six Sigma 結合了 Lean（消除浪費）和 Six Sigma（減少變異）的優勢。",
+                            frameworkTip: "DMAIC: 每步都基於前一步。最重要也最常被忽略的是 C（Control）"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "流程改善 Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "以下哪個回答最能展示你的能力？",
+                            scenario: Challenge.Scenario(
+                                title: "面試題：你怎麼改善流程？",
+                                narrative: "面試官問你：「假設你是新上任的 Supply Chain Analyst，發現公司的 Perfect Order Rate 只有 78%（業界平均 90%）。你的前 90 天會怎麼做？」\n\nPerfect Order Rate = 同時滿足準時交付 + 完整數量 + 無損壞 + 正確文件的訂單比例。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "立刻導入新系統來解決", explanation: "不知道問題在哪就導入系統是盲目投資。先了解現狀再決定行動。"),
+                                Challenge.Option(id: "B", text: "前 30 天收集數據找根因 → 30-60 天提出改善計畫 → 60-90 天實施最高影響的快贏項目", explanation: "正確！完美的 90 天計畫：\n\n第 1-30 天（了解和量測）：分解 Perfect Order Rate 的四個組成（OTD、Fill Rate、Damage、Documentation），找出哪個拖後腿最多。訪談關鍵利害人收集質化資訊。\n\n第 30-60 天（分析和規劃）：用 Pareto 找出 Top 3 根因，設計改善方案，量化預期 ROI。\n\n第 60-90 天（執行快贏）：先做 Quick Wins（低成本高影響），建立 Dashboard 追蹤進度。展示 early results 建立信任。"),
+                                Challenge.Option(id: "C", text: "跟業界標竿學習，複製他們的做法", explanation: "標竿學習有價值，但每家公司問題不同。不了解自己的根因就複製別人，可能解決錯誤的問題。"),
+                                Challenge.Option(id: "D", text: "告訴老闆 78% 也還好，不用改", explanation: "低於業界平均 12 個百分點很明顯有改善空間。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["面試要展示的是你的思維方法，不是具體答案。有結構的回答最加分。", "前 90 天計畫：了解 → 分析 → 行動。不是上來就改。"],
+                            explanation: "這個面試題考的是：(1) 結構化思維（有計畫不是亂做）(2) 數據驅動（先量測再行動）(3) 根因分析（不治標）(4) 優先級判斷（Quick Wins first）(5) 溝通能力（向管理層展示成果）。這也是面試最常問的問題之一：「你怎麼發現問題？怎麼改善？用什麼指標看成果？」用 DMAIC 思維回答就對了。",
+                            frameworkTip: "面試萬用答案框架：了解現狀(30天) → 分析根因(30天) → 執行快贏(30天)"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        World(
+            id: 61,
+            name: "風險管理與永續",
+            emoji: "🌍",
+            description: "供應鏈風險類型、韌性策略、ESG 合規與永續採購",
+            quests: [
+                Quest(
+                    id: "61-1",
+                    name: "供應鏈風險管理",
+                    description: "認識風險類型、評估方法和韌性策略。",
+                    xp: 50,
+                    isBoss: false,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "風險類型辨識",
+                            type: .multipleChoice,
+                            difficulty: .easy,
+                            question: "以下風險分類哪個最正確？",
+                            scenario: Challenge.Scenario(
+                                title: "風險地圖",
+                                narrative: "你被要求建立公司的 Supply Chain Risk Register。以下是最近發生或可能發生的事件：\n\nA：台灣大地震導致晶圓廠停工\nB：主要供應商的 CEO 突然離職，公司方向不明\nC：美國對中國稀土加徵 50% 關稅\nD：歐洲熱浪導致萊茵河水位過低，內河運輸中斷\nE：駭客攻擊你的 ERP 系統，資料被加密勒索",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "A=天災, B=營運, C=政治, D=天災, E=營運", explanation: "B 不是營運風險，是供應商風險（Supplier Risk）。E 不是一般營運風險，是網路安全風險（Cyber Risk）。分類要更精細。"),
+                                Challenge.Option(id: "B", text: "A=自然災害, B=供應商風險, C=地緣政治風險, D=氣候風險, E=網路安全風險", explanation: "正確！精確的風險分類很重要，因為不同類型的風險需要不同的應對策略。自然災害 → 備援地點和安全庫存。供應商風險 → Dual Sourcing 和定期評估。地緣政治 → 分散採購區域。氣候風險 → 替代運輸路線。網路安全 → IT 防護和備份。2026 年 Everstream Analytics 評估地緣政治風險 97%、極端天氣 93%。"),
+                                Challenge.Option(id: "C", text: "全部都是外部風險，公司無法控制", explanation: "雖然都是外部風險，但公司可以透過準備來減輕影響。風險管理不是「避免風險」而是「降低衝擊」。"),
+                                Challenge.Option(id: "D", text: "只有 A 和 D 是真正的風險，其他是商業決策", explanation: "關稅變化和網路攻擊都是真實的供應鏈風險，已經造成數十億美元的損失。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["風險分類的目的是對症下藥。不同類型用不同策略應對。", "2025-2026 最大的供應鏈風險：地緣政治、極端氣候、網路安全。"],
+                            explanation: "供應鏈風險類型：Natural Disasters（地震、颱風）、Geopolitical（關稅、制裁、戰爭）、Supplier（倒閉、品質問題）、Climate（極端天氣、水資源）、Cyber（駭客、勒索軟體）、Demand（需求暴漲或暴跌）、Regulatory（法規變更）。風險管理框架：Identify → Assess → Mitigate → Monitor。2025 年全球供應鏈中斷的平均成本：每次 $184M（McKinsey）。",
+                            frameworkTip: "風險管理：Identify（辨識）→ Assess（評估）→ Mitigate（減緩）→ Monitor（監控）"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "風險評估矩陣",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "應該優先投入資源處理哪個風險？",
+                            scenario: Challenge.Scenario(
+                                title: "哪個風險要先處理？",
+                                narrative: "你用風險矩陣（機率 × 影響）評估了四個風險：",
+                                data: [
+                                    ["risk": "晶片供應商停工", "probability": "中", "impact": "極高", "score": "高"],
+                                    ["risk": "辦公用品供應商延遲", "probability": "高", "impact": "低", "score": "中"],
+                                    ["risk": "主要市場爆發疫情", "probability": "低", "impact": "極高", "score": "中高"],
+                                    ["risk": "原料價格波動 10%", "probability": "高", "impact": "中", "score": "中高"],
+                                ],
+                                dataCaption: "風險評估矩陣結果"
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "辦公用品延遲——因為機率最高", explanation: "機率高但影響低，即使發生也不會對營運造成重大衝擊。"),
+                                Challenge.Option(id: "B", text: "晶片供應商停工——中機率但影響極高，而且有具體的 mitigation 方案可以做", explanation: "正確！風險管理的優先級：(1) 高機率 × 高影響 → 立即行動 (2) 中機率 × 極高影響 → 優先準備。晶片停工雖然機率「中」，但影響「極高」且有明確的行動方案（Dual Sourcing、Safety Stock、替代設計）。相較之下，疫情影響也很大但機率低且難以預防。原料價格波動可以用期貨合約 hedging。"),
+                                Challenge.Option(id: "C", text: "疫情——影響最大", explanation: "影響確實大，但機率低且很難預防特定事件。不如把資源放在可以具體行動的風險上。"),
+                                Challenge.Option(id: "D", text: "四個一起處理", explanation: "資源有限要有優先級。先處理 Risk Score 最高且有明確 mitigation 方案的。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["風險優先級 = 機率 × 影響 × 可行動性。不只看分數，也看你能做什麼。", "可以具體行動的風險（如 Dual Sourcing）比難以預防的風險（如疫情）更值得投資。"],
+                            explanation: "風險評估矩陣是最基本的風險管理工具。但優先級不只看 Probability × Impact，還要考慮：(1) Mitigation Feasibility（能做什麼）(2) Speed of Onset（衝擊多快來）(3) Recovery Time（恢復多久）。進階方法：Monte Carlo Simulation 量化風險的財務影響、Scenario Planning 模擬多種情境。2025 年趨勢是用 AI 整合外部信號（衛星圖像、新聞、社群）做即時風險評分。",
+                            frameworkTip: "優先級 = Probability × Impact × Actionability。能行動的風險優先投資"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "韌性策略",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "以下哪個韌性策略組合最全面？",
+                            scenario: Challenge.Scenario(
+                                title: "從 COVID 學到的教訓",
+                                narrative: "你的公司在做 post-COVID 供應鏈韌性強化計畫。CEO 問：「我們怎麼確保下一次大規模中斷不會再造成 $50M 的損失？」\n\n你分析了 COVID 期間的問題：\n• 70% 的零組件只有一個供應來源\n• 沒有即時的供應商狀態可視性\n• 安全庫存只夠 2 週（需要 6 週）\n• 決策完全依賴人工判斷，反應時間 2-3 週",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "全面增加安全庫存到 6 個月", explanation: "持有成本太高。而且庫存只能緩衝，不能避免中斷。需要更全面的策略。"),
+                                Challenge.Option(id: "B", text: "Dual Sourcing + Control Tower + 彈性庫存策略 + Scenario Planning", explanation: "正確！四層韌性策略：(1) Dual/Multi Sourcing 分散供應風險（解決 70% 單一來源）(2) Supply Chain Control Tower 提供即時可視性（解決看不到問題）(3) 差異化庫存策略——關鍵零件增加 SS，非關鍵維持精實（解決庫存不足但不過度）(4) Scenario Planning / Digital Twin 模擬極端情境，預先準備應對方案（解決反應太慢）。這就是「Resilience by Design」——韌性不是意外發生後才想，而是設計進供應鏈架構中。"),
+                                Challenge.Option(id: "C", text: "把所有生產移回國內（Reshoring）", explanation: "成本可能高 30-50%，而且國內也會遭遇天災或勞動力短缺。完全 Reshoring 不切實際，Nearshoring 更平衡。"),
+                                Challenge.Option(id: "D", text: "買供應鏈保險就好", explanation: "保險可以補償部分財務損失，但不能阻止業務中斷和客戶流失。韌性的目標是「持續營運」不是「事後賠償」。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["韌性不是單一策略，是多層防護。像防火系統：偵測 + 警報 + 滅火 + 備援。", "每個 COVID 期間的問題都需要對應的解決方案。"],
+                            explanation: "Supply Chain Resilience 框架：Anticipate（預測）→ Prepare（準備）→ Respond（回應）→ Recover（恢復）→ Learn（學習）。2025-2026 年韌性最佳實踐：(1) 多元採購（Dual/Multi Source + Nearshoring）(2) 端到端可視性（Control Tower）(3) 彈性產能（Flexible Manufacturing）(4) 數位模擬（Digital Twin + Scenario Planning）(5) Agentic AI 自動回應低風險中斷。Gartner 預測到 2026 年，50% 的大型企業將把「韌性」納入供應鏈 KPI。",
+                            frameworkTip: "Resilience 五步：Anticipate → Prepare → Respond → Recover → Learn。韌性是設計出來的"
+                        ),
+                    ]
+                ),
+                Quest(
+                    id: "61-2",
+                    name: "ESG 與永續供應鏈",
+                    description: "了解 CSRD、Scope 3 排放、永續採購等 2025 年最新合規要求。",
+                    xp: 100,
+                    isBoss: true,
+                    challenges: [
+                        Challenge(
+                            id: 1,
+                            name: "Scope 3 排放與 CSRD",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "對供應鏈來說，Scope 3 最大的挑戰是什麼？",
+                            scenario: Challenge.Scenario(
+                                title: "CFO 來敲門了",
+                                narrative: "CFO 緊急找你：「歐盟 CSRD 法規要求我們揭露 Scope 3 排放。財務長說供應鏈通常佔 70-90% 的碳足跡。你能解釋一下什麼是 Scope 1、2、3 嗎？我們需要做什麼？」\n\n你快速整理：\n• Scope 1：公司直接排放（自家工廠、車輛）\n• Scope 2：間接排放（購買的電力、蒸汽）\n• Scope 3：價值鏈排放（供應商製造、產品運輸、客戶使用、廢棄處理）\n\nCSRD 從 2025 年起要求在歐盟營運的企業提供完整的永續報告。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "計算太簡單了，用 Excel 就能搞定", explanation: "Scope 3 涉及整條供應鏈（數百甚至數千個供應商），數據收集極其複雜。這不是 Excel 能處理的規模。"),
+                                Challenge.Option(id: "B", text: "數據來自供應商，你無法直接控制。需要建立供應商碳排數據收集機制和估算方法", explanation: "正確！Scope 3 的最大挑戰是數據可及性——排放數據在供應商手上，而很多供應商（尤其是 Tier 2、3）根本沒有碳排追蹤能力。解法：(1) 對大型供應商要求提供實際碳排數據 (2) 對中小供應商用產業平均值估算 (3) 將碳排要求嵌入 RFQ 和合約 (4) 使用 AI 平台（如 Ecoinvent、Watershed）自動化碳排計算。CSRD 下，不合規可能面臨罰款和市場准入限制。"),
+                                Challenge.Option(id: "C", text: "不重要，只有歐盟公司需要在意", explanation: "任何在歐盟有業務的公司都受 CSRD 影響，包括非歐盟企業。而且美國 SEC 也在推類似要求。ESG 合規是全球趨勢。"),
+                                Challenge.Option(id: "D", text: "先不管，等被罰再說", explanation: "不合規的風險不只是罰款：失去歐盟市場准入、大客戶流失（很多大企業要求供應商符合 ESG 標準）、投資人撤資。"),
+                            ],
+                            correctAnswer: "B",
+                            hints: ["Scope 3 = 你無法直接控制的排放，但你要負責揭露。數據在供應商手上。", "70-90% 的碳足跡在 Scope 3。這是為什麼供應鏈是永續的關鍵戰場。"],
+                            explanation: "CSRD (Corporate Sustainability Reporting Directive) 2025 年起全面生效，要求揭露環境、社會、治理 (ESG) 數據。Scope 3 排放通常佔企業碳足跡 70-90%，是最大的挑戰也是最大的減碳機會。四大 ESG 報告框架：GRI（最廣泛）、SASB（產業專屬）、TCFD（氣候風險）、ISSB（新全球標準）。EU CBAM（碳邊境稅）進一步把碳排成本轉嫁到進口商品上，讓低碳供應商有價格優勢。",
+                            frameworkTip: "Scope 3 策略：大供應商→要實際數據；小供應商→用產業估算；全部→嵌入合約"
+                        ),
+                        Challenge(
+                            id: 2,
+                            name: "永續採購實務",
+                            type: .multipleChoice,
+                            difficulty: .medium,
+                            question: "以下哪個行動計畫最務實且有效？",
+                            scenario: Challenge.Scenario(
+                                title: "綠色供應鏈不只是口號",
+                                narrative: "你被指派推動公司的永續供應鏈計畫。主管給了三個目標：\n\n1. 2030 年前 Scope 3 排放降低 30%\n2. 100% 的關鍵供應商通過 ESG 審核\n3. 包裝材料 80% 使用可回收材質\n\n你需要制定行動計畫。",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "發一封 Email 通知所有供應商要符合 ESG 標準", explanation: "一封信不會改變任何事。需要具體的行動、時間表、獎懲機制。"),
+                                Challenge.Option(id: "B", text: "立刻換掉所有不符合的供應商", explanation: "太快太激進。轉換供應商有成本和風險。應該給現有供應商改善的機會和支援。"),
+                                Challenge.Option(id: "C", text: "分階段推動：建立碳排基線 → 將 ESG 嵌入供應商評估 → 與關鍵供應商共同制定減碳路徑 → 定期審計和報告", explanation: "正確！務實的永續計畫：(1) 建立 Baseline——先測量才知道從哪裡減（碳排基線計算）(2) 嵌入流程——將 ESG 分數納入 Supplier Scorecard 和 RFQ 評估（不只看價格）(3) 協同減碳——與關鍵供應商共同制定 Roadmap，提供技術支援（不是只要求）(4) 監控報告——定期 ESG 審計，追蹤進度，向管理層和監管機構報告。研究顯示，與供應商「協同」比「要求」的減碳效果高 3-5 倍。"),
+                                Challenge.Option(id: "D", text: "只做包裝改善（目標 3），因為最容易看到成果", explanation: "包裝只是一小部分。Scope 3 排放的大頭在原料製造和運輸。只做包裝是避重就輕。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["「You can't manage what you can't measure.」先建立碳排基線。", "永續不是「要求」供應商做，而是「一起」做。協同效果遠大於施壓。"],
+                            explanation: "永續供應鏈的實務框架：Measure（測量碳排基線）→ Integrate（嵌入採購流程）→ Collaborate（與供應商協同）→ Report（合規報告）→ Improve（持續改善）。關鍵工具：LCA（生命週期評估）、Carbon Accounting 平台、Supplier ESG Scorecard。成功案例：Apple 要求前 200 大供應商 2030 年前達到碳中和，並提供技術和資金支援。IKEA 與供應商合作改用再生能源，減少了供應鏈 15% 的碳排。",
+                            frameworkTip: "永續五步：Measure → Integrate → Collaborate → Report → Improve。協同 > 施壓"
+                        ),
+                        Challenge(
+                            id: 3,
+                            name: "風險與永續 Boss Challenge",
+                            type: .multipleChoice,
+                            difficulty: .hard,
+                            question: "以下哪個 2030 願景最有前瞻性？",
+                            scenario: Challenge.Scenario(
+                                title: "2030 年的供應鏈長什麼樣？",
+                                narrative: "你在準備一份給董事會的策略報告：「2030 年供應鏈願景」。\n\n你整理了 2025-2026 年的趨勢：\n• AI/Agentic AI 從輔助變為自主決策\n• Digital Twin 成為策略規劃標配\n• ESG 從「加分項」變為「法律要求」\n• 地緣政治碎片化推動供應鏈區域化\n• 極端氣候事件頻率每 5 年翻倍\n• 勞動力短缺推動倉庫自動化\n• Scope 3 碳排成為供應商選擇的關鍵因素",
+                                data: nil,
+                                dataCaption: nil
+                            ),
+                            options: [
+                                Challenge.Option(id: "A", text: "全面自動化，零人力供應鏈", explanation: "完全零人力不切實際。人在高複雜度決策、關係管理、創新方面仍不可替代。未來是「人機協作」不是「機器取代人」。"),
+                                Challenge.Option(id: "B", text: "回到本地化生產，不要全球供應鏈", explanation: "完全本地化會喪失比較優勢和規模經濟。趨勢是「區域化」和「多元化」，不是「完全本地化」。"),
+                                Challenge.Option(id: "C", text: "智慧、韌性、永續的三位一體：AI 驅動決策 + 分散韌性網絡 + 碳中和供應鏈", explanation: "正確！2030 供應鏈三大支柱：\n\n(1) 智慧（Intelligent）：Agentic AI 自主處理 80% 的常規決策，人聚焦策略和例外。Digital Twin 即時模擬。Control Tower 預測性管理。\n\n(2) 韌性（Resilient）：多元化供應網絡（Nearshoring + Multi-sourcing）、彈性產能、即時可視性。風險不是要避免，而是要能快速恢復。\n\n(3) 永續（Sustainable）：碳中和不是目標而是基線。碳排成為成本的一部分（CBAM）。循環經濟（Circular Economy）減少廢棄。ESG 嵌入每個決策。\n\n這三個不是分開的——它們互相強化。"),
+                                Challenge.Option(id: "D", text: "跟現在一樣，只是速度更快", explanation: "2025-2030 年是供應鏈的根本轉型期。AI、ESG 法規、地緣政治正在重塑整個產業。「速度更快」太低估了變革的規模。"),
+                            ],
+                            correctAnswer: "C",
+                            hints: ["未來供應鏈不是單一方向的變化，而是多個趨勢交匯。", "智慧(AI) + 韌性(風險) + 永續(ESG) 三者互相強化，不是獨立的。"],
+                            explanation: "供應鏈正在經歷最深刻的轉型。三大支柱 Intelligent × Resilient × Sustainable 互相強化：AI 幫助精確計算碳排和風險；韌性的分散網絡也降低了集中排放；永續的短鏈策略也增加了韌性。你的競爭力在 Supply Chain + Data + IT 的交叉——這正是 2030 年供應鏈最需要的人才組合。掌握這 8 個世界的知識，你就具備了理解和推動這個轉型的基礎。",
+                            frameworkTip: "2030 供應鏈三支柱：Intelligent(AI) × Resilient(韌性) × Sustainable(永續)。你的定位：SC + Data + IT"
+                        ),
+                    ]
+                ),
+            ]
+        ),
+    ]
+}
