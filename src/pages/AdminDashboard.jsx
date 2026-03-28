@@ -531,7 +531,7 @@ function AdminDashboard() {
     return sortAsc ? av - bv : bv - av
   })
 
-  const SortIcon = ({ field }) => {
+  const renderSortIcon = (field) => {
     if (sortField !== field) return null
     return sortAsc ? <ChevronUp className="w-3 h-3 inline ml-0.5" /> : <ChevronDown className="w-3 h-3 inline ml-0.5" />
   }
@@ -599,13 +599,13 @@ function AdminDashboard() {
               <tr className="text-slate-400 text-xs border-b border-slate-700">
                 <th className="text-left py-2 px-2">User</th>
                 <th className="text-right py-2 px-2 cursor-pointer hover:text-slate-200" onClick={() => handleSort('total_xp')}>
-                  XP <SortIcon field="total_xp" />
+                  XP {renderSortIcon("total_xp")}
                 </th>
                 <th className="text-right py-2 px-2 cursor-pointer hover:text-slate-200 hidden sm:table-cell" onClick={() => handleSort('streak_days')}>
-                  Streak <SortIcon field="streak_days" />
+                  Streak {renderSortIcon("streak_days")}
                 </th>
                 <th className="text-right py-2 px-2 cursor-pointer hover:text-slate-200 hidden sm:table-cell" onClick={() => handleSort('longest_streak')}>
-                  Best <SortIcon field="longest_streak" />
+                  Best {renderSortIcon("longest_streak")}
                 </th>
                 <th className="text-right py-2 px-2 cursor-pointer hover:text-slate-200 hidden md:table-cell" onClick={() => handleSort('challengesCompleted')}>
                   Challenges <SortIcon field="challengesCompleted" />

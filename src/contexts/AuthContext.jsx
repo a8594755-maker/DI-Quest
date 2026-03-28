@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../utils/supabase'
+import { logVisit } from '../utils/visitorLogger'
 
 const AuthContext = createContext(null)
 
@@ -147,7 +148,10 @@ export function AuthProvider({ children }) {
           fetchProfileRef.current(session.user.id, session.user.user_metadata, session.user)
             .catch(err => console.error('Profile fetch error:', err))
             .finally(() => {
-              if (mounted) setLoading(false)
+              if (mounted) {
+                setLoading(false)
+                logVisit({ userId: session.user.id, isGuest: false })
+              }
               if (window.location.search.includes('code=')) {
                 window.history.replaceState({}, '', window.location.pathname)
               }
@@ -159,7 +163,10 @@ export function AuthProvider({ children }) {
       setUser(null)
       setProfile(null)
       const wasGuest = localStorage.getItem('di-quest-guest')
-      if (wasGuest) setIsGuest(true)
+      if (wasGuest) {
+        setIsGuest(true)
+        logVisit({ userId: null, isGuest: true })
+      }
       setLoading(false)
     })
 
@@ -220,6 +227,7 @@ export function AuthProvider({ children }) {
     setIsGuest(true)
     localStorage.setItem('di-quest-guest', 'true')
     setLoading(false)
+    logVisit({ userId: null, isGuest: true })
   }
 
   const completeProfileSetup = async ({ username, displayName }) => {

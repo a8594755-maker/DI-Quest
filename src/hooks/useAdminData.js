@@ -6,6 +6,7 @@ export function useAdminData() {
   const [allCheckins, setAllCheckins] = useState([])
   const [allProgress, setAllProgress] = useState([])
   const [allApiUsage, setAllApiUsage] = useState([])
+  const [allVisitorLogs, setAllVisitorLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -13,11 +14,12 @@ export function useAdminData() {
     setLoading(true)
     setError(null)
     try {
-      const [profilesRes, checkinsRes, progressRes, apiRes] = await Promise.all([
+      const [profilesRes, checkinsRes, progressRes, apiRes, visitorRes] = await Promise.all([
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('daily_checkins').select('*').order('checkin_date', { ascending: false }).limit(1000),
         supabase.from('user_progress').select('*'),
         supabase.from('api_usage').select('*').order('usage_date', { ascending: false }).limit(500),
+        supabase.from('visitor_logs').select('*').order('visited_at', { ascending: false }).limit(1000),
       ])
 
       if (profilesRes.error) throw profilesRes.error
@@ -25,6 +27,7 @@ export function useAdminData() {
       setAllCheckins(checkinsRes.data || [])
       setAllProgress(progressRes.data || [])
       setAllApiUsage(apiRes.data || [])
+      setAllVisitorLogs(visitorRes.data || [])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -85,8 +88,41 @@ export function useAdminData() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
 
-    return { totalUsers, activeToday, activeThisWeek, avgStreak, totalApiCalls, dauTrend, apiTrend, topApiUsers }
-  }, [allProfiles, allCheckins, allApiUsage])
+    // Visitor stats
+    const totalVisits = allVisitorLogs.length
+    const guestVisits = allVisitorLogs.filter(v => v.is_guest).length
+    const todayVisits = allVisitorLogs.filter(v => v.visited_at?.slice(0, 10) === today).length
+    const uniqueIps = new Set(allVisitorLogs.map(v => v.ip_address).filter(Boolean)).size
+
+    // Visitor trend (last 14 days)
+    const visitorMap = {}
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000)
+      visitorMap[d.toISOString().slice(0, 10)] = { total: 0, guest: 0 }
+    }
+    allVisitorLogs.forEach(v => {
+      const date = v.visited_at?.slice(0, 10)
+      if (visitorMap[date]) {
+        visitorMap[date].total++
+        if (v.is_guest) visitorMap[date].guest++
+      }
+    })
+    const visitorTrend = Object.entries(visitorMap).map(([date, counts]) => {
+      const d = new Date(date)
+      return { label: `${d.getMonth() + 1}/${d.getDate()}`, value: counts.total, guest: counts.guest, date }
+    })
+
+    // Recent visitors (last 20)
+    const recentVisitors = allVisitorLogs.slice(0, 30).map(v => {
+      const profile = v.user_id ? allProfiles.find(p => p.id === v.user_id) : null
+      return {
+        ...v,
+        displayName: profile?.display_name || profile?.username || (v.is_guest ? 'Guest' : 'Unknown'),
+      }
+    })
+
+    return { totalUsers, activeToday, activeThisWeek, avgStreak, totalApiCalls, dauTrend, apiTrend, topApiUsers, totalVisits, guestVisits, todayVisits, uniqueIps, visitorTrend, recentVisitors }
+  }, [allProfiles, allCheckins, allApiUsage, allVisitorLogs])
 
   // Per-user summary
   const userSummaries = useMemo(() => {
