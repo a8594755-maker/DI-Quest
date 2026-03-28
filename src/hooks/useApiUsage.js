@@ -38,7 +38,6 @@ export function useApiUsage() {
   const incrementUsage = useCallback(async () => {
     if (!isAuthenticated || !user) return false
     if (isBlocked) return false
-    if (isPremium) return true
 
     const today = new Date().toISOString().slice(0, 10)
 
@@ -46,7 +45,7 @@ export function useApiUsage() {
     const { data, error } = await supabase.rpc('increment_api_usage', {
       p_user_id: user.id,
       p_date: today,
-      p_limit: DAILY_LIMIT,
+      p_limit: isPremium ? 999999 : DAILY_LIMIT,
     })
 
     // If RPC doesn't exist, fallback to manual upsert
@@ -60,7 +59,7 @@ export function useApiUsage() {
         .maybeSingle()
 
       const currentCount = existing?.call_count || 0
-      if (currentCount >= DAILY_LIMIT) {
+      if (!isPremium && currentCount >= DAILY_LIMIT) {
         setTodayUsage(currentCount)
         return false
       }
@@ -78,11 +77,11 @@ export function useApiUsage() {
       }
 
       setTodayUsage(currentCount + 1)
-      return currentCount + 1 <= DAILY_LIMIT
+      return isPremium || currentCount + 1 <= DAILY_LIMIT
     }
 
     // RPC succeeded
-    if (data === false) {
+    if (data === false && !isPremium) {
       await fetchUsage()
       return false
     }

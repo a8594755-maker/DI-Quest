@@ -274,11 +274,14 @@ export function QuestProvider({ children }) {
             checkedInToday: !!checkinData, // Only trust daily_checkins table, not stale progress_data
           }
           dispatch({ type: 'SYNC_FROM_CLOUD', payload })
+          // Recalculate streak after cloud overwrite (mount UPDATE_STREAK ran before cloud loaded)
+          dispatch({ type: 'UPDATE_STREAK' })
         } else {
           // Cloud data empty — still sync checkin status, then save local to cloud
           if (checkinData) {
             dispatch({ type: 'SYNC_FROM_CLOUD', payload: { ...state, checkedInToday: true } })
           }
+          dispatch({ type: 'UPDATE_STREAK' })
           await saveToCloud(state)
         }
       } catch (err) {

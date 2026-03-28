@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck } from 'lucide-react'
+import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAdminData } from '../hooks/useAdminData'
 import { BRANCHES } from '../data/branches'
 import { WORLDS } from '../data/questData'
@@ -44,6 +44,108 @@ function BarChart({ data, color = 'bg-brand-primary', unit = '' }) {
           <span className="text-slate-300 text-xs w-10 flex-shrink-0">{item.value}{unit}</span>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ========================
+// Check-in Calendar for User Detail
+// ========================
+function CheckinCalendar({ checkinDates }) {
+  const [monthOffset, setMonthOffset] = useState(0)
+
+  const dateSet = useMemo(() => new Set(checkinDates), [checkinDates])
+
+  const { year, month, weeks, label } = useMemo(() => {
+    const now = new Date()
+    const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+    const y = target.getFullYear()
+    const m = target.getMonth()
+    const label = target.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+
+    // First day of month and total days
+    const firstDay = new Date(y, m, 1).getDay() // 0=Sun
+    const daysInMonth = new Date(y, m + 1, 0).getDate()
+    const today = new Date().toISOString().slice(0, 10)
+
+    // Build weeks grid
+    const weeks = []
+    let week = new Array(firstDay).fill(null) // pad start
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      week.push({ day: d, date: dateStr, isCheckedIn: dateSet.has(dateStr), isToday: dateStr === today })
+      if (week.length === 7) {
+        weeks.push(week)
+        week = []
+      }
+    }
+    if (week.length > 0) {
+      while (week.length < 7) week.push(null)
+      weeks.push(week)
+    }
+
+    return { year: y, month: m, weeks, label }
+  }, [monthOffset, dateSet])
+
+  const monthCheckins = useMemo(() => {
+    const prefix = `${year}-${String(month + 1).padStart(2, '0')}`
+    return checkinDates.filter(d => d.startsWith(prefix)).length
+  }, [checkinDates, year, month])
+
+  return (
+    <div>
+      {/* Month nav */}
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={() => setMonthOffset(prev => prev - 1)} className="p-1 rounded hover:bg-slate-700 transition-colors">
+          <ChevronLeft className="w-4 h-4 text-slate-400" />
+        </button>
+        <span className="text-slate-300 text-sm font-medium">{label}</span>
+        <button
+          onClick={() => setMonthOffset(prev => Math.min(prev + 1, 0))}
+          disabled={monthOffset >= 0}
+          className="p-1 rounded hover:bg-slate-700 transition-colors disabled:opacity-30"
+        >
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+        </button>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+          <div key={d} className="text-center text-[10px] text-slate-500 py-0.5">{d}</div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="space-y-1">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 gap-1">
+            {week.map((cell, ci) => (
+              <div
+                key={ci}
+                className={`aspect-square rounded-md flex items-center justify-center text-xs transition-colors ${
+                  !cell
+                    ? ''
+                    : cell.isCheckedIn
+                      ? 'bg-emerald-500/25 text-emerald-400 font-medium'
+                      : cell.isToday
+                        ? 'bg-slate-700 text-white ring-1 ring-brand-primary'
+                        : 'bg-slate-800/30 text-slate-600'
+                }`}
+                title={cell?.date}
+              >
+                {cell?.day}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Month summary */}
+      <p className="text-slate-500 text-xs text-center mt-2">
+        {monthCheckins} check-in{monthCheckins !== 1 ? 's' : ''} this month
+      </p>
     </div>
   )
 }
@@ -361,7 +463,7 @@ function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock
           </div>
         )}
 
-        {/* Check-in History */}
+        {/* Check-in History Calendar */}
         <div className="card p-4 mb-4">
           <h4 className="text-white font-medium mb-3 flex items-center gap-2 text-sm">
             <Calendar className="w-4 h-4 text-brand-secondary" />
@@ -370,16 +472,7 @@ function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock
           {checkinDates.length === 0 ? (
             <p className="text-slate-500 text-sm">No check-ins</p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {checkinDates.slice(0, 60).map(date => (
-                <span key={date} className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded">
-                  {date}
-                </span>
-              ))}
-              {checkinDates.length > 60 && (
-                <span className="text-slate-500 text-xs self-center">+{checkinDates.length - 60} more</span>
-              )}
-            </div>
+            <CheckinCalendar checkinDates={checkinDates} />
           )}
         </div>
 
