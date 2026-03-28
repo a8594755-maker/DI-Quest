@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X } from 'lucide-react'
+import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck } from 'lucide-react'
 import { useAdminData } from '../hooks/useAdminData'
 import { BRANCHES } from '../data/branches'
 import { WORLDS } from '../data/questData'
@@ -51,8 +51,9 @@ function BarChart({ data, color = 'bg-brand-primary', unit = '' }) {
 // ========================
 // User Detail Panel
 // ========================
-function UserDetailPanel({ userId, getUserDetail, onClose }) {
+function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock, onClose }) {
   const { profile, progress, checkins, apiUsage } = getUserDetail(userId)
+  const [actionLoading, setActionLoading] = useState(null) // 'role' | 'block'
 
   const questStatus = progress?.questStatus || {}
   const challengeStatus = progress?.challengeStatus || {}
@@ -112,6 +113,34 @@ function UserDetailPanel({ userId, getUserDetail, onClose }) {
 
   // API usage for this user
   const totalApiCalls = apiUsage.reduce((s, u) => s + (u.call_count || 0), 0)
+
+  // API usage per day (last 14 days)
+  const apiPerDay = (() => {
+    const map = {}
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000)
+      map[d.toISOString().slice(0, 10)] = 0
+    }
+    apiUsage.forEach(u => {
+      if (map[u.usage_date] !== undefined) map[u.usage_date] += u.call_count || 0
+    })
+    return Object.entries(map).map(([date, count]) => {
+      const d = new Date(date)
+      return { label: `${d.getMonth() + 1}/${d.getDate()}`, value: count }
+    })
+  })()
+
+  const handleRoleChange = async (newRole) => {
+    setActionLoading('role')
+    try { await updateUserRole(userId, newRole) } catch (err) { console.error(err) }
+    setActionLoading(null)
+  }
+
+  const handleToggleBlock = async () => {
+    setActionLoading('block')
+    try { await toggleApiBlock(userId, !profile.api_blocked) } catch (err) { console.error(err) }
+    setActionLoading(null)
+  }
 
   // Recently completed challenges
   const recentChallenges = Object.entries(challengeStatus)
@@ -199,6 +228,60 @@ function UserDetailPanel({ userId, getUserDetail, onClose }) {
             <p className="text-white font-bold text-sm">{totalReviewDue}</p>
             <p className="text-slate-500 text-xs">Reviews Due</p>
           </div>
+        </div>
+
+        {/* Admin Actions */}
+        {profile.role !== 'admin' && (
+          <div className="card p-4 mb-4">
+            <h4 className="text-white font-medium mb-3 text-sm">Admin Actions</h4>
+            <div className="flex flex-wrap gap-2">
+              {/* Role toggle */}
+              {profile.role !== 'premium' ? (
+                <button
+                  onClick={() => handleRoleChange('premium')}
+                  disabled={actionLoading === 'role'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs font-medium hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  {actionLoading === 'role' ? '...' : 'Grant Premium'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleRoleChange('user')}
+                  disabled={actionLoading === 'role'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-500/20 text-slate-400 rounded-lg text-xs font-medium hover:bg-slate-500/30 transition-colors disabled:opacity-50"
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  {actionLoading === 'role' ? '...' : 'Revoke Premium'}
+                </button>
+              )}
+              {/* API block toggle */}
+              <button
+                onClick={handleToggleBlock}
+                disabled={actionLoading === 'block'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 ${
+                  profile.api_blocked
+                    ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                    : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                }`}
+              >
+                {profile.api_blocked ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldBan className="w-3.5 h-3.5" />}
+                {actionLoading === 'block' ? '...' : profile.api_blocked ? 'Unblock API' : 'Block API'}
+              </button>
+            </div>
+            {profile.api_blocked && (
+              <p className="text-red-400/70 text-xs mt-2">This user is currently blocked from using the AI API.</p>
+            )}
+          </div>
+        )}
+
+        {/* API Usage Chart */}
+        <div className="card p-4 mb-4">
+          <h4 className="text-white font-medium mb-3 flex items-center gap-2 text-sm">
+            <Zap className="w-4 h-4 text-amber-400" />
+            API Usage (14 days) — {totalApiCalls} total
+          </h4>
+          <BarChart data={apiPerDay} color="bg-amber-500" unit=" calls" />
         </div>
 
         {/* Daily Activity Chart */}
@@ -313,7 +396,7 @@ function UserDetailPanel({ userId, getUserDetail, onClose }) {
 // Main Dashboard
 // ========================
 function AdminDashboard() {
-  const { metrics, userSummaries, recentCheckins, getUserDetail, loading, error, refresh } = useAdminData()
+  const { metrics, userSummaries, recentCheckins, getUserDetail, updateUserRole, toggleApiBlock, loading, error, refresh } = useAdminData()
   const [sortField, setSortField] = useState('total_xp')
   const [sortAsc, setSortAsc] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState(null)
@@ -457,6 +540,7 @@ function AdminDashboard() {
                         <div className="text-white text-sm truncate flex items-center gap-1.5">
                           {user.display_name || user.username}
                           {roleBadge(user.role)}
+                          {user.api_blocked && <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 font-medium">Blocked</span>}
                         </div>
                         <div className="text-slate-500 text-xs truncate">@{user.username}</div>
                       </div>
@@ -537,6 +621,8 @@ function AdminDashboard() {
           <UserDetailPanel
             userId={selectedUserId}
             getUserDetail={getUserDetail}
+            updateUserRole={updateUserRole}
+            toggleApiBlock={toggleApiBlock}
             onClose={() => setSelectedUserId(null)}
           />
         )}

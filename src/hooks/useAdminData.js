@@ -129,6 +129,25 @@ export function useAdminData() {
     })
   }, [allCheckins, allProfiles])
 
+  // Admin actions
+  const updateUserRole = useCallback(async (userId, newRole) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId)
+    if (error) throw error
+    setAllProfiles(prev => prev.map(p => p.id === userId ? { ...p, role: newRole } : p))
+  }, [])
+
+  const toggleApiBlock = useCallback(async (userId, blocked) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ api_blocked: blocked })
+      .eq('id', userId)
+    if (error) throw error
+    setAllProfiles(prev => prev.map(p => p.id === userId ? { ...p, api_blocked: blocked } : p))
+  }, [])
+
   // Get full detail for a specific user
   const getUserDetail = useCallback((userId) => {
     const profile = allProfiles.find(p => p.id === userId)
@@ -138,5 +157,5 @@ export function useAdminData() {
     return { profile, progress, checkins, apiUsage }
   }, [allProfiles, allProgress, allCheckins, allApiUsage])
 
-  return { metrics, userSummaries, recentCheckins, getUserDetail, loading, error, refresh: fetchAll }
+  return { metrics, userSummaries, recentCheckins, getUserDetail, updateUserRole, toggleApiBlock, loading, error, refresh: fetchAll }
 }

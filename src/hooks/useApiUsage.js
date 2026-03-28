@@ -9,9 +9,10 @@ export function useApiUsage() {
   const [todayUsage, setTodayUsage] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  const isPremium = profile?.role === 'premium'
+  const isPremium = profile?.role === 'premium' || profile?.role === 'admin'
+  const isBlocked = !!profile?.api_blocked
   const remaining = isPremium ? Infinity : Math.max(0, DAILY_LIMIT - todayUsage)
-  const canUseApi = isAuthenticated && (isPremium || todayUsage < DAILY_LIMIT)
+  const canUseApi = isAuthenticated && !isBlocked && (isPremium || todayUsage < DAILY_LIMIT)
 
   const fetchUsage = useCallback(async () => {
     if (!isAuthenticated || !user) {
@@ -35,7 +36,9 @@ export function useApiUsage() {
   useEffect(() => { fetchUsage() }, [fetchUsage])
 
   const incrementUsage = useCallback(async () => {
-    if (!isAuthenticated || !user || isPremium) return true
+    if (!isAuthenticated || !user) return false
+    if (isBlocked) return false
+    if (isPremium) return true
 
     const today = new Date().toISOString().slice(0, 10)
 
@@ -85,7 +88,7 @@ export function useApiUsage() {
     }
     setTodayUsage(prev => prev + 1)
     return true
-  }, [isAuthenticated, user, isPremium, fetchUsage])
+  }, [isAuthenticated, user, isPremium, isBlocked, fetchUsage])
 
   return {
     todayUsage,
