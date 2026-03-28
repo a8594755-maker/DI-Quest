@@ -608,13 +608,13 @@ function AdminDashboard() {
                   Best {renderSortIcon("longest_streak")}
                 </th>
                 <th className="text-right py-2 px-2 cursor-pointer hover:text-slate-200 hidden md:table-cell" onClick={() => handleSort('challengesCompleted')}>
-                  Challenges <SortIcon field="challengesCompleted" />
+                  Challenges {renderSortIcon("challengesCompleted")}
                 </th>
                 <th className="text-right py-2 px-2 cursor-pointer hover:text-slate-200 hidden md:table-cell" onClick={() => handleSort('questsCompleted')}>
-                  Quests <SortIcon field="questsCompleted" />
+                  Quests {renderSortIcon("questsCompleted")}
                 </th>
                 <th className="text-right py-2 px-2 cursor-pointer hover:text-slate-200 hidden lg:table-cell" onClick={() => handleSort('totalCheckins')}>
-                  Check-ins <SortIcon field="totalCheckins" />
+                  Check-ins {renderSortIcon("totalCheckins")}
                 </th>
                 <th className="text-right py-2 px-2 hidden lg:table-cell">Last Active</th>
               </tr>
