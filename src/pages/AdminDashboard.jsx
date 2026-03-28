@@ -54,28 +54,10 @@ function BarChart({ data, color = 'bg-brand-primary', unit = '' }) {
 function UserDetailPanel({ userId, getUserDetail, onClose }) {
   const { profile, progress, checkins, apiUsage } = getUserDetail(userId)
 
-  if (!profile) return null
-
-  const questStatus = progress.questStatus || {}
-  const challengeStatus = progress.challengeStatus || {}
-  const analytics = progress.analytics || { dailyStats: {}, challengeTimings: {} }
-  const reviewSchedule = progress.reviewSchedule || {}
-
-  const totalChallenges = Object.values(challengeStatus).filter(c => c.completed).length
-  const totalQuests = Object.values(questStatus).filter(q => q.completed).length
-  const totalReviewDue = Object.values(reviewSchedule).filter(r => r.nextReviewDate <= new Date().toISOString().slice(0, 10)).length
-
-  // Branch progress
-  const branchProgress = BRANCHES.map(branch => {
-    const worlds = WORLDS.filter(w => branch.worldIds.includes(w.id))
-    const worldDetails = worlds.map(w => {
-      const completed = w.quests.filter(q => questStatus[q.id]?.completed).length
-      return { id: w.id, name: `${w.emoji} ${w.name}`, completed, total: w.quests.length }
-    })
-    const totalCompleted = worldDetails.reduce((s, w) => s + w.completed, 0)
-    const totalAll = worldDetails.reduce((s, w) => s + w.total, 0)
-    return { ...branch, worldDetails, totalCompleted, totalAll }
-  })
+  const questStatus = progress?.questStatus || {}
+  const challengeStatus = progress?.challengeStatus || {}
+  const analytics = progress?.analytics || { dailyStats: {}, challengeTimings: {} }
+  const reviewSchedule = progress?.reviewSchedule || {}
 
   // Daily activity (last 14 days)
   const dailyActivity = useMemo(() => {
@@ -106,6 +88,24 @@ function UserDetailPanel({ userId, getUserDetail, onClose }) {
     }
     return days
   }, [analytics.dailyStats])
+
+  if (!profile) return null
+
+  const totalChallenges = Object.values(challengeStatus).filter(c => c.completed).length
+  const totalQuests = Object.values(questStatus).filter(q => q.completed).length
+  const totalReviewDue = Object.values(reviewSchedule).filter(r => r.nextReviewDate <= new Date().toISOString().slice(0, 10)).length
+
+  // Branch progress
+  const branchProgress = BRANCHES.map(branch => {
+    const worlds = WORLDS.filter(w => branch.worldIds.includes(w.id))
+    const worldDetails = worlds.map(w => {
+      const completed = w.quests.filter(q => questStatus[q.id]?.completed).length
+      return { id: w.id, name: `${w.emoji} ${w.name}`, completed, total: w.quests.length }
+    })
+    const totalCompleted = worldDetails.reduce((s, w) => s + w.completed, 0)
+    const totalAll = worldDetails.reduce((s, w) => s + w.total, 0)
+    return { ...branch, worldDetails, totalCompleted, totalAll }
+  })
 
   // Checkin history
   const checkinDates = checkins.map(c => c.checkin_date).sort().reverse()
