@@ -215,19 +215,23 @@ export function QuestProvider({ children }) {
     if (!isAuthenticated || !user) return
     try {
       const { devMode, ...progressData } = stateToSave
-      await supabase.from('user_progress').upsert({
+      const { error: progressError } = await supabase.from('user_progress').upsert({
         user_id: user.id,
         progress_data: progressData,
         updated_at: new Date().toISOString(),
       })
+      if (progressError) console.error('[QuestContext] progress sync error:', progressError)
       // Also sync profile XP and streak
-      await supabase.from('profiles').update({
+      const { error: profileError } = await supabase.from('profiles').update({
         total_xp: stateToSave.totalXp,
         streak_days: stateToSave.streakDays,
         longest_streak: stateToSave.longestStreak || 0,
         last_active_date: stateToSave.lastActiveDate,
       }).eq('id', user.id)
-    } catch {}
+      if (profileError) console.error('[QuestContext] profile sync error:', profileError)
+    } catch (err) {
+      console.error('[QuestContext] saveToCloud error:', err)
+    }
   }, [isAuthenticated, user])
 
   useEffect(() => {
@@ -267,7 +271,7 @@ export function QuestProvider({ children }) {
         if (data?.progress_data && Object.keys(data.progress_data).length > 0) {
           const payload = {
             ...data.progress_data,
-            checkedInToday: data.progress_data.checkedInToday || !!checkinData,
+            checkedInToday: !!checkinData, // Only trust daily_checkins table, not stale progress_data
           }
           dispatch({ type: 'SYNC_FROM_CLOUD', payload })
         } else {
@@ -277,7 +281,9 @@ export function QuestProvider({ children }) {
           }
           await saveToCloud(state)
         }
-      } catch {}
+      } catch (err) {
+        console.error('[QuestContext] loadFromCloud error:', err)
+      }
       setCloudSynced(true)
     }
     loadFromCloud()
@@ -296,7 +302,7 @@ export function QuestProvider({ children }) {
 
   const levelInfo = getLevelInfo(state.totalXp)
 
-  const isPremium = profile?.role === 'premium'
+  const isPremium = profile?.role === 'premium' || profile?.role === 'admin'
 
   // 判斷關卡是否解鎖（Premium 用戶全部解鎖）
   // 解鎖邏輯基於 branch：每條路線的第一個 world 自動解鎖，路線間互不影響
