@@ -31,6 +31,12 @@ final class QuestProgressViewModel: ObservableObject {
     func saveProgress() async {
         saveLocal()
         try? await dataService?.saveProgress(progress)
+        try? await dataService?.syncProfile(
+            totalXp: progress.totalXp,
+            streakDays: progress.streakDays,
+            longestStreak: progress.longestStreak,
+            lastActiveDate: progress.lastActiveDate
+        )
     }
 
     // MARK: - Actions

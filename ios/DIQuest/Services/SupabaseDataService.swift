@@ -41,15 +41,15 @@ final class SupabaseDataService: ObservableObject {
         guard let userId = authManager?.currentUserId else { return nil }
         let data = try await request(
             path: "/rest/v1/user_progress",
-            query: [("user_id", "eq.\(userId)"), ("select", "progress")]
+            query: [("user_id", "eq.\(userId)"), ("select", "progress_data")]
         )
 
         struct Row: Codable {
-            let progress: UserProgress
+            let progress_data: UserProgress
         }
 
         let rows = try JSONDecoder().decode([Row].self, from: data)
-        return rows.first?.progress
+        return rows.first?.progress_data
     }
 
     func saveProgress(_ progress: UserProgress) async throws {
@@ -57,10 +57,10 @@ final class SupabaseDataService: ObservableObject {
 
         struct Payload: Codable {
             let user_id: String
-            let progress: UserProgress
+            let progress_data: UserProgress
         }
 
-        let payload = Payload(user_id: userId, progress: progress)
+        let payload = Payload(user_id: userId, progress_data: progress)
         let body = try JSONEncoder().encode(payload)
         _ = try await request(
             path: "/rest/v1/user_progress",
@@ -68,6 +68,27 @@ final class SupabaseDataService: ObservableObject {
             method: "POST",
             body: body,
             extraHeaders: [("Prefer", "resolution=merge-duplicates")]
+        )
+    }
+
+    func syncProfile(totalXp: Int, streakDays: Int, longestStreak: Int, lastActiveDate: String?) async throws {
+        guard let userId = authManager?.currentUserId else { return }
+
+        var fields: [String: Any] = [
+            "total_xp": totalXp,
+            "streak_days": streakDays,
+            "longest_streak": longestStreak
+        ]
+        if let lastActiveDate {
+            fields["last_active_date"] = lastActiveDate
+        }
+
+        let body = try JSONSerialization.data(withJSONObject: fields)
+        _ = try await request(
+            path: "/rest/v1/profiles",
+            query: [("id", "eq.\(userId)")],
+            method: "PATCH",
+            body: body
         )
     }
 
