@@ -8,7 +8,7 @@ import { useQuest } from '../contexts/QuestContext'
 
 function BranchSelect() {
   const { t } = useTranslation(['quest', 'common'])
-  const { questStatus } = useQuest()
+  const { questStatus, isPremium } = useQuest()
 
   const getBranchProgress = (branch) => {
     const worlds = WORLDS.filter(w => branch.worldIds.includes(w.id))
@@ -34,6 +34,7 @@ function BranchSelect() {
         {getVisibleBranches().map((branch, i) => {
           const progress = getBranchProgress(branch)
           const isComingSoon = branch.comingSoon
+          const isLocked = branch.premiumOnly && !isPremium
 
           return (
             <motion.div
@@ -42,10 +43,10 @@ function BranchSelect() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(i * 0.08, 0.3) }}
             >
-              {isComingSoon ? (
+              {isComingSoon || isLocked ? (
                 <div className="relative rounded-2xl border-2 border-slate-800 bg-slate-900/50 p-5 sm:p-8 opacity-60">
-                  <div className="absolute top-4 right-4 px-3 py-1 bg-slate-700 text-slate-400 text-xs rounded-full font-medium">
-                    {t('common:status.comingSoon')}
+                  <div className="absolute top-4 right-4 px-3 py-1 bg-slate-700 text-slate-400 text-xs rounded-full font-medium flex items-center gap-1">
+                    {isLocked ? <><Lock className="w-3 h-3" /> Premium</> : t('common:status.comingSoon')}
                   </div>
                   <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${branch.color} flex items-center justify-center text-3xl shadow-lg grayscale`}>
                     {branch.emoji}
