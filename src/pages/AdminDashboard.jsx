@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X } from 'lucide-react'
 import { useAdminData } from '../hooks/useAdminData'
+import { BRANCHES } from '../data/branches'
+import { WORLDS } from '../data/questData'
 import UserAvatar from '../components/UserAvatar'
 
 function StatCard({ icon: Icon, label, value, color, delay = 0 }) {
@@ -46,11 +48,275 @@ function BarChart({ data, color = 'bg-brand-primary', unit = '' }) {
   )
 }
 
+// ========================
+// User Detail Panel
+// ========================
+function UserDetailPanel({ userId, getUserDetail, onClose }) {
+  const { profile, progress, checkins, apiUsage } = getUserDetail(userId)
+
+  if (!profile) return null
+
+  const questStatus = progress.questStatus || {}
+  const challengeStatus = progress.challengeStatus || {}
+  const analytics = progress.analytics || { dailyStats: {}, challengeTimings: {} }
+  const reviewSchedule = progress.reviewSchedule || {}
+
+  const totalChallenges = Object.values(challengeStatus).filter(c => c.completed).length
+  const totalQuests = Object.values(questStatus).filter(q => q.completed).length
+  const totalReviewDue = Object.values(reviewSchedule).filter(r => r.nextReviewDate <= new Date().toISOString().slice(0, 10)).length
+
+  // Branch progress
+  const branchProgress = BRANCHES.map(branch => {
+    const worlds = WORLDS.filter(w => branch.worldIds.includes(w.id))
+    const worldDetails = worlds.map(w => {
+      const completed = w.quests.filter(q => questStatus[q.id]?.completed).length
+      return { id: w.id, name: `${w.emoji} ${w.name}`, completed, total: w.quests.length }
+    })
+    const totalCompleted = worldDetails.reduce((s, w) => s + w.completed, 0)
+    const totalAll = worldDetails.reduce((s, w) => s + w.total, 0)
+    return { ...branch, worldDetails, totalCompleted, totalAll }
+  })
+
+  // Daily activity (last 14 days)
+  const dailyActivity = useMemo(() => {
+    const days = []
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000)
+      const key = d.toISOString().slice(0, 10)
+      const stats = analytics.dailyStats[key]
+      days.push({
+        label: `${d.getMonth() + 1}/${d.getDate()}`,
+        value: stats?.challengesCompleted || 0,
+      })
+    }
+    return days
+  }, [analytics.dailyStats])
+
+  // XP trend (last 14 days)
+  const xpTrend = useMemo(() => {
+    const days = []
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000)
+      const key = d.toISOString().slice(0, 10)
+      const stats = analytics.dailyStats[key]
+      days.push({
+        label: `${d.getMonth() + 1}/${d.getDate()}`,
+        value: stats?.xpEarned || 0,
+      })
+    }
+    return days
+  }, [analytics.dailyStats])
+
+  // Checkin history
+  const checkinDates = checkins.map(c => c.checkin_date).sort().reverse()
+
+  // API usage for this user
+  const totalApiCalls = apiUsage.reduce((s, u) => s + (u.call_count || 0), 0)
+
+  // Recently completed challenges
+  const recentChallenges = Object.entries(challengeStatus)
+    .filter(([, v]) => v.completed)
+    .map(([key, v]) => ({ key, ...v }))
+    .sort((a, b) => (b.earnedXp || 0) - (a.earnedXp || 0))
+    .slice(0, 10)
+
+  const roleBadge = (role) => {
+    if (role === 'admin') return <span className="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 font-medium">Admin</span>
+    if (role === 'premium') return <span className="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 font-medium">Premium</span>
+    return <span className="px-2 py-0.5 rounded text-xs bg-slate-500/20 text-slate-400 font-medium">Free</span>
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm overflow-y-auto"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, x: 100 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 100 }}
+        transition={{ type: 'spring', damping: 25 }}
+        className="ml-auto w-full max-w-2xl min-h-screen bg-slate-900 border-l border-slate-700 p-6 overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-800 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          <UserAvatar username={profile.username} displayName={profile.display_name} avatarUrl={profile.avatar_url} size="lg" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-bold text-white truncate">{profile.display_name || profile.username}</h3>
+              {roleBadge(profile.role)}
+            </div>
+            <p className="text-slate-400 text-sm">@{profile.username}</p>
+            <p className="text-slate-500 text-xs">Joined {profile.created_at?.slice(0, 10)}</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-800 transition-colors">
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="card p-3 text-center">
+            <Zap className="w-4 h-4 text-brand-accent mx-auto mb-1" />
+            <p className="text-white font-bold">{profile.total_xp || 0}</p>
+            <p className="text-slate-500 text-xs">Total XP</p>
+          </div>
+          <div className="card p-3 text-center">
+            <Flame className="w-4 h-4 text-orange-400 mx-auto mb-1" />
+            <p className="text-white font-bold">{profile.streak_days || 0} / {profile.longest_streak || 0}</p>
+            <p className="text-slate-500 text-xs">Streak / Best</p>
+          </div>
+          <div className="card p-3 text-center">
+            <Target className="w-4 h-4 text-brand-primary mx-auto mb-1" />
+            <p className="text-white font-bold">{totalChallenges}</p>
+            <p className="text-slate-500 text-xs">Challenges</p>
+          </div>
+          <div className="card p-3 text-center">
+            <Trophy className="w-4 h-4 text-brand-secondary mx-auto mb-1" />
+            <p className="text-white font-bold">{totalQuests}</p>
+            <p className="text-slate-500 text-xs">Quests</p>
+          </div>
+        </div>
+
+        {/* Extra Info Row */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="card p-3 text-center">
+            <p className="text-white font-bold text-sm">{checkinDates.length}</p>
+            <p className="text-slate-500 text-xs">Check-ins</p>
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-white font-bold text-sm">{totalApiCalls}</p>
+            <p className="text-slate-500 text-xs">API Calls</p>
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-white font-bold text-sm">{totalReviewDue}</p>
+            <p className="text-slate-500 text-xs">Reviews Due</p>
+          </div>
+        </div>
+
+        {/* Daily Activity Chart */}
+        <div className="card p-4 mb-4">
+          <h4 className="text-white font-medium mb-3 flex items-center gap-2 text-sm">
+            <BarChart3 className="w-4 h-4 text-brand-primary" />
+            Daily Activity (14 days)
+          </h4>
+          <BarChart data={dailyActivity} color="bg-brand-primary" unit=" done" />
+        </div>
+
+        {/* XP Trend */}
+        <div className="card p-4 mb-4">
+          <h4 className="text-white font-medium mb-3 flex items-center gap-2 text-sm">
+            <Zap className="w-4 h-4 text-brand-accent" />
+            XP Earned (14 days)
+          </h4>
+          <BarChart data={xpTrend} color="bg-brand-accent" unit=" XP" />
+        </div>
+
+        {/* Branch Progress */}
+        <div className="card p-4 mb-4">
+          <h4 className="text-white font-medium mb-3 flex items-center gap-2 text-sm">
+            <BookOpen className="w-4 h-4 text-brand-secondary" />
+            Progress by Branch
+          </h4>
+          <div className="space-y-4">
+            {branchProgress.filter(b => b.totalAll > 0).map(branch => (
+              <div key={branch.id}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-slate-300 text-sm">{branch.emoji} {branch.name}</span>
+                  <span className="text-slate-400 text-xs">{branch.totalCompleted}/{branch.totalAll} quests</span>
+                </div>
+                <div className="progress-bar h-2 mb-2">
+                  <div
+                    className="h-full bg-brand-primary rounded-full transition-all"
+                    style={{ width: `${branch.totalAll > 0 ? (branch.totalCompleted / branch.totalAll) * 100 : 0}%` }}
+                  />
+                </div>
+                {/* Per-world breakdown */}
+                <div className="ml-4 space-y-1">
+                  {branch.worldDetails.filter(w => w.completed > 0).map(w => (
+                    <div key={w.id} className="flex items-center justify-between">
+                      <span className="text-slate-500 text-xs truncate flex-1">{w.name}</span>
+                      <span className="text-slate-400 text-xs ml-2">{w.completed}/{w.total}</span>
+                    </div>
+                  ))}
+                  {branch.worldDetails.every(w => w.completed === 0) && (
+                    <p className="text-slate-600 text-xs">Not started</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Completed Challenges */}
+        {recentChallenges.length > 0 && (
+          <div className="card p-4 mb-4">
+            <h4 className="text-white font-medium mb-3 flex items-center gap-2 text-sm">
+              <Target className="w-4 h-4 text-brand-primary" />
+              Top Challenges (by XP)
+            </h4>
+            <div className="space-y-1.5">
+              {recentChallenges.map(c => (
+                <div key={c.key} className="flex items-center justify-between">
+                  <span className="text-slate-400 text-xs font-mono">{c.key}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-500 text-xs">
+                      {c.attempts || 1} attempt{(c.attempts || 1) > 1 ? 's' : ''} · {c.usedHints || 0} hints
+                    </span>
+                    <span className="text-brand-accent text-xs font-medium">+{c.earnedXp || 0} XP</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Check-in History */}
+        <div className="card p-4 mb-4">
+          <h4 className="text-white font-medium mb-3 flex items-center gap-2 text-sm">
+            <Calendar className="w-4 h-4 text-brand-secondary" />
+            Check-in History ({checkinDates.length} total)
+          </h4>
+          {checkinDates.length === 0 ? (
+            <p className="text-slate-500 text-sm">No check-ins</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {checkinDates.slice(0, 60).map(date => (
+                <span key={date} className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded">
+                  {date}
+                </span>
+              ))}
+              {checkinDates.length > 60 && (
+                <span className="text-slate-500 text-xs self-center">+{checkinDates.length - 60} more</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Last Active */}
+        <div className="text-center text-slate-500 text-xs pb-6">
+          Last active: {profile.last_active_date || 'Never'} · Streak freezes: {profile.streak_freezes ?? 0}
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ========================
+// Main Dashboard
+// ========================
 function AdminDashboard() {
-  const { metrics, userSummaries, recentCheckins, loading, error, refresh } = useAdminData()
+  const { metrics, userSummaries, recentCheckins, getUserDetail, loading, error, refresh } = useAdminData()
   const [sortField, setSortField] = useState('total_xp')
   const [sortAsc, setSortAsc] = useState(false)
-  const [expandedUser, setExpandedUser] = useState(null)
+  const [selectedUserId, setSelectedUserId] = useState(null)
 
   if (loading) {
     return (
@@ -182,7 +448,7 @@ function AdminDashboard() {
                 <tr
                   key={user.id}
                   className="border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer transition-colors"
-                  onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
+                  onClick={() => setSelectedUserId(user.id)}
                 >
                   <td className="py-2.5 px-2">
                     <div className="flex items-center gap-2">
@@ -264,6 +530,17 @@ function AdminDashboard() {
           )}
         </motion.div>
       </div>
+
+      {/* User Detail Slide-over Panel */}
+      <AnimatePresence>
+        {selectedUserId && (
+          <UserDetailPanel
+            userId={selectedUserId}
+            getUserDetail={getUserDetail}
+            onClose={() => setSelectedUserId(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

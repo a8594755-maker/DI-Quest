@@ -129,5 +129,14 @@ export function useAdminData() {
     })
   }, [allCheckins, allProfiles])
 
-  return { metrics, userSummaries, recentCheckins, loading, error, refresh: fetchAll }
+  // Get full detail for a specific user
+  const getUserDetail = useCallback((userId) => {
+    const profile = allProfiles.find(p => p.id === userId)
+    const progress = allProgress.find(p => p.user_id === userId)?.progress_data || {}
+    const checkins = allCheckins.filter(c => c.user_id === userId)
+    const apiUsage = allApiUsage.filter(u => u.user_id === userId)
+    return { profile, progress, checkins, apiUsage }
+  }, [allProfiles, allProgress, allCheckins, allApiUsage])
+
+  return { metrics, userSummaries, recentCheckins, getUserDetail, loading, error, refresh: fetchAll }
 }
