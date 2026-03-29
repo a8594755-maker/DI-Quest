@@ -6,5 +6,20 @@
   "totalDue": "共 <1>{{count}}</1> 題待複習",
   "questionCount": "{{count}} 題",
   "lastScore": "上次得分：{{score}}",
-  "overdue": "逾期 {{days}} 天"
+  "overdue": "逾期 {{days}} 天",
+  "startSession": "開始複習",
+  "sessionProgress": "第 {{current}} / {{total}} 題",
+  "sessionXpHint": "每答對一題 +10 XP",
+  "allCaughtUp": "太棒了，已全部複習完！可以練習已完成的題目。",
+  "summaryTitle": "複習完成！",
+  "summaryCorrect": "{{correct}} / {{total}} 答對",
+  "summaryXpEarned": "獲得 {{xp}} XP",
+  "anotherSession": "再來一輪",
+  "backToQueue": "返回複習列表",
+  "reviewXpLabel": "+10 XP",
+  "scenarioToggle": "查看情境資料",
+  "nextQuestion": "下一題",
+  "viewResults": "查看結果",
+  "wrongAnswer": "答錯了",
+  "unlockHint": "完成 {{required}} 題即可開啟複習模式（目前 {{current}} 題）"
 }

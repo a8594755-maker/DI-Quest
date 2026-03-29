@@ -54,7 +54,10 @@ function reducer(state, action) {
       if (prev?.completed && !isReview) return state // 已完成不重複加分
 
       const baseXp = action.payload.baseXp || 50
-      const earnedXp = isReview ? 0 : calculateChallengeXp(baseXp, { usedHints, attempts })
+      const REVIEW_XP = 10
+      const earnedXp = isReview
+        ? (score >= 60 ? REVIEW_XP : 0)
+        : calculateChallengeXp(baseXp, { usedHints, attempts })
 
       // 計算 spaced repetition schedule
       const quality = performanceToQuality({ score, usedHints, attempts })
@@ -86,6 +89,7 @@ function reducer(state, action) {
             [today]: {
               ...todayStats,
               challengesCompleted: todayStats.challengesCompleted + (isReview ? 0 : 1),
+              reviewsCompleted: (todayStats.reviewsCompleted || 0) + (isReview ? 1 : 0),
               xpEarned: todayStats.xpEarned + earnedXp,
             },
           },

@@ -1,6 +1,8 @@
 {
   "multipleChoice": {
-    "confirm": "Confirm Answer"
+    "confirm": "Confirm Answer",
+    "retry": "Try Again",
+    "attemptsLeft": "{{count}} attempts left"
   },
   "codeChallenge": {
     "initDb": "Initializing database...",

@@ -89,11 +89,16 @@ function CaseStudy() {
     }
   }
 
-  const handleAnswer = (isCorrect) => {
-    setAttempts(prev => prev + 1)
+  const handleAnswer = (isCorrect, _selected, attemptCount) => {
+    setAttempts(attemptCount || 1)
     setAnswerCorrect(isCorrect)
     triggerHaptic(isCorrect ? 'success' : 'error')
-    if (isCorrect) completeChallenge(100)
+    if (isCorrect) {
+      completeChallenge(100)
+    } else {
+      // All attempts exhausted — complete with score 0
+      completeChallenge(0)
+    }
   }
 
   const handleOpenEndedSubmit = (score) => {
@@ -187,7 +192,8 @@ function CaseStudy() {
           options={challenge.options}
           correctAnswer={challenge.correctAnswer}
           onAnswer={handleAnswer}
-          disabled={submitted}
+          disabled={!isReview && !!challengeStatus[`${questId}-${challengeId}`]?.completed}
+          showAnswer={!isReview && !!challengeStatus[`${questId}-${challengeId}`]?.completed}
         />
       ) : challenge.type === 'open-ended' ? (
         <OpenEndedAnswer

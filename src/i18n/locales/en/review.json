@@ -6,5 +6,20 @@
   "totalDue": "<1>{{count}}</1> questions due for review",
   "questionCount": "{{count}} questions",
   "lastScore": "Last score: {{score}}",
-  "overdue": "Overdue by {{days}} days"
+  "overdue": "Overdue by {{days}} days",
+  "startSession": "Start Review",
+  "sessionProgress": "Question {{current}} / {{total}}",
+  "sessionXpHint": "+10 XP per correct answer",
+  "allCaughtUp": "All caught up! Practice with completed questions.",
+  "summaryTitle": "Session Complete!",
+  "summaryCorrect": "{{correct}} / {{total}} correct",
+  "summaryXpEarned": "Earned {{xp}} XP",
+  "anotherSession": "Start Another",
+  "backToQueue": "Back to Queue",
+  "reviewXpLabel": "+10 XP",
+  "scenarioToggle": "View Scenario",
+  "nextQuestion": "Next",
+  "viewResults": "View Results",
+  "wrongAnswer": "Incorrect",
+  "unlockHint": "Complete {{required}} challenges to unlock review ({{current}}/{{required}})"
 }

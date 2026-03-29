@@ -41,7 +41,15 @@ export function getLevelInfo(totalXp) {
 
 export function calculateChallengeXp(baseXp, { usedHints = 0, attempts = 1 }) {
   let xp = baseXp
-  if (usedHints === 0 && attempts === 1) xp = Math.floor(xp * 1.5)
-  else if (usedHints > 0) xp = Math.max(10, xp - usedHints * 20)
+  // Attempt-based scaling
+  if (attempts === 1 && usedHints === 0) {
+    xp = Math.floor(xp * 1.5) // Perfect: 75 XP (base 50)
+  } else if (attempts === 2) {
+    xp = Math.floor(xp * 0.7) // Second try: 35 XP
+  } else if (attempts >= 3) {
+    xp = Math.floor(xp * 0.3) // Third try: 15 XP
+  }
+  // Hint penalty stacks
+  if (usedHints > 0) xp = Math.max(5, xp - usedHints * 15)
   return xp
 }

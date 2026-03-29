@@ -1,6 +1,8 @@
 {
   "multipleChoice": {
-    "confirm": "確認答案"
+    "confirm": "確認答案",
+    "retry": "再試一次",
+    "attemptsLeft": "還有 {{count}} 次機會"
   },
   "codeChallenge": {
     "initDb": "正在初始化資料庫...",
