@@ -13,20 +13,22 @@ function NoteEditor({ note, onUpdate, onDelete, onBack, onTogglePin, compact = f
   const textareaRef = useRef(null)
   const saveTimerRef = useRef(null)
 
+  const noteId = note?.id
+
   // Sync state when note prop changes
   useEffect(() => {
     if (note) {
       setTitle(note.title || '')
       setContent(note.content || '')
     }
-  }, [note?.id])
+  }, [noteId])
 
   const debouncedSave = useCallback((newTitle, newContent) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      onUpdate(note.id, { title: newTitle, content: newContent })
+      onUpdate(noteId, { title: newTitle, content: newContent })
     }, 500)
-  }, [note?.id, onUpdate])
+  }, [noteId, onUpdate])
 
   useEffect(() => {
     return () => {

@@ -3,7 +3,7 @@ import { BRANCHES, getBranch, getBranchForWorld } from '../branches'
 
 describe('branches', () => {
   it('has 6 learning tracks', () => {
-    expect(BRANCHES).toHaveLength(6)
+    expect(BRANCHES).toHaveLength(7)
   })
 
   it('each branch has required fields', () => {

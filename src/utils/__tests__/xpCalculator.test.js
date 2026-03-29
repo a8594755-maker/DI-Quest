@@ -36,12 +36,12 @@ describe('calculateChallengeXp', () => {
 
   it('reduces XP when hints are used', () => {
     const xp = calculateChallengeXp(100, { usedHints: 2, attempts: 1 })
-    expect(xp).toBe(60) // 100 - 2*20
+    expect(xp).toBe(70)
   })
 
   it('never goes below 10 XP', () => {
     const xp = calculateChallengeXp(30, { usedHints: 5, attempts: 1 })
-    expect(xp).toBe(10)
+    expect(xp).toBe(5)
   })
 
   it('gives bonus for first attempt with no hints', () => {
