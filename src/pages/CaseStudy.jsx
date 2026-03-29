@@ -55,7 +55,7 @@ function CaseStudy() {
     setHintLevel(prev => Math.min(prev + 1, challenge?.hints?.length || 3))
   }
 
-  const completeChallenge = (score) => {
+  const completeChallenge = (score, attemptCount) => {
     const durationMs = endChallenge(questId, challengeId)
     if (durationMs > 0) {
       dispatch({
@@ -71,7 +71,7 @@ function CaseStudy() {
         challengeId: Number(challengeId),
         score,
         usedHints: hintLevel,
-        attempts: attempts + 1,
+        attempts: attemptCount,
         baseXp: quest?.isBoss ? 200 : 50,
         isReview,
       },
@@ -98,20 +98,21 @@ function CaseStudy() {
     setAnswerCorrect(isCorrect)
     triggerHaptic(isCorrect ? 'success' : 'error')
     if (isCorrect) {
-      completeChallenge(100)
+      completeChallenge(100, attemptCount || 1)
     } else {
       // All attempts exhausted — complete with score 0
-      completeChallenge(0)
+      completeChallenge(0, attemptCount || 1)
     }
   }
 
   const handleOpenEndedSubmit = (score) => {
-    setAttempts(prev => prev + 1)
+    const newAttempts = attempts + 1
+    setAttempts(newAttempts)
     const passed = score >= 60
     setAnswerCorrect(passed)
     triggerHaptic(passed ? 'success' : 'error')
     if (passed) {
-      completeChallenge(score)
+      completeChallenge(score, newAttempts)
     }
   }
 
