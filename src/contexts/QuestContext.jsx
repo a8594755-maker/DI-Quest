@@ -329,41 +329,30 @@ export function QuestProvider({ children }) {
           const localChallenges = Object.keys(localState.challengeStatus || {}).length
           const cloudChallenges = Object.keys(cloudProgress.challengeStatus || {}).length
 
-          let winner
-          if (localXp > cloudXp || localChallenges > cloudChallenges) {
-            // Local has more progress — keep local, push to cloud
-            winner = localState
-            console.log('[QuestContext] Local has more progress, keeping local', { localXp, cloudXp, localChallenges, cloudChallenges })
-          } else if (cloudXp > localXp || cloudChallenges > localChallenges) {
-            // Cloud has more progress — use cloud
-            winner = cloudProgress
-            console.log('[QuestContext] Cloud has more progress, using cloud', { localXp, cloudXp, localChallenges, cloudChallenges })
-          } else {
-            // Same progress — deep merge to pick up any differences
-            winner = {
-              ...cloudProgress,
-              challengeStatus: { ...cloudProgress.challengeStatus, ...localState.challengeStatus },
-              questStatus: { ...cloudProgress.questStatus, ...localState.questStatus },
-              reviewSchedule: { ...cloudProgress.reviewSchedule, ...localState.reviewSchedule },
-              achievements: [...new Set([...(cloudProgress.achievements || []), ...(localState.achievements || [])])],
-              totalXp: Math.max(localXp, cloudXp),
-              streakDays: Math.max(localState.streakDays || 0, cloudProgress.streakDays || 0),
-              longestStreak: Math.max(localState.longestStreak || 0, cloudProgress.longestStreak || 0),
-              analytics: {
-                challengeTimings: { ...(cloudProgress.analytics?.challengeTimings || {}), ...(localState.analytics?.challengeTimings || {}) },
-                dailyStats: { ...(cloudProgress.analytics?.dailyStats || {}), ...(localState.analytics?.dailyStats || {}) },
-              },
-            }
+          // Always deep merge — never discard either side
+          const merged = {
+            ...initialState,
+            ...cloudProgress,
+            ...localState,
+            challengeStatus: { ...cloudProgress.challengeStatus, ...localState.challengeStatus },
+            questStatus: { ...cloudProgress.questStatus, ...localState.questStatus },
+            reviewSchedule: { ...cloudProgress.reviewSchedule, ...localState.reviewSchedule },
+            achievements: [...new Set([...(cloudProgress.achievements || []), ...(localState.achievements || [])])],
+            totalXp: Math.max(localXp, cloudXp),
+            streakDays: Math.max(localState.streakDays || 0, cloudProgress.streakDays || 0),
+            longestStreak: Math.max(localState.longestStreak || 0, cloudProgress.longestStreak || 0),
+            analytics: {
+              challengeTimings: { ...(cloudProgress.analytics?.challengeTimings || {}), ...(localState.analytics?.challengeTimings || {}) },
+              dailyStats: { ...(cloudProgress.analytics?.dailyStats || {}), ...(localState.analytics?.dailyStats || {}) },
+            },
+            checkedInToday: !!checkinData,
           }
 
-          const payload = { ...winner, checkedInToday: !!checkinData }
-          dispatch({ type: 'SYNC_FROM_CLOUD', payload })
+          dispatch({ type: 'SYNC_FROM_CLOUD', payload: merged })
           dispatch({ type: 'UPDATE_STREAK' })
 
-          // If local won, push to cloud immediately
-          if (localXp > cloudXp || localChallenges > cloudChallenges) {
-            await saveToCloud({ ...winner, checkedInToday: !!checkinData })
-          }
+          // Push merged result to cloud so both sides stay in sync
+          await saveToCloud(merged)
         } else {
           // Cloud data empty — still sync checkin status, then save local to cloud
           if (checkinData) {
