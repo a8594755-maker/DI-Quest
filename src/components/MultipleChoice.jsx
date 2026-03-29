@@ -13,7 +13,7 @@ function MultipleChoice({ question, options: rawOptions, correctAnswer, onAnswer
   const [attemptCount, setAttemptCount] = useState(0)
   const [wrongSelections, setWrongSelections] = useState([])
 
-  // Reveal correct answer: user answered correctly, exhausted attempts, or parent says to show
+  // Reveal correct answer: parent says show, user answered correctly, or exhausted attempts
   const revealAnswer = showAnswer || (submitted && (selected === correctAnswer || attemptCount >= MAX_ATTEMPTS))
 
   const options = rawOptions.map((opt) => {
@@ -44,7 +44,6 @@ function MultipleChoice({ question, options: rawOptions, correctAnswer, onAnswer
     } else {
       setWrongSelections(prev => [...prev, selected])
       if (newAttemptCount >= MAX_ATTEMPTS) {
-        // Final attempt wrong — reveal answer, report as wrong
         onAnswer?.(false, selected, newAttemptCount)
       }
     }
@@ -60,6 +59,21 @@ function MultipleChoice({ question, options: rawOptions, correctAnswer, onAnswer
   const getOptionStyle = (optionId) => {
     const isWrong = wrongSelections.includes(optionId)
 
+    // Reveal mode: show correct answer (revisiting or exhausted attempts)
+    if (revealAnswer) {
+      if (optionId === correctAnswer) {
+        return 'border-emerald-500 bg-emerald-500/10'
+      }
+      if (optionId === selected && selected !== correctAnswer) {
+        return 'border-red-500 bg-red-500/10'
+      }
+      if (isWrong) {
+        return 'border-red-500/30 bg-red-500/5 opacity-60'
+      }
+      return 'border-slate-700/50 bg-slate-800/30 opacity-60'
+    }
+
+    // Active answering
     if (!submitted) {
       if (selected === optionId) {
         return 'border-brand-primary bg-brand-primary/10 ring-2 ring-brand-primary/30'
@@ -70,10 +84,7 @@ function MultipleChoice({ question, options: rawOptions, correctAnswer, onAnswer
       return 'border-slate-700 bg-slate-800/50 hover:border-slate-500 cursor-pointer'
     }
 
-    // Submitted state
-    if (revealAnswer && optionId === correctAnswer) {
-      return 'border-emerald-500 bg-emerald-500/10'
-    }
+    // Just submitted wrong (before retry)
     if (optionId === selected && selected !== correctAnswer) {
       return 'border-red-500 bg-red-500/10'
     }
@@ -93,8 +104,8 @@ function MultipleChoice({ question, options: rawOptions, correctAnswer, onAnswer
             onClick={() => handleSelect(option.id)}
             disabled={disabled || revealAnswer}
             className={`w-full text-left px-3 py-2.5 rounded-lg border-2 transition-all duration-200 touch-manipulation ${getOptionStyle(option.id)}`}
-            whileHover={!submitted && !disabled ? { scale: 1.01 } : {}}
-            whileTap={!submitted && !disabled ? { scale: 0.98 } : {}}
+            whileHover={!revealAnswer && !submitted && !disabled ? { scale: 1.01 } : {}}
+            whileTap={!revealAnswer && !submitted && !disabled ? { scale: 0.98 } : {}}
           >
             <div className="flex items-start gap-2.5">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
@@ -135,7 +146,7 @@ function MultipleChoice({ question, options: rawOptions, correctAnswer, onAnswer
         </p>
       )}
 
-      {!submitted ? (
+      {revealAnswer ? null : !submitted ? (
         <button
           onClick={handleSubmit}
           disabled={!selected || disabled}
