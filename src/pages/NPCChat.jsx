@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Sparkles, BookOpen, HelpCircle, Map, BarChart3 } from 'lucide-react'
+import { Send, Bot, User, Sparkles, BookOpen, HelpCircle, Map, BarChart3, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { WORLDS } from '../data/questData'
 import { Link } from 'react-router-dom'
 import { chatWithDeepSeek } from '../utils/deepseek'
+import { route } from '../config/product'
 
 // ── 知識庫主題列表 ────────────────────────────────────────
 const KNOWLEDGE_TOPICS = [
@@ -54,6 +57,43 @@ function findTopic(input) {
     }
   }
   return null
+}
+
+// ── 程式碼區塊（含複製按鈕） ─────────────────────────────────
+function CodeBlock({ children, ...props }) {
+  const [copied, setCopied] = useState(false)
+
+  const extractText = (node) => {
+    if (typeof node === 'string') return node
+    if (!node) return ''
+    if (node.props?.children) {
+      return Array.isArray(node.props.children)
+        ? node.props.children.map(extractText).join('')
+        : extractText(node.props.children)
+    }
+    return ''
+  }
+
+  const code = extractText(children).replace(/\n$/, '')
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className="relative group">
+      <button
+        onClick={handleCopy}
+        className="absolute top-1.5 right-1.5 p-1 rounded bg-slate-700/80 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Copy code"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+      <pre {...props}>{children}</pre>
+    </div>
+  )
 }
 
 // ── 主元件 ────────────────────────────────────────────────
@@ -297,14 +337,19 @@ function NPCChat() {
                     ? 'bg-brand-primary text-white'
                     : 'bg-slate-800 text-slate-200'
                 }`}>
-                  <p className="text-left whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                  {message.role === 'user' ? (
+                    <p className="text-left whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                  ) : (
+                    <div className="prose prose-invert prose-sm max-w-none break-words prose-p:my-1 prose-li:my-0.5 prose-headings:my-2 prose-hr:my-2 prose-ul:my-1 prose-ol:my-1 [&_pre]:overflow-x-auto [&_table]:overflow-x-auto">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ pre: CodeBlock }}>{message.content}</ReactMarkdown>
+                    </div>
+                  )}
                 </div>
 
                 {message.showMapLink && (
                   <div className="mt-2">
                     <Link
-                      to="/di-quest/map"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
+                      to={route('/map')} className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
                     >
                       <Map className="w-4 h-4" />
                       {t('npc.goToMap')}

@@ -17,6 +17,7 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@supabase/supabase-js": "^2.100.1",
+    "@tailwindcss/typography": "^0.5.19",
     "dompurify": "^3.3.3",
     "framer-motion": "^10.17.0",
     "i18next": "^25.10.10",
