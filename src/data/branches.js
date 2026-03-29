@@ -53,6 +53,15 @@ export const BRANCHES = [
     color: 'from-teal-500 to-emerald-500',
     worldIds: [54, 55, 56, 57, 58, 59, 60, 61],
   },
+  {
+    id: 'coding-interview',
+    name: 'Coding Interview 路線',
+    emoji: '💻',
+    description: 'Pattern-based 技術面試準備，從 Arrays 到 Dynamic Programming',
+    color: 'from-cyan-500 to-violet-600',
+    worldIds: [200, 201, 202, 203, 204, 205, 206, 207, 208, 209],
+    premiumOnly: true,
+  },
 ]
 
 import i18n from '../i18n'

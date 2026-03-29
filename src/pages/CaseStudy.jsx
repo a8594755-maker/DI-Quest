@@ -16,7 +16,7 @@ import CodeChallenge from '../components/CodeChallenge'
 import PythonChallenge from '../components/PythonChallenge'
 
 // Python worlds use Pyodide instead of sql.js
-const PYTHON_WORLD_IDS = new Set([15, 16, 17, 18, 19, 20, 21, 22])
+const PYTHON_WORLD_IDS = new Set([15, 16, 17, 18, 19, 20, 21, 22, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209])
 
 function CaseStudy() {
   const { t } = useTranslation(['case', 'common'])

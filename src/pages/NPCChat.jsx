@@ -8,7 +8,6 @@ import { useQuest } from '../contexts/QuestContext'
 import { WORLDS } from '../data/questData'
 import { Link } from 'react-router-dom'
 import { chatWithDeepSeek } from '../utils/deepseek'
-import { route } from '../config/product'
 
 // ── 知識庫主題列表 ────────────────────────────────────────
 const KNOWLEDGE_TOPICS = [
@@ -349,7 +348,7 @@ function NPCChat() {
                 {message.showMapLink && (
                   <div className="mt-2">
                     <Link
-                      to={route('/map')} className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
+                      to="/di-quest/map" className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
                     >
                       <Map className="w-4 h-4" />
                       {t('npc.goToMap')}
