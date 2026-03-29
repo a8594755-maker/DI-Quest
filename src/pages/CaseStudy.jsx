@@ -182,6 +182,7 @@ function CaseStudy() {
     <>
       {challenge.type === 'multiple-choice' || challenge.type === 'data-interpretation' ? (
         <MultipleChoice
+          key={`${questId}-${challengeId}`}
           question={challenge.question}
           options={challenge.options}
           correctAnswer={challenge.correctAnswer}
@@ -190,6 +191,7 @@ function CaseStudy() {
         />
       ) : challenge.type === 'open-ended' ? (
         <OpenEndedAnswer
+          key={`${questId}-${challengeId}`}
           prompt={challenge.prompt}
           evaluationCriteria={challenge.evaluationCriteria}
           sampleAnswer={challenge.sampleAnswer}
@@ -199,6 +201,7 @@ function CaseStudy() {
         />
       ) : challenge.type === 'code' ? (
         <CodeChallenge
+          key={`${questId}-${challengeId}`}
           question={challenge.question}
           starterCode={challenge.starterCode || ''}
           sampleSchema={challenge.sampleSchema}
