@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Bot, User, X, Plus, Clock, ChevronLeft, Trash2, ThumbsUp, ThumbsDown, Lock, Crown } from 'lucide-react'
+import { Send, Bot, User, X, Plus, Clock, ChevronLeft, Trash2, ThumbsUp, ThumbsDown, Lock, Crown, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -89,6 +89,43 @@ function useRelativeDate() {
     if (days < 7) return t('time.daysAgo', { count: days })
     return new Date(ts).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'zh-TW', { month: 'short', day: 'numeric' })
   }
+}
+
+// ── Code block with copy button ─────────────────────────────
+function CodeBlock({ children, ...props }) {
+  const [copied, setCopied] = useState(false)
+
+  const extractText = (node) => {
+    if (typeof node === 'string') return node
+    if (!node) return ''
+    if (node.props?.children) {
+      return Array.isArray(node.props.children)
+        ? node.props.children.map(extractText).join('')
+        : extractText(node.props.children)
+    }
+    return ''
+  }
+
+  const code = extractText(children).replace(/\n$/, '')
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className="relative group">
+      <button
+        onClick={handleCopy}
+        className="absolute top-1.5 right-1.5 p-1 rounded bg-slate-700/80 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Copy code"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+      <pre {...props}>{children}</pre>
+    </div>
+  )
 }
 
 // ── 主元件 ──────────────────────────────────────────────────
@@ -407,7 +444,7 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
                         <p className="text-left whitespace-pre-wrap">{msg.content}</p>
                       ) : (
                         <div className="prose prose-invert prose-sm max-w-none break-words prose-p:my-1 prose-li:my-0.5 prose-headings:my-2 prose-hr:my-2 prose-ul:my-1 prose-ol:my-1 [&_pre]:overflow-x-auto [&_table]:overflow-x-auto">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ pre: CodeBlock }}>{msg.content}</ReactMarkdown>
                         </div>
                       )}
                     </div>
