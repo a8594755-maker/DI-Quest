@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck, ChevronLeft, ChevronRight, Eye, Globe, Monitor, MessageSquare } from 'lucide-react'
+import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck, ChevronLeft, ChevronRight, Eye, Globe, Monitor, MessageSquare, Tag, Plus } from 'lucide-react'
 import { useAdminData } from '../hooks/useAdminData'
 import { BRANCHES } from '../data/branches'
 import { WORLDS } from '../data/questData'
@@ -535,13 +535,72 @@ function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock
 }
 
 // ========================
+// Inline Group Editor
+// ========================
+function GroupEditor({ value, allGroups, onChange }) {
+  const [editing, setEditing] = useState(false)
+  const [input, setInput] = useState('')
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          className="w-20 px-1.5 py-0.5 bg-slate-700 border border-slate-600 rounded text-xs text-white outline-none focus:border-brand-primary"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { onChange(input.trim()); setEditing(false) }
+            if (e.key === 'Escape') setEditing(false)
+          }}
+          onBlur={() => { onChange(input.trim()); setEditing(false) }}
+          list="group-options"
+          placeholder="group name"
+        />
+        <datalist id="group-options">
+          {allGroups.map(g => <option key={g} value={g} />)}
+        </datalist>
+      </div>
+    )
+  }
+
+  if (value) {
+    return (
+      <button
+        onClick={() => { setInput(value); setEditing(true) }}
+        className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 transition-colors"
+      >
+        {value}
+      </button>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => { setInput(''); setEditing(true) }}
+      className="p-0.5 rounded text-slate-600 hover:text-slate-400 transition-colors"
+      title="Assign group"
+    >
+      <Plus className="w-3.5 h-3.5" />
+    </button>
+  )
+}
+
+// ========================
 // Main Dashboard
 // ========================
 function AdminDashboard() {
-  const { metrics, userSummaries, recentCheckins, getUserDetail, updateUserRole, toggleApiBlock, loading, error, refresh } = useAdminData()
+  const { metrics, userSummaries, recentCheckins, getUserDetail, updateUserRole, updateUserGroup, toggleApiBlock, loading, error, refresh } = useAdminData()
   const [sortField, setSortField] = useState('total_xp')
   const [sortAsc, setSortAsc] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState(null)
+  const [filterGroup, setFilterGroup] = useState(null) // null = all
+
+  // Derive unique groups from user data
+  const allGroups = useMemo(() => {
+    const groups = new Set(userSummaries.map(u => u.user_group).filter(Boolean))
+    return Array.from(groups).sort()
+  }, [userSummaries])
 
   if (loading) {
     return (
@@ -574,7 +633,13 @@ function AdminDashboard() {
     }
   }
 
-  const sortedUsers = [...userSummaries].sort((a, b) => {
+  const filteredUsers = filterGroup
+    ? filterGroup === '__ungrouped'
+      ? userSummaries.filter(u => !u.user_group)
+      : userSummaries.filter(u => u.user_group === filterGroup)
+    : userSummaries
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
     const av = a[sortField] ?? 0
     const bv = b[sortField] ?? 0
     return sortAsc ? av - bv : bv - av
@@ -637,16 +702,55 @@ function AdminDashboard() {
 
       {/* User Table */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card p-5 mb-6">
-        <h4 className="text-white font-medium mb-4 flex items-center gap-2">
-          <Users className="w-4 h-4 text-brand-primary" />
-          All Users ({userSummaries.length})
-        </h4>
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-white font-medium flex items-center gap-2">
+            <Users className="w-4 h-4 text-brand-primary" />
+            {filterGroup ? `${filterGroup} (${filteredUsers.length})` : `All Users (${userSummaries.length})`}
+          </h4>
+        </div>
+
+        {/* Group filter tabs */}
+        {allGroups.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            <button
+              onClick={() => setFilterGroup(null)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                !filterGroup ? 'bg-brand-primary text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              All ({userSummaries.length})
+            </button>
+            {allGroups.map(g => {
+              const count = userSummaries.filter(u => u.user_group === g).length
+              return (
+                <button
+                  key={g}
+                  onClick={() => setFilterGroup(filterGroup === g ? null : g)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    filterGroup === g ? 'bg-brand-primary text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {g} ({count})
+                </button>
+              )
+            })}
+            <button
+              onClick={() => setFilterGroup('__ungrouped')}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                filterGroup === '__ungrouped' ? 'bg-brand-primary text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Ungrouped ({userSummaries.filter(u => !u.user_group).length})
+            </button>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-slate-400 text-xs border-b border-slate-700">
                 <th className="text-left py-2 px-2">User</th>
+                <th className="text-left py-2 px-2 hidden sm:table-cell">Group</th>
                 <th className="text-right py-2 px-2 cursor-pointer hover:text-slate-200" onClick={() => handleSort('total_xp')}>
                   XP {renderSortIcon("total_xp")}
                 </th>
@@ -687,6 +791,13 @@ function AdminDashboard() {
                         <div className="text-slate-500 text-xs truncate">@{user.username}</div>
                       </div>
                     </div>
+                  </td>
+                  <td className="py-2 px-2 hidden sm:table-cell" onClick={e => e.stopPropagation()}>
+                    <GroupEditor
+                      value={user.user_group}
+                      allGroups={allGroups}
+                      onChange={(g) => updateUserGroup(user.id, g)}
+                    />
                   </td>
                   <td className="text-right py-2 px-2 text-brand-accent font-medium">{user.total_xp || 0}</td>
                   <td className="text-right py-2 px-2 text-slate-300 hidden sm:table-cell">

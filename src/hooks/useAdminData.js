@@ -178,6 +178,15 @@ export function useAdminData() {
     setAllProfiles(prev => prev.map(p => p.id === userId ? { ...p, role: newRole } : p))
   }, [])
 
+  const updateUserGroup = useCallback(async (userId, group) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ user_group: group || null })
+      .eq('id', userId)
+    if (error) throw error
+    setAllProfiles(prev => prev.map(p => p.id === userId ? { ...p, user_group: group || null } : p))
+  }, [])
+
   const toggleApiBlock = useCallback(async (userId, blocked) => {
     const { error } = await supabase
       .from('profiles')
@@ -197,5 +206,5 @@ export function useAdminData() {
     return { profile, progress, checkins, apiUsage, chatSessions }
   }, [allProfiles, allProgress, allCheckins, allApiUsage, allChatSessions])
 
-  return { metrics, userSummaries, recentCheckins, allChatSessions, getUserDetail, updateUserRole, toggleApiBlock, loading, error, refresh: fetchAll }
+  return { metrics, userSummaries, recentCheckins, allChatSessions, getUserDetail, updateUserRole, updateUserGroup, toggleApiBlock, loading, error, refresh: fetchAll }
 }
