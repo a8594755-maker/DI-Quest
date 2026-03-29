@@ -3,7 +3,6 @@ import { Send, Bot, User, X, Plus, Clock, ChevronLeft, Trash2, ThumbsUp, ThumbsD
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import DOMPurify from 'dompurify'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
@@ -408,7 +407,7 @@ function ChatPanel({ isOpen, onClose, selectedText, onClearSelection, mode = 'si
                         <p className="text-left whitespace-pre-wrap">{msg.content}</p>
                       ) : (
                         <div className="prose prose-invert prose-sm max-w-none break-words prose-p:my-1 prose-li:my-0.5 prose-headings:my-2 prose-hr:my-2 prose-ul:my-1 prose-ol:my-1 [&_pre]:overflow-x-auto [&_table]:overflow-x-auto">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{DOMPurify.sanitize(msg.content)}</ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                         </div>
                       )}
                     </div>
