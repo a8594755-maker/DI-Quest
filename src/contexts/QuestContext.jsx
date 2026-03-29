@@ -235,19 +235,64 @@ export function QuestProvider({ children }) {
     }
   }, [isAuthenticated, user])
 
+  const pendingStateRef = useRef(null)
+
   useEffect(() => {
     if (!isAuthenticated) return
+    pendingStateRef.current = state
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => saveToCloud(state), 2000)
+    saveTimerRef.current = setTimeout(() => {
+      pendingStateRef.current = null
+      saveToCloud(state)
+    }, 2000)
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
   }, [state, isAuthenticated, saveToCloud])
+
+  // Cache access token for synchronous use in beforeunload
+  const tokenRef = useRef(null)
+  useEffect(() => {
+    if (!isAuthenticated) { tokenRef.current = null; return }
+    supabase.auth.getSession().then(({ data }) => {
+      tokenRef.current = data?.session?.access_token || null
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      tokenRef.current = session?.access_token || null
+    })
+    return () => subscription.unsubscribe()
+  }, [isAuthenticated])
+
+  // Flush pending cloud save on page unload so progress is never lost
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!pendingStateRef.current || !user || !tokenRef.current) return
+      const { devMode, ...progressData } = pendingStateRef.current
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_progress?on_conflict=user_id`
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${tokenRef.current}`,
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          progress_data: progressData,
+          updated_at: new Date().toISOString(),
+        }),
+        keepalive: true,
+      }).catch(() => {})
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [user])
 
   // Mark cloud as synced for non-authenticated users
   useEffect(() => {
     if (!isAuthenticated) setCloudSynced(true)
   }, [isAuthenticated])
 
-  // Load from cloud on first auth
+  // Load from cloud on first auth — merge with local (keep the version with more progress)
   useEffect(() => {
     if (!isAuthenticated || !user || cloudLoadedRef.current) return
     cloudLoadedRef.current = true
@@ -269,21 +314,59 @@ export function QuestProvider({ children }) {
           .eq('checkin_date', today)
           .maybeSingle()
 
-        if (data?.progress_data && Object.keys(data.progress_data).length > 0) {
-          const payload = {
-            ...data.progress_data,
-            checkedInToday: !!checkinData, // Only trust daily_checkins table, not stale progress_data
+        const localState = loadState()
+        const cloudProgress = data?.progress_data
+        const hasCloud = cloudProgress && Object.keys(cloudProgress).length > 0
+
+        if (hasCloud) {
+          // Merge: pick the version with more progress, not blindly overwrite
+          const localXp = localState.totalXp || 0
+          const cloudXp = cloudProgress.totalXp || 0
+          const localChallenges = Object.keys(localState.challengeStatus || {}).length
+          const cloudChallenges = Object.keys(cloudProgress.challengeStatus || {}).length
+
+          let winner
+          if (localXp > cloudXp || localChallenges > cloudChallenges) {
+            // Local has more progress — keep local, push to cloud
+            winner = localState
+            console.log('[QuestContext] Local has more progress, keeping local', { localXp, cloudXp, localChallenges, cloudChallenges })
+          } else if (cloudXp > localXp || cloudChallenges > localChallenges) {
+            // Cloud has more progress — use cloud
+            winner = cloudProgress
+            console.log('[QuestContext] Cloud has more progress, using cloud', { localXp, cloudXp, localChallenges, cloudChallenges })
+          } else {
+            // Same progress — deep merge to pick up any differences
+            winner = {
+              ...cloudProgress,
+              challengeStatus: { ...cloudProgress.challengeStatus, ...localState.challengeStatus },
+              questStatus: { ...cloudProgress.questStatus, ...localState.questStatus },
+              reviewSchedule: { ...cloudProgress.reviewSchedule, ...localState.reviewSchedule },
+              achievements: [...new Set([...(cloudProgress.achievements || []), ...(localState.achievements || [])])],
+              totalXp: Math.max(localXp, cloudXp),
+              streakDays: Math.max(localState.streakDays || 0, cloudProgress.streakDays || 0),
+              longestStreak: Math.max(localState.longestStreak || 0, cloudProgress.longestStreak || 0),
+              analytics: {
+                challengeTimings: { ...(cloudProgress.analytics?.challengeTimings || {}), ...(localState.analytics?.challengeTimings || {}) },
+                dailyStats: { ...(cloudProgress.analytics?.dailyStats || {}), ...(localState.analytics?.dailyStats || {}) },
+              },
+            }
           }
+
+          const payload = { ...winner, checkedInToday: !!checkinData }
           dispatch({ type: 'SYNC_FROM_CLOUD', payload })
-          // Recalculate streak after cloud overwrite (mount UPDATE_STREAK ran before cloud loaded)
           dispatch({ type: 'UPDATE_STREAK' })
+
+          // If local won, push to cloud immediately
+          if (localXp > cloudXp || localChallenges > cloudChallenges) {
+            await saveToCloud({ ...winner, checkedInToday: !!checkinData })
+          }
         } else {
           // Cloud data empty — still sync checkin status, then save local to cloud
           if (checkinData) {
-            dispatch({ type: 'SYNC_FROM_CLOUD', payload: { ...state, checkedInToday: true } })
+            dispatch({ type: 'SYNC_FROM_CLOUD', payload: { ...localState, checkedInToday: true } })
           }
           dispatch({ type: 'UPDATE_STREAK' })
-          await saveToCloud(state)
+          await saveToCloud(localState)
         }
       } catch (err) {
         console.error('[QuestContext] loadFromCloud error:', err)
