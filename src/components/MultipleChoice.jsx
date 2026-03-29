@@ -7,7 +7,7 @@ import { triggerHaptic } from '../utils/nativeApp'
 function MultipleChoice({ question, options: rawOptions, correctAnswer, onAnswer, disabled = false }) {
   const { t } = useTranslation('case')
   const [selected, setSelected] = useState(null)
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState(disabled)
 
   // Normalize options: support both string format ('A. text') and object format ({ id, text })
   const options = rawOptions.map((opt) => {
