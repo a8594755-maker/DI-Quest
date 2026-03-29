@@ -5,6 +5,7 @@ import { getBranchForWorld } from '../data/branches'
 import { getWorld } from '../data/questData'
 import { useAuth } from './AuthContext'
 import { supabase } from '../utils/supabase'
+import { getLocalToday } from '../utils/localDate'
 
 const QuestContext = createContext(null)
 
@@ -64,7 +65,7 @@ function reducer(state, action) {
       const nextReviewDate = new Date(Date.now() + nextInterval * 86400000).toISOString().slice(0, 10)
 
       // 更新 dailyStats
-      const today = new Date().toISOString().slice(0, 10)
+      const today = getLocalToday()
       const todayStats = state.analytics.dailyStats[today] || { challengesCompleted: 0, xpEarned: 0, timeSpentMs: 0 }
 
       return {
@@ -113,7 +114,7 @@ function reducer(state, action) {
     }
 
     case 'UPDATE_STREAK': {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = getLocalToday()
       if (state.lastActiveDate === today) return state
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
       let streakDays
@@ -139,7 +140,7 @@ function reducer(state, action) {
       // Prevent duplicate check-in XP
       if (state.checkedInToday) return state
 
-      const today = new Date().toISOString().slice(0, 10)
+      const today = getLocalToday()
       const bonus = action.payload?.bonusXp || 0
       const todayStats = state.analytics.dailyStats[today] || { challengesCompleted: 0, xpEarned: 0, timeSpentMs: 0 }
       return {
@@ -165,7 +166,7 @@ function reducer(state, action) {
     case 'RECORD_CHALLENGE_TIMING': {
       const { questId, challengeId, durationMs } = action.payload
       const key = `${questId}-${challengeId}`
-      const today = new Date().toISOString().slice(0, 10)
+      const today = getLocalToday()
       const prev = state.analytics.challengeTimings[key] || { bestTimeMs: Infinity, attemptDates: [] }
       const todayStats = state.analytics.dailyStats[today] || { challengesCompleted: 0, xpEarned: 0, timeSpentMs: 0 }
 
@@ -260,7 +261,7 @@ export function QuestProvider({ children }) {
           .single()
 
         // Always check if user already checked in today via daily_checkins table
-        const today = new Date().toISOString().slice(0, 10)
+        const today = getLocalToday()
         const { data: checkinData } = await supabase
           .from('daily_checkins')
           .select('id, xp_earned')
@@ -297,7 +298,7 @@ export function QuestProvider({ children }) {
 
   // Reset checkedInToday at midnight
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalToday()
     if (state.lastActiveDate !== today && state.checkedInToday) {
       dispatch({ type: 'UPDATE_STREAK' })
     }
@@ -381,7 +382,7 @@ export function QuestProvider({ children }) {
 
   // 到期複習數量
   const getDueReviewCount = () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalToday()
     return Object.values(state.reviewSchedule).filter(r => r.nextReviewDate <= today).length
   }
 

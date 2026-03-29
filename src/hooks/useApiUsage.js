@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../utils/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { getLocalToday } from '../utils/localDate'
 
 const DAILY_LIMIT = 20
 
@@ -20,7 +21,7 @@ export function useApiUsage() {
       return
     }
     try {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = getLocalToday()
       const { data } = await supabase
         .from('api_usage')
         .select('call_count')
@@ -39,7 +40,7 @@ export function useApiUsage() {
     if (!isAuthenticated || !user) return false
     if (isBlocked) return false
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalToday()
 
     // Try upsert: increment or create
     const { data, error } = await supabase.rpc('increment_api_usage', {

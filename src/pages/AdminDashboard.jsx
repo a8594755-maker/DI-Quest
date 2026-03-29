@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck, ChevronLeft, ChevronRight, Eye, Globe, Monitor, MessageSquare, Tag, Plus } from 'lucide-react'
+import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck, ChevronLeft, ChevronRight, Eye, Globe, Monitor, MessageSquare, Tag, Plus, Search, Download, Filter, FileText } from 'lucide-react'
 import { useAdminData } from '../hooks/useAdminData'
 import { BRANCHES } from '../data/branches'
 import { WORLDS } from '../data/questData'
 import UserAvatar from '../components/UserAvatar'
+import { getEasternToday } from '../utils/localDate'
+import { supabase } from '../utils/supabase'
 
 function StatCard({ icon: Icon, label, value, color, delay = 0 }) {
   return (
@@ -66,7 +68,7 @@ function CheckinCalendar({ checkinDates }) {
     // First day of month and total days
     const firstDay = new Date(y, m, 1).getDay() // 0=Sun
     const daysInMonth = new Date(y, m + 1, 0).getDate()
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getEasternToday()
 
     // Build weeks grid
     const weeks = []
@@ -153,10 +155,12 @@ function CheckinCalendar({ checkinDates }) {
 // ========================
 // User Detail Panel
 // ========================
-function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock, onClose }) {
+function UserDetailPanel({ userId, getUserDetail, updateUserRole, updateAdminNotes, toggleApiBlock, onClose }) {
   const { profile, progress, checkins, apiUsage, chatSessions } = getUserDetail(userId)
   const [actionLoading, setActionLoading] = useState(null) // 'role' | 'block'
   const [expandedChat, setExpandedChat] = useState(null)
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [notesInput, setNotesInput] = useState(profile?.admin_notes || '')
 
   const questStatus = progress?.questStatus || {}
   const challengeStatus = progress?.challengeStatus || {}
@@ -197,7 +201,7 @@ function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock
 
   const totalChallenges = Object.values(challengeStatus).filter(c => c.completed).length
   const totalQuests = Object.values(questStatus).filter(q => q.completed).length
-  const totalReviewDue = Object.values(reviewSchedule).filter(r => r.nextReviewDate <= new Date().toISOString().slice(0, 10)).length
+  const totalReviewDue = Object.values(reviewSchedule).filter(r => r.nextReviewDate <= getEasternToday()).length
 
   // Branch progress
   const branchProgress = BRANCHES.map(branch => {
@@ -377,6 +381,43 @@ function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock
             )}
           </div>
         )}
+
+        {/* Admin Notes */}
+        <div className="card p-4 mb-4">
+          <h4 className="text-white font-medium mb-2 text-sm flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-slate-400" />
+            Admin Notes
+          </h4>
+          {editingNotes ? (
+            <div>
+              <textarea
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white resize-none outline-none focus:border-brand-primary"
+                rows={3}
+                value={notesInput}
+                onChange={e => setNotesInput(e.target.value)}
+                placeholder="Add notes about this user..."
+                autoFocus
+              />
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={async () => { await updateAdminNotes(userId, notesInput.trim()); setEditingNotes(false) }}
+                  className="px-3 py-1 bg-brand-primary text-white text-xs rounded-lg"
+                >Save</button>
+                <button
+                  onClick={() => { setNotesInput(profile?.admin_notes || ''); setEditingNotes(false) }}
+                  className="px-3 py-1 bg-slate-700 text-slate-300 text-xs rounded-lg"
+                >Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => setEditingNotes(true)}
+              className="text-slate-400 text-xs cursor-pointer hover:text-slate-300 transition-colors min-h-[2rem] whitespace-pre-wrap"
+            >
+              {profile?.admin_notes || <span className="text-slate-600 italic">Click to add notes...</span>}
+            </div>
+          )}
+        </div>
 
         {/* API Usage Chart */}
         <div className="card p-4 mb-4">
@@ -590,11 +631,46 @@ function GroupEditor({ value, allGroups, onChange }) {
 // Main Dashboard
 // ========================
 function AdminDashboard() {
-  const { metrics, userSummaries, recentCheckins, getUserDetail, updateUserRole, updateUserGroup, toggleApiBlock, loading, error, refresh } = useAdminData()
+  const { metrics, userSummaries, recentCheckins, getUserDetail, updateUserRole, updateUserGroup, updateAdminNotes, toggleApiBlock, loading, error, refresh } = useAdminData()
   const [sortField, setSortField] = useState('total_xp')
   const [sortAsc, setSortAsc] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [filterGroup, setFilterGroup] = useState(null) // null = all
+  const [searchQuery, setSearchQuery] = useState('')
+  const [announcements, setAnnouncements] = useState([])
+  const [showNewAnnouncement, setShowNewAnnouncement] = useState(false)
+  const [newAnn, setNewAnn] = useState({ title: '', content: '', type: 'info' })
+
+  // Load announcements
+  useEffect(() => {
+    supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(20)
+      .then(({ data }) => { if (data) setAnnouncements(data) })
+  }, [])
+
+  const createAnnouncement = async () => {
+    if (!newAnn.title.trim()) return
+    const { data } = await supabase.from('announcements').insert({
+      title: newAnn.title.trim(),
+      content: newAnn.content.trim(),
+      type: newAnn.type,
+      is_active: true,
+    }).select().single()
+    if (data) {
+      setAnnouncements(prev => [data, ...prev])
+      setNewAnn({ title: '', content: '', type: 'info' })
+      setShowNewAnnouncement(false)
+    }
+  }
+
+  const toggleAnnouncement = async (id, active) => {
+    await supabase.from('announcements').update({ is_active: active }).eq('id', id)
+    setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, is_active: active } : a))
+  }
+
+  const deleteAnnouncement = async (id) => {
+    await supabase.from('announcements').delete().eq('id', id)
+    setAnnouncements(prev => prev.filter(a => a.id !== id))
+  }
 
   // Derive unique groups from user data
   const allGroups = useMemo(() => {
@@ -633,11 +709,23 @@ function AdminDashboard() {
     }
   }
 
-  const filteredUsers = filterGroup
-    ? filterGroup === '__ungrouped'
-      ? userSummaries.filter(u => !u.user_group)
-      : userSummaries.filter(u => u.user_group === filterGroup)
-    : userSummaries
+  const filteredUsers = useMemo(() => {
+    let users = userSummaries
+    if (filterGroup) {
+      users = filterGroup === '__ungrouped'
+        ? users.filter(u => !u.user_group)
+        : users.filter(u => u.user_group === filterGroup)
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      users = users.filter(u =>
+        (u.display_name || '').toLowerCase().includes(q) ||
+        (u.username || '').toLowerCase().includes(q) ||
+        (u.admin_notes || '').toLowerCase().includes(q)
+      )
+    }
+    return users
+  }, [userSummaries, filterGroup, searchQuery])
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     const av = a[sortField] ?? 0
@@ -673,6 +761,82 @@ function AdminDashboard() {
         </button>
       </div>
 
+      {/* Announcements Management */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card p-5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-white font-medium flex items-center gap-2">
+            <FileText className="w-4 h-4 text-cyan-400" />
+            Announcements ({announcements.filter(a => a.is_active).length} active)
+          </h4>
+          <button
+            onClick={() => setShowNewAnnouncement(!showNewAnnouncement)}
+            className="flex items-center gap-1 px-3 py-1.5 bg-brand-primary/20 text-brand-primary rounded-lg text-xs font-medium hover:bg-brand-primary/30 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            New
+          </button>
+        </div>
+
+        {showNewAnnouncement && (
+          <div className="bg-slate-800/50 rounded-lg p-4 mb-4 space-y-3">
+            <input
+              value={newAnn.title}
+              onChange={e => setNewAnn(p => ({ ...p, title: e.target.value }))}
+              placeholder="Announcement title..."
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-brand-primary"
+            />
+            <textarea
+              value={newAnn.content}
+              onChange={e => setNewAnn(p => ({ ...p, content: e.target.value }))}
+              placeholder="Content (optional)..."
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-brand-primary resize-none"
+              rows={2}
+            />
+            <div className="flex items-center gap-2">
+              {['info', 'warning', 'update', 'event'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setNewAnn(p => ({ ...p, type }))}
+                  className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
+                    newAnn.type === type ? 'bg-brand-primary text-white' : 'bg-slate-700 text-slate-400'
+                  }`}
+                >{type}</button>
+              ))}
+              <div className="flex-1" />
+              <button onClick={createAnnouncement} className="px-4 py-1.5 bg-brand-primary text-white text-xs font-medium rounded-lg">Publish</button>
+              <button onClick={() => setShowNewAnnouncement(false)} className="px-3 py-1.5 bg-slate-700 text-slate-400 text-xs rounded-lg">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {announcements.length > 0 && (
+          <div className="space-y-2">
+            {announcements.slice(0, 10).map(a => (
+              <div key={a.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${a.is_active ? 'bg-slate-800/50' : 'bg-slate-800/20 opacity-50'}`}>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-medium capitalize ${
+                  a.type === 'warning' ? 'bg-amber-500/20 text-amber-400' :
+                  a.type === 'update' ? 'bg-emerald-500/20 text-emerald-400' :
+                  a.type === 'event' ? 'bg-purple-500/20 text-purple-400' :
+                  'bg-blue-500/20 text-blue-400'
+                }`}>{a.type}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-300 text-xs font-medium truncate">{a.title}</p>
+                  {a.content && <p className="text-slate-500 text-[10px] truncate">{a.content}</p>}
+                </div>
+                <span className="text-slate-600 text-[10px] flex-shrink-0">{a.created_at?.slice(0, 10)}</span>
+                <button
+                  onClick={() => toggleAnnouncement(a.id, !a.is_active)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium ${a.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}`}
+                >{a.is_active ? 'Active' : 'Off'}</button>
+                <button onClick={() => deleteAnnouncement(a.id)} className="text-slate-600 hover:text-red-400 transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
       {/* Overview Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatCard icon={Users} label="Total Users" value={metrics.totalUsers} color="bg-blue-500" delay={0} />
@@ -700,13 +864,146 @@ function AdminDashboard() {
         </motion.div>
       </div>
 
+      {/* Retention Funnel + Content Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Retention Funnel */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card p-5">
+          <h4 className="text-white font-medium mb-4 flex items-center gap-2">
+            <Filter className="w-4 h-4 text-emerald-400" />
+            Retention Funnel
+          </h4>
+          {(() => {
+            const f = metrics.retentionFunnel
+            const steps = [
+              { label: 'Signed Up', value: f.signedUp, color: 'bg-blue-500' },
+              { label: 'First Challenge', value: f.didFirstChallenge, color: 'bg-emerald-500' },
+              { label: 'First Check-in', value: f.didFirstCheckin, color: 'bg-purple-500' },
+              { label: `7-Day Retention${f.retentionEligible > 0 ? ` (of ${f.retentionEligible})` : ''}`, value: f.sevenDayRetention, color: 'bg-amber-500' },
+            ]
+            const max = Math.max(f.signedUp, 1)
+            return (
+              <div className="space-y-3">
+                {steps.map((step, i) => (
+                  <div key={i}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-slate-400 text-xs">{step.label}</span>
+                      <span className="text-white text-sm font-medium">
+                        {step.value}
+                        {i > 0 && f.signedUp > 0 && (
+                          <span className="text-slate-500 text-xs ml-1">({Math.round(step.value / f.signedUp * 100)}%)</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="bg-slate-800 rounded-full h-3 overflow-hidden">
+                      <div className={`${step.color} h-full rounded-full transition-all duration-500`} style={{ width: `${Math.max((step.value / max) * 100, 2)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+        </motion.div>
+
+        {/* Content Heatmap */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="card p-5">
+          <h4 className="text-white font-medium mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-brand-secondary" />
+            Content Analytics
+          </h4>
+          {(() => {
+            const ca = metrics.contentAnalytics
+            const totalUsers = ca.totalUsersWithProgress || 1
+
+            // World completion rates
+            const worldStats = WORLDS.map(w => {
+              const completions = w.quests.map(q => ca.questCompletions[q.id] || 0)
+              const avgCompletion = completions.length > 0 ? completions.reduce((a, b) => a + b, 0) / completions.length : 0
+              return { id: w.id, name: `${w.emoji} ${w.name}`, rate: Math.round(avgCompletion / totalUsers * 100), avgCompletion }
+            }).filter(w => w.avgCompletion > 0).sort((a, b) => b.rate - a.rate)
+
+            // Slowest challenges (avg time)
+            const challengeAvgTimes = Object.entries(ca.challengeTimings)
+              .map(([key, t]) => ({ key, avgMs: t.count > 0 ? t.totalMs / t.count : 0, count: t.count }))
+              .filter(c => c.count >= 2)
+              .sort((a, b) => b.avgMs - a.avgMs)
+              .slice(0, 5)
+
+            return (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-slate-400 text-xs mb-2 font-medium">World Completion Rate</p>
+                  {worldStats.length === 0 ? (
+                    <p className="text-slate-600 text-xs">No data yet</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {worldStats.slice(0, 8).map(w => (
+                        <div key={w.id} className="flex items-center gap-2">
+                          <span className="text-slate-400 text-xs w-28 truncate flex-shrink-0">{w.name}</span>
+                          <div className="flex-1 bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                            <div className="bg-brand-secondary h-full rounded-full" style={{ width: `${Math.max(w.rate, 2)}%` }} />
+                          </div>
+                          <span className="text-slate-300 text-xs w-10 text-right flex-shrink-0">{w.rate}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-slate-400 text-xs mb-2 font-medium">Slowest Challenges (avg time)</p>
+                  {challengeAvgTimes.length === 0 ? (
+                    <p className="text-slate-600 text-xs">Not enough data</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {challengeAvgTimes.map(c => (
+                        <div key={c.key} className="flex items-center justify-between">
+                          <span className="text-slate-400 text-xs font-mono">{c.key}</span>
+                          <span className="text-slate-300 text-xs">{Math.round(c.avgMs / 1000)}s avg ({c.count} users)</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
+        </motion.div>
+      </div>
+
       {/* User Table */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-white font-medium flex items-center gap-2">
+        <div className="flex items-center justify-between mb-4 gap-3">
+          <h4 className="text-white font-medium flex items-center gap-2 flex-shrink-0">
             <Users className="w-4 h-4 text-brand-primary" />
             {filterGroup ? `${filterGroup} (${filteredUsers.length})` : `All Users (${userSummaries.length})`}
           </h4>
+          <div className="flex items-center gap-2 flex-1 justify-end">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search users..."
+                className="pl-7 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white outline-none focus:border-brand-primary w-40"
+              />
+            </div>
+            <button
+              onClick={() => {
+                const headers = ['Username', 'Display Name', 'Role', 'Group', 'XP', 'Streak', 'Best Streak', 'Challenges', 'Quests', 'Check-ins', 'Last Active', 'Created', 'Notes']
+                const rows = sortedUsers.map(u => [u.username, u.display_name, u.role, u.user_group || '', u.total_xp || 0, u.streak_days || 0, u.longest_streak || 0, u.challengesCompleted, u.questsCompleted, u.totalCheckins, u.last_active_date || '', u.created_at?.slice(0, 10) || '', (u.admin_notes || '').replace(/"/g, '""')])
+                const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n')
+                const blob = new Blob([csv], { type: 'text/csv' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url; a.download = `di-quest-users-${getEasternToday()}.csv`; a.click()
+                URL.revokeObjectURL(url)
+              }}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+              title="Export CSV"
+            >
+              <Download className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
         </div>
 
         {/* Group filter tabs */}
@@ -875,6 +1172,7 @@ function AdminDashboard() {
             userId={selectedUserId}
             getUserDetail={getUserDetail}
             updateUserRole={updateUserRole}
+            updateAdminNotes={updateAdminNotes}
             toggleApiBlock={toggleApiBlock}
             onClose={() => setSelectedUserId(null)}
           />

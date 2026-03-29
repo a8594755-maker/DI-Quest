@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../utils/supabase'
+import { getEasternToday } from '../utils/localDate'
 
 export function useAdminData() {
   const [allProfiles, setAllProfiles] = useState([])
@@ -41,7 +42,7 @@ export function useAdminData() {
   useEffect(() => { fetchAll() }, [fetchAll])
 
   const metrics = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getEasternToday()
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
 
     const totalUsers = allProfiles.length
@@ -124,8 +125,48 @@ export function useAdminData() {
       }
     })
 
-    return { totalUsers, activeToday, activeThisWeek, avgStreak, totalApiCalls, dauTrend, apiTrend, topApiUsers, totalVisits, guestVisits, todayVisits, uniqueIps, visitorTrend, recentVisitors }
-  }, [allProfiles, allCheckins, allApiUsage, allVisitorLogs])
+    // ── Retention funnel ──
+    const progressMap = {}
+    allProgress.forEach(p => { progressMap[p.user_id] = p.progress_data })
+
+    const signedUp = allProfiles.length
+    const didFirstChallenge = allProfiles.filter(p => {
+      const prog = progressMap[p.id]
+      return prog?.challengeStatus && Object.values(prog.challengeStatus).some(c => c.completed)
+    }).length
+    const didFirstCheckin = new Set(allCheckins.map(c => c.user_id)).size
+    const sevenDayRetention = allProfiles.filter(p => {
+      const created = new Date(p.created_at)
+      const daysSinceCreation = (Date.now() - created.getTime()) / 86400000
+      if (daysSinceCreation < 7) return false // too new
+      const sevenDaysAfter = new Date(created.getTime() + 7 * 86400000).toISOString().slice(0, 10)
+      return p.last_active_date >= sevenDaysAfter
+    }).length
+    const retentionEligible = allProfiles.filter(p => (Date.now() - new Date(p.created_at).getTime()) / 86400000 >= 7).length
+    const retentionFunnel = { signedUp, didFirstChallenge, didFirstCheckin, sevenDayRetention, retentionEligible }
+
+    // ── Content analytics ──
+    const questCompletions = {} // questId -> count
+    const challengeTimings = {} // challengeKey -> { totalMs, count }
+    allProgress.forEach(p => {
+      const prog = p.progress_data || {}
+      if (prog.questStatus) {
+        Object.entries(prog.questStatus).forEach(([qId, v]) => {
+          if (v.completed) questCompletions[qId] = (questCompletions[qId] || 0) + 1
+        })
+      }
+      if (prog.analytics?.challengeTimings) {
+        Object.entries(prog.analytics.challengeTimings).forEach(([key, t]) => {
+          if (!challengeTimings[key]) challengeTimings[key] = { totalMs: 0, count: 0 }
+          challengeTimings[key].totalMs += t.lastDurationMs || 0
+          challengeTimings[key].count += 1
+        })
+      }
+    })
+    const contentAnalytics = { questCompletions, challengeTimings, totalUsersWithProgress: Object.keys(progressMap).length }
+
+    return { totalUsers, activeToday, activeThisWeek, avgStreak, totalApiCalls, dauTrend, apiTrend, topApiUsers, totalVisits, guestVisits, todayVisits, uniqueIps, visitorTrend, recentVisitors, retentionFunnel, contentAnalytics }
+  }, [allProfiles, allCheckins, allApiUsage, allVisitorLogs, allProgress])
 
   // Per-user summary
   const userSummaries = useMemo(() => {
@@ -187,6 +228,15 @@ export function useAdminData() {
     setAllProfiles(prev => prev.map(p => p.id === userId ? { ...p, user_group: group || null } : p))
   }, [])
 
+  const updateAdminNotes = useCallback(async (userId, notes) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ admin_notes: notes || null })
+      .eq('id', userId)
+    if (error) throw error
+    setAllProfiles(prev => prev.map(p => p.id === userId ? { ...p, admin_notes: notes || null } : p))
+  }, [])
+
   const toggleApiBlock = useCallback(async (userId, blocked) => {
     const { error } = await supabase
       .from('profiles')
@@ -206,5 +256,5 @@ export function useAdminData() {
     return { profile, progress, checkins, apiUsage, chatSessions }
   }, [allProfiles, allProgress, allCheckins, allApiUsage, allChatSessions])
 
-  return { metrics, userSummaries, recentCheckins, allChatSessions, getUserDetail, updateUserRole, updateUserGroup, toggleApiBlock, loading, error, refresh: fetchAll }
+  return { metrics, userSummaries, recentCheckins, allChatSessions, getUserDetail, updateUserRole, updateUserGroup, updateAdminNotes, toggleApiBlock, loading, error, refresh: fetchAll }
 }

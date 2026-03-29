@@ -5,11 +5,12 @@ import { useTranslation, Trans } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { getDueReviews } from '../utils/spacedRepetition'
 import { getQuest, getChallenge, getWorld } from '../data/questData'
+import { getLocalToday } from '../utils/localDate'
 
 function ReviewQueue() {
   const { t } = useTranslation(['review', 'common'])
   const { reviewSchedule, challengeStatus } = useQuest()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getLocalToday()
   const dueReviews = getDueReviews(reviewSchedule, today)
 
   // 按 world 分組

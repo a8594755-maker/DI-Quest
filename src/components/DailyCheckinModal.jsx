@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../utils/supabase'
+import { getLocalToday } from '../utils/localDate'
 import StreakFlame from './StreakFlame'
 import StreakCalendar from './StreakCalendar'
 import AnimatedNumber from './AnimatedNumber'
@@ -23,7 +24,7 @@ function DailyCheckinModal({ isOpen, onClose }) {
 
   // Daily XP goal
   const dailyGoal = 50
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getLocalToday()
   const todayStats = analytics?.dailyStats?.[today] || { xpEarned: 0 }
   const dailyProgress = todayStats.xpEarned || 0
 

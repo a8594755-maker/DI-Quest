@@ -12,6 +12,7 @@ import StreakFlame from './StreakFlame'
 import DailyCheckinModal from './DailyCheckinModal'
 import ProfileSetupModal from './ProfileSetupModal'
 import UserAvatar from './UserAvatar'
+import AnnouncementBanner from './AnnouncementBanner'
 
 function Layout() {
   const { t } = useTranslation(['common', 'auth', 'social'])
@@ -240,6 +241,7 @@ function Layout() {
       {/* 內容 + 小迪面板 flex 排版 */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
         <main className={`flex-1 transition-all duration-300 ${(isArena || location.pathname.includes('/lesson')) ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          <div className="px-4 pt-3"><AnnouncementBanner /></div>
           <Outlet />
         </main>
 
