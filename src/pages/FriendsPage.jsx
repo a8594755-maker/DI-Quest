@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Users, UserPlus, Search, Check, X, Clock, Link2, Copy } from 'lucide-react'
+import { Users, UserPlus, Search, Check, X, Clock, Link2, Copy, UserMinus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
 import { useFriends } from '../hooks/useFriends'
@@ -13,7 +13,7 @@ import UserAvatar from '../components/UserAvatar'
 function FriendsPage() {
   const { t } = useTranslation('social')
   const { user, isAuthenticated, isGuest, profile } = useAuth()
-  const { friends, pendingRequests, loading, searchUsers, sendFriendRequest, acceptRequest, declineRequest } = useFriends()
+  const { friends, pendingRequests, loading, searchUsers, sendFriendRequest, acceptRequest, declineRequest, removeFriend } = useFriends()
   const { entries: leaderboardEntries } = useLeaderboard(friends.map(f => f.id))
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -237,7 +237,23 @@ function FriendsPage() {
               </div>
             ) : (
               friends.map((friend) => (
-                <FriendCard key={friend.id} friend={friend} />
+                <FriendCard
+                  key={friend.id}
+                  friend={friend}
+                  actions={
+                    <button
+                      onClick={() => {
+                        if (window.confirm(t('friends.removeConfirm', 'Remove this friend?'))) {
+                          removeFriend(friend.id)
+                        }
+                      }}
+                      className="p-1.5 text-slate-600 hover:text-red-400 transition-colors cursor-pointer"
+                      title={t('friends.remove')}
+                    >
+                      <UserMinus className="w-4 h-4" />
+                    </button>
+                  }
+                />
               ))
             )}
           </div>
