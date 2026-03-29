@@ -42,6 +42,9 @@ export const w21Extra = {
       question: '完成以下函式，使用 context manager（with 語句）安全地執行 SQLite 操作。函式要：\n1. 用 with 開啟連線\n2. 建立 orders 資料表（id, product, amount）\n3. 插入一筆訂單\n4. 確保連線自動關閉\n\n```python\nimport sqlite3\n\ndef create_order(db_path, product, amount):\n    # 用 with 管理連線，確保自動 commit 和關閉\n    pass\n```',
       starterCode: 'import sqlite3\n\ndef create_order(db_path, product, amount):\n    # 用 with 管理連線，確保自動 commit 和關閉\n    pass',
       expectedQuery: 'import sqlite3\n\ndef create_order(db_path, product, amount):\n    with sqlite3.connect(db_path) as conn:\n        cursor = conn.cursor()\n        cursor.execute("""\n            CREATE TABLE IF NOT EXISTS orders (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                product TEXT NOT NULL,\n                amount REAL NOT NULL\n            )\n        """)\n        cursor.execute(\n            "INSERT INTO orders (product, amount) VALUES (?, ?)",\n            (product, amount)\n        )\n        conn.commit()',
+      testCases: [
+        { input: 'import sqlite3\ncreate_order(":memory:", "Laptop", 999.99)\nwith sqlite3.connect(":memory:") as c:\n    create_order(":memory:", "Mouse", 29.99)\n"ok"' },
+      ],
       hints: ['sqlite3.connect() 支援 with 語句', 'with 區塊結束時會自動處理連線', '記得用參數化查詢防止 SQL Injection'],
       explanation: 'Context Manager（with 語句）確保資源在使用完畢後自動釋放：\n\n```python\nwith sqlite3.connect(db_path) as conn:\n    # conn 在 with 區塊結束時自動處理\n    # 如果沒有例外，自動 commit\n    # 如果有例外，自動 rollback\n```\n\n不用 with 的話，忘記 conn.close() 會導致連線洩漏。',
       frameworkTip: '面試時展示你懂得用 context manager 管理資源（檔案、連線、鎖），說明你理解 Python 的資源管理最佳實踐。這在 Google 和 Amazon 面試中是加分項。',
@@ -87,6 +90,9 @@ export const w21Extra = {
       question: '將以下逐筆插入的低效寫法，改寫為使用 executemany() 的批次操作。\n\n```python\n# 原始低效寫法（每筆都 commit）\nfor product in products:\n    cursor.execute("INSERT INTO products (name, price) VALUES (?, ?)",\n                   (product["name"], product["price"]))\n    conn.commit()  # 每筆都 commit，效能極差\n```\n\n改寫成高效的批次操作：',
       starterCode: 'import sqlite3\n\ndef batch_insert(db_path, products):\n    # products = [{"name": "商品A", "price": 100}, ...]\n    # 用 executemany 批次插入，最後只 commit 一次\n    pass',
       expectedQuery: 'import sqlite3\n\ndef batch_insert(db_path, products):\n    with sqlite3.connect(db_path) as conn:\n        cursor = conn.cursor()\n        cursor.executemany(\n            "INSERT INTO products (name, price) VALUES (?, ?)",\n            [(p["name"], p["price"]) for p in products]\n        )\n        conn.commit()',
+      testCases: [
+        { input: 'import sqlite3\ndb = ":memory:"\nwith sqlite3.connect(db) as c:\n    c.execute("CREATE TABLE products (name TEXT, price REAL)")\nbatch_insert(db, [{"name": "A", "price": 10}, {"name": "B", "price": 20}])\n"ok"' },
+      ],
       hints: ['executemany() 接收一個 SQL 和一個參數 list', '用 list comprehension 轉換資料格式', '只在所有資料插入後 commit 一次'],
       explanation: '批次操作的效能差異：\n\n```python\n# 慢：N 次 execute + N 次 commit = N 次磁碟 I/O\nfor item in data:\n    cursor.execute(sql, item)\n    conn.commit()\n\n# 快：1 次 executemany + 1 次 commit = 1 次磁碟 I/O\ncursor.executemany(sql, data_list)\nconn.commit()\n```\n\n效能差距可達 100-1000 倍，因為每次 commit 都涉及磁碟寫入。',
       frameworkTip: '面試時提到資料庫效能優化，「批次操作 + 減少 commit 次數」是最基本也最有效的方法。展示你理解 I/O 是效能瓶頸。',
@@ -132,6 +138,9 @@ export const w21Extra = {
       question: '以下 SQLAlchemy 查詢效能很差，請改寫成更高效的版本。\n\n```python\n# 低效寫法：取出所有資料再用 Python 過濾\nall_products = session.query(Product).all()\nexpensive = [p for p in all_products if p.price > 100]\nsorted_products = sorted(expensive, key=lambda p: p.price, reverse=True)\ntop_10 = sorted_products[:10]\n```\n\n改寫為在資料庫層面完成過濾、排序和分頁：',
       starterCode: '# 用 SQLAlchemy ORM 的 filter, order_by, limit\n# 讓資料庫做過濾和排序，而不是 Python\ndef get_top_expensive(session):\n    pass',
       expectedQuery: 'def get_top_expensive(session):\n    return session.query(Product)\\\n        .filter(Product.price > 100)\\\n        .order_by(Product.price.desc())\\\n        .limit(10)\\\n        .all()',
+      testCases: [
+        { input: 'class FakeQuery:\n    def __init__(self): self._chain = []\n    def query(self, model): return self\n    def filter(self, cond): return self\n    def order_by(self, col): return self\n    def limit(self, n): self._n = n; return self\n    def all(self): return [f"item_{i}" for i in range(self._n)]\nclass Product:\n    class price:\n        @staticmethod\n        def desc(): return "desc"\n    price_val = 0\n    def __gt__(self, other): return True\nsession = FakeQuery()\nlen(get_top_expensive(session))' },
+      ],
       hints: ['用 .filter() 取代 Python 的 list comprehension 過濾', '用 .order_by() 取代 Python 的 sorted()', '用 .limit() 取代 Python 的 slice [:10]'],
       explanation: '資料庫 vs Python 處理的效能差異：\n\n```python\n# 差：從資料庫取出 10 萬筆，用 Python 過濾\nall_data = session.query(Product).all()  # 10 萬筆全部傳輸\nfiltered = [x for x in all_data if x.price > 100]  # Python 過濾\n\n# 好：讓資料庫只回傳需要的 10 筆\nsession.query(Product)\\\n    .filter(Product.price > 100)\\\n    .order_by(Product.price.desc())\\\n    .limit(10)\\\n    .all()  # 只傳輸 10 筆\n```\n\n資料庫有索引優化，處理過濾和排序比 Python 快幾個數量級。',
       frameworkTip: '面試中的效能優化題，核心原則是「讓資料庫做它擅長的事」。提到 filter/order_by/limit 推到 SQL 層，展示你理解 ORM 不是用來取代 SQL 而是抽象 SQL。',
@@ -155,6 +164,11 @@ export const w21Extra = {
       question: '用 FastAPI + Pydantic 完成一個建立使用者的 API，需求：\n1. 用 Pydantic BaseModel 定義 UserCreate schema（name: str, email: str, age: int）\n2. age 必須 >= 0 且 <= 150\n3. email 必須包含 @\n4. 用依賴注入取得資料庫 session',
       starterCode: 'from fastapi import FastAPI, Depends\nfrom pydantic import BaseModel, validator\n\napp = FastAPI()\n\n# 1. 定義 Pydantic schema\nclass UserCreate(BaseModel):\n    pass  # 定義欄位和驗證\n\n# 2. 依賴注入：取得 DB session\ndef get_db():\n    pass  # yield db session\n\n# 3. API endpoint\n@app.post("/users")\ndef create_user(user: UserCreate, db = Depends(get_db)):\n    pass',
       expectedQuery: 'from fastapi import FastAPI, Depends\nfrom pydantic import BaseModel, validator\n\napp = FastAPI()\n\nclass UserCreate(BaseModel):\n    name: str\n    email: str\n    age: int\n\n    @validator("age")\n    def age_must_be_valid(cls, v):\n        if v < 0 or v > 150:\n            raise ValueError("Age must be between 0 and 150")\n        return v\n\n    @validator("email")\n    def email_must_contain_at(cls, v):\n        if "@" not in v:\n            raise ValueError("Invalid email format")\n        return v\n\ndef get_db():\n    db = SessionLocal()\n    try:\n        yield db\n    finally:\n        db.close()\n\n@app.post("/users")\ndef create_user(user: UserCreate, db = Depends(get_db)):\n    db_user = User(name=user.name, email=user.email, age=user.age)\n    db.add(db_user)\n    db.commit()\n    return {"id": db_user.id, "name": db_user.name}',
+      testCases: [
+        { input: 'u = UserCreate(name="Alice", email="alice@test.com", age=25)\nu.name' },
+        { input: 'try:\n    UserCreate(name="Bob", email="invalid", age=25)\nexcept Exception:\n    "validation_error"' },
+        { input: 'try:\n    UserCreate(name="Carol", email="c@test.com", age=-1)\nexcept Exception:\n    "age_error"' },
+      ],
       hints: ['Pydantic 的 @validator 裝飾器用來自訂驗證邏輯', '依賴注入用 Depends() 和 yield 模式', 'FastAPI 會自動將驗證錯誤轉為 422 回應'],
       explanation: 'FastAPI 的兩大殺手功能：\n\n**Pydantic 驗證**：自動將 request body 轉為型別安全的物件，驗證失敗自動回傳 422 錯誤。\n\n**依賴注入**：用 Depends() 注入 DB session、認證、設定等。yield 模式確保資源清理：\n```python\ndef get_db():\n    db = SessionLocal()\n    try:\n        yield db      # 注入到 endpoint\n    finally:\n        db.close()    # endpoint 結束後自動清理\n```',
       frameworkTip: 'FastAPI 在 2024 年採用率成長 141%，已經超越 Flask 成為 Python Web 框架首選。面試時展示你會 Pydantic 驗證 + 依賴注入，說明你跟得上現代 Python 生態系。',
@@ -222,6 +236,10 @@ export const w21Extra = {
       question: '設計一個統一的 API 回應格式函式，支援成功和錯誤兩種情況。\n\n成功回應範例：\n```json\n{"success": true, "data": {"id": 1, "name": "Product"}, "error": null}\n```\n\n錯誤回應範例：\n```json\n{"success": false, "data": null, "error": {"code": "NOT_FOUND", "message": "Product not found"}}\n```',
       starterCode: 'from fastapi.responses import JSONResponse\n\ndef success_response(data, status_code=200):\n    # 回傳統一的成功格式\n    pass\n\ndef error_response(code, message, status_code=400):\n    # 回傳統一的錯誤格式\n    pass\n\n# 使用範例\n@app.get("/products/{product_id}")\ndef get_product(product_id: int):\n    product = db.query(Product).get(product_id)\n    if not product:\n        return error_response("NOT_FOUND", "Product not found", 404)\n    return success_response({"id": product.id, "name": product.name})',
       expectedQuery: 'from fastapi.responses import JSONResponse\n\ndef success_response(data, status_code=200):\n    return JSONResponse(\n        status_code=status_code,\n        content={\n            "success": True,\n            "data": data,\n            "error": None\n        }\n    )\n\ndef error_response(code, message, status_code=400):\n    return JSONResponse(\n        status_code=status_code,\n        content={\n            "success": False,\n            "data": None,\n            "error": {\n                "code": code,\n                "message": message\n            }\n        }\n    )',
+      testCases: [
+        { input: 'class JSONResponse:\n    def __init__(self, status_code, content): self.status_code = status_code; self.body = content\nr = success_response({"id": 1})\nr.body["success"]' },
+        { input: 'class JSONResponse:\n    def __init__(self, status_code, content): self.status_code = status_code; self.body = content\nr = error_response("NOT_FOUND", "Not found", 404)\nr.body["error"]["code"]' },
+      ],
       hints: ['用 JSONResponse 可以同時設定 status_code 和 content', '成功時 error 為 null，錯誤時 data 為 null', '錯誤物件包含 code（機器讀）和 message（人讀）'],
       explanation: '統一 API 回應格式的好處：\n\n1. **前端一致處理**：前端只需檢查 success 欄位\n2. **錯誤可機器解析**：error.code 讓前端可以根據錯誤類型做不同處理\n3. **除錯友善**：error.message 提供人類可讀的錯誤描述\n\n```python\n# 前端處理邏輯\nif response.success:\n    render(response.data)\nelse:\n    showError(response.error.message)\n```\n\n這是 Google、Amazon、Stripe 等公司的 API 設計標準做法。',
       frameworkTip: '面試時設計 API，提出統一回應格式會讓面試官知道你有實際專案經驗。特別是 error 物件包含 code 和 message 的設計，展示你考慮到前端和後端的協作需求。Amazon 的 Leadership Principle "Customer Obsession" 就體現在這種為前端（你的客戶）設計友善介面的思維。',

@@ -256,6 +256,10 @@ export const w19Extra = {
       question: '寫一個函式 top_campaigns(df, n)：\n1. 計算 ROI 欄位 = (revenue - cost) / cost\n2. 篩選出 ROI > 0 的廣告活動\n3. 按 ROI 降序排列，ROI 相同時按 cost 升序排列\n4. 回傳前 n 筆\n\n範例 DataFrame 有 campaign, cost, revenue 三個欄位。',
       starterCode: 'import pandas as pd\n\ndef top_campaigns(df, n):\n    # 1. 計算 ROI\n    # 2. 篩選 ROI > 0\n    # 3. 複合排序\n    # 4. 取前 n 筆\n    pass',
       expectedQuery: 'import pandas as pd\n\ndef top_campaigns(df, n):\n    df = df.copy()\n    df["roi"] = (df["revenue"] - df["cost"]) / df["cost"]\n    profitable = df[df["roi"] > 0]\n    sorted_df = profitable.sort_values(\n        ["roi", "cost"], ascending=[False, True]\n    )\n    return sorted_df.head(n)',
+      testCases: [
+        { input: 'import pandas as pd\ndf = pd.DataFrame({"campaign": ["A", "B", "C"], "cost": [100, 200, 50], "revenue": [300, 150, 200]})\nlen(top_campaigns(df, 2))' },
+        { input: 'import pandas as pd\ndf = pd.DataFrame({"campaign": ["X"], "cost": [100], "revenue": [50]})\nlen(top_campaigns(df, 5))' },
+      ],
       hints: ['sort_values 可接受 list 做多欄排序', 'ascending 也可以是 list，對應每個排序欄位的方向', 'head(n) 取前 n 筆，等效於 nlargest 但更靈活'],
       explanation: 'Pandas 複合排序語法：\nsort_values(["col1", "col2"], ascending=[False, True])\n\n這表示先按 col1 降序，col1 相同時按 col2 升序。ascending 參數接受一個 list，對應每個排序欄位的方向。\n\nnlargest(n, "col") 適合單欄取最大的 n 筆，但複合排序時用 sort_values + head 更靈活。',
       frameworkTip: '面試中遇到排序題，記得考慮 tie-breaking（平手時的排序規則）。主動提出這一點展示你的嚴謹度。',
@@ -279,6 +283,10 @@ export const w19Extra = {
       question: '給定銷售數據 DataFrame（欄位：region, quarter, product, revenue），用 pivot_table 建立：\n- 列（index）：region\n- 欄（columns）：quarter\n- 值（values）：revenue 的總和\n- 用 0 填充缺失值\n\n```python\nimport pandas as pd\n\ndf = pd.DataFrame({\n    "region": ["North", "North", "South", "South", "North", "South"],\n    "quarter": ["Q1", "Q2", "Q1", "Q2", "Q1", "Q3"],\n    "product": ["A", "B", "A", "A", "B", "A"],\n    "revenue": [100, 200, 150, 300, 50, 250]\n})\n```',
       starterCode: 'import pandas as pd\n\ndef create_pivot(df):\n    # 用 pivot_table 建立樞紐分析表\n    # index=region, columns=quarter, values=revenue, aggfunc=sum\n    pass',
       expectedQuery: 'import pandas as pd\n\ndef create_pivot(df):\n    return pd.pivot_table(\n        df,\n        index="region",\n        columns="quarter",\n        values="revenue",\n        aggfunc="sum",\n        fill_value=0\n    )',
+      testCases: [
+        { input: 'import pandas as pd\ndf = pd.DataFrame({"region": ["N", "N", "S"], "quarter": ["Q1", "Q2", "Q1"], "product": ["A", "B", "A"], "revenue": [100, 200, 150]})\nresult = create_pivot(df)\nresult.loc["N", "Q1"]' },
+        { input: 'import pandas as pd\ndf = pd.DataFrame({"region": ["N", "S"], "quarter": ["Q1", "Q2"], "product": ["A", "A"], "revenue": [100, 200]})\nresult = create_pivot(df)\nresult.loc["N", "Q2"]' },
+      ],
       hints: ['pd.pivot_table() 的核心參數：index, columns, values, aggfunc', 'fill_value=0 把 NaN 填成 0', 'aggfunc 可以是 "sum", "mean", "count" 等'],
       explanation: 'pd.pivot_table 是 Pandas 最強大的資料重塑工具：\n- index：分組的列標籤（相當於 SQL GROUP BY）\n- columns：展開成欄的維度\n- values：要聚合的數值欄位\n- aggfunc：聚合函式（sum, mean, count, etc.）\n- fill_value：填充缺失值\n\n結果是一個交叉表，每個 cell 是該 region + quarter 組合的 revenue 總和。',
       frameworkTip: '面試時把 pivot_table 比喻成 Excel 的樞紐分析表，但更靈活。提到你可以同時對多個 values 用不同的 aggfunc，這展示你的進階 Pandas 能力。',
@@ -296,6 +304,10 @@ export const w19Extra = {
       question: '寫一個函式 customer_summary(df)：\n1. 按 customer_id 分組\n2. 同時計算 amount 的 count, sum, mean, max\n3. 將欄位重新命名為 txn_count, total_amount, avg_amount, max_amount\n4. 按 total_amount 降序排列\n5. 重設 index\n\nDataFrame 有 customer_id, amount, date 三個欄位。',
       starterCode: 'import pandas as pd\n\ndef customer_summary(df):\n    # groupby + agg 多重聚合\n    # 重命名欄位\n    # 排序 + reset_index\n    pass',
       expectedQuery: 'import pandas as pd\n\ndef customer_summary(df):\n    summary = df.groupby("customer_id")["amount"].agg(\n        txn_count="count",\n        total_amount="sum",\n        avg_amount="mean",\n        max_amount="max"\n    ).sort_values("total_amount", ascending=False).reset_index()\n    return summary',
+      testCases: [
+        { input: 'import pandas as pd\ndf = pd.DataFrame({"customer_id": [1, 1, 2], "amount": [100, 200, 50], "date": ["2024-01-01", "2024-01-02", "2024-01-01"]})\nresult = customer_summary(df)\nresult["total_amount"].iloc[0]' },
+        { input: 'import pandas as pd\ndf = pd.DataFrame({"customer_id": [1, 1, 1], "amount": [10, 20, 30], "date": ["a", "b", "c"]})\nresult = customer_summary(df)\nresult["txn_count"].iloc[0]' },
+      ],
       hints: ['agg() 可用 named aggregation：agg(新欄名="聚合函式")', '這種語法同時完成聚合和重命名', 'reset_index() 把 groupby 的 key 變回普通欄位'],
       explanation: 'Pandas Named Aggregation 語法（推薦寫法）：\ndf.groupby("key")["col"].agg(\n    new_name1="func1",\n    new_name2="func2"\n)\n\n優點：一步完成聚合和重命名，比先 agg 再 rename 更簡潔。\n\n也可以對不同欄位做不同聚合：\ndf.groupby("key").agg(\n    total=("amount", "sum"),\n    avg_qty=("quantity", "mean")\n)',
       frameworkTip: '面試時展示 named aggregation 語法而不是 agg({"col": ["sum", "mean"]}) 再 rename，這展示你知道 Pandas 的最新最佳實踐。Google 面試特別看重程式碼的簡潔性和可讀性。',
