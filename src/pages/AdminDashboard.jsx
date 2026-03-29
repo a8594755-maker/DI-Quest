@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck, ChevronLeft, ChevronRight, Eye, Globe, Monitor, MessageSquare } from 'lucide-react'
 import { useAdminData } from '../hooks/useAdminData'
 import { BRANCHES } from '../data/branches'
 import { WORLDS } from '../data/questData'
@@ -154,8 +154,9 @@ function CheckinCalendar({ checkinDates }) {
 // User Detail Panel
 // ========================
 function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock, onClose }) {
-  const { profile, progress, checkins, apiUsage } = getUserDetail(userId)
+  const { profile, progress, checkins, apiUsage, chatSessions } = getUserDetail(userId)
   const [actionLoading, setActionLoading] = useState(null) // 'role' | 'block'
+  const [expandedChat, setExpandedChat] = useState(null)
 
   const questStatus = progress?.questStatus || {}
   const challengeStatus = progress?.challengeStatus || {}
@@ -473,6 +474,54 @@ function UserDetailPanel({ userId, getUserDetail, updateUserRole, toggleApiBlock
             <p className="text-slate-500 text-sm">No check-ins</p>
           ) : (
             <CheckinCalendar checkinDates={checkinDates} />
+          )}
+        </div>
+
+        {/* Chat History */}
+        <div className="card p-4 mb-4">
+          <h4 className="text-white font-medium mb-3 flex items-center gap-2 text-sm">
+            <MessageSquare className="w-4 h-4 text-cyan-400" />
+            AI Chat History ({chatSessions.length} sessions)
+          </h4>
+          {chatSessions.length === 0 ? (
+            <p className="text-slate-500 text-sm">No chat sessions</p>
+          ) : (
+            <div className="space-y-2">
+              {chatSessions.map(session => {
+                const msgCount = (session.messages || []).filter(m => m.role === 'user').length
+                const isExpanded = expandedChat === session.id
+                return (
+                  <div key={session.id} className="bg-slate-800/50 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setExpandedChat(isExpanded ? null : session.id)}
+                      className="w-full flex items-center justify-between p-3 text-left hover:bg-slate-700/50 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-slate-300 text-xs font-medium truncate">{session.title || 'Untitled'}</p>
+                        <p className="text-slate-500 text-[10px]">
+                          {msgCount} messages · {session.updated_at ? new Date(session.updated_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                        </p>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-slate-500 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isExpanded && (
+                      <div className="px-3 pb-3 space-y-2 max-h-80 overflow-y-auto border-t border-slate-700/50">
+                        {(session.messages || []).filter(m => m.role !== 'system').map((m, i) => (
+                          <div key={i} className={`text-xs p-2 rounded ${
+                            m.role === 'user'
+                              ? 'bg-brand-primary/10 text-brand-primary'
+                              : 'bg-slate-700/50 text-slate-300'
+                          }`}>
+                            <span className="font-medium text-[10px] uppercase opacity-60">{m.role === 'user' ? 'User' : 'AI'}</span>
+                            <p className="mt-0.5 whitespace-pre-wrap break-words leading-relaxed">{m.content?.slice(0, 500)}{m.content?.length > 500 ? '...' : ''}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
 

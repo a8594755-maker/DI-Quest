@@ -7,6 +7,7 @@ export function useAdminData() {
   const [allProgress, setAllProgress] = useState([])
   const [allApiUsage, setAllApiUsage] = useState([])
   const [allVisitorLogs, setAllVisitorLogs] = useState([])
+  const [allChatSessions, setAllChatSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -14,12 +15,13 @@ export function useAdminData() {
     setLoading(true)
     setError(null)
     try {
-      const [profilesRes, checkinsRes, progressRes, apiRes, visitorRes] = await Promise.all([
+      const [profilesRes, checkinsRes, progressRes, apiRes, visitorRes, chatRes] = await Promise.all([
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('daily_checkins').select('*').order('checkin_date', { ascending: false }).limit(1000),
         supabase.from('user_progress').select('*'),
         supabase.from('api_usage').select('*').order('usage_date', { ascending: false }).limit(500),
         supabase.from('visitor_logs').select('*').order('visited_at', { ascending: false }).limit(1000),
+        supabase.from('chat_sessions').select('id,user_id,title,messages,updated_at').order('updated_at', { ascending: false }).limit(200),
       ])
 
       if (profilesRes.error) throw profilesRes.error
@@ -28,6 +30,7 @@ export function useAdminData() {
       setAllProgress(progressRes.data || [])
       setAllApiUsage(apiRes.data || [])
       setAllVisitorLogs(visitorRes.data || [])
+      setAllChatSessions(chatRes.data || [])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -190,8 +193,9 @@ export function useAdminData() {
     const progress = allProgress.find(p => p.user_id === userId)?.progress_data || {}
     const checkins = allCheckins.filter(c => c.user_id === userId)
     const apiUsage = allApiUsage.filter(u => u.user_id === userId)
-    return { profile, progress, checkins, apiUsage }
-  }, [allProfiles, allProgress, allCheckins, allApiUsage])
+    const chatSessions = allChatSessions.filter(c => c.user_id === userId)
+    return { profile, progress, checkins, apiUsage, chatSessions }
+  }, [allProfiles, allProgress, allCheckins, allApiUsage, allChatSessions])
 
-  return { metrics, userSummaries, recentCheckins, getUserDetail, updateUserRole, toggleApiBlock, loading, error, refresh: fetchAll }
+  return { metrics, userSummaries, recentCheckins, allChatSessions, getUserDetail, updateUserRole, toggleApiBlock, loading, error, refresh: fetchAll }
 }
