@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Activity, TrendingUp, Zap, RefreshCw, Clock, Trophy, Flame, Target, ChevronDown, ChevronUp, ArrowLeft, Calendar, BarChart3, BookOpen, X, Crown, ShieldBan, ShieldCheck, ChevronLeft, ChevronRight, Eye, Globe, Monitor, MessageSquare, Tag, Plus, Search, Download, Filter, FileText } from 'lucide-react'
 import { useAdminData } from '../hooks/useAdminData'
@@ -678,6 +678,24 @@ function AdminDashboard() {
     return Array.from(groups).sort()
   }, [userSummaries])
 
+  const filteredUsers = useMemo(() => {
+    let users = userSummaries
+    if (filterGroup) {
+      users = filterGroup === '__ungrouped'
+        ? users.filter(u => !u.user_group)
+        : users.filter(u => u.user_group === filterGroup)
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      users = users.filter(u =>
+        (u.display_name || '').toLowerCase().includes(q) ||
+        (u.username || '').toLowerCase().includes(q) ||
+        (u.admin_notes || '').toLowerCase().includes(q)
+      )
+    }
+    return users
+  }, [userSummaries, filterGroup, searchQuery])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -708,24 +726,6 @@ function AdminDashboard() {
       setSortAsc(false)
     }
   }
-
-  const filteredUsers = useMemo(() => {
-    let users = userSummaries
-    if (filterGroup) {
-      users = filterGroup === '__ungrouped'
-        ? users.filter(u => !u.user_group)
-        : users.filter(u => u.user_group === filterGroup)
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      users = users.filter(u =>
-        (u.display_name || '').toLowerCase().includes(q) ||
-        (u.username || '').toLowerCase().includes(q) ||
-        (u.admin_notes || '').toLowerCase().includes(q)
-      )
-    }
-    return users
-  }, [userSummaries, filterGroup, searchQuery])
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     const av = a[sortField] ?? 0

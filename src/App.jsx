@@ -18,6 +18,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const FriendsPage = lazy(() => import('./pages/FriendsPage'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const NotesPage = lazy(() => import('./pages/NotesPage'))
 
 function Loading() {
   return (
@@ -45,6 +46,8 @@ function App() {
             <Route path="chat" element={<NPCChat />} />
             <Route path="review" element={<ReviewQueue />} />
             <Route path="friends" element={<FriendsPage />} />
+            <Route path="notes" element={<NotesPage />} />
+            <Route path="notes/:noteId" element={<NotesPage />} />
             <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           </Route>
           <Route index element={<Navigate to="/di-quest" replace />} />

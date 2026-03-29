@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
-import { Map, BarChart3, MessageCircle, Briefcase, RotateCcw, Search, Users, LogOut, LogIn, ChevronDown, Settings, Shield } from 'lucide-react'
+import { Map, BarChart3, MessageCircle, Briefcase, RotateCcw, Search, Users, LogOut, LogIn, ChevronDown, Settings, Shield, StickyNote } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQuest } from '../contexts/QuestContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,6 +13,7 @@ import DailyCheckinModal from './DailyCheckinModal'
 import ProfileSetupModal from './ProfileSetupModal'
 import UserAvatar from './UserAvatar'
 import AnnouncementBanner from './AnnouncementBanner'
+import NotesSidePanel from './NotesSidePanel'
 
 function Layout() {
   const { t } = useTranslation(['common', 'auth', 'social'])
@@ -22,6 +23,7 @@ function Layout() {
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [checkinModalOpen, setCheckinModalOpen] = useState(false)
@@ -55,7 +57,11 @@ function Layout() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
         e.preventDefault()
-        setChatOpen(prev => !prev)
+        setChatOpen(prev => { if (!prev) setNotesOpen(false); return !prev })
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault()
+        setNotesOpen(prev => { if (!prev) setChatOpen(false); return !prev })
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -247,25 +253,39 @@ function Layout() {
 
         {/* 側邊欄模式：講義/題目頁推開內容 */}
         {isContentPage && (
-          <ChatPanel
-            isOpen={chatOpen}
-            onClose={() => setChatOpen(false)}
-            selectedText={selectedText}
-            onClearSelection={() => setSelectedText('')}
-            mode="sidebar"
-          />
+          <>
+            <ChatPanel
+              isOpen={chatOpen}
+              onClose={() => setChatOpen(false)}
+              selectedText={selectedText}
+              onClearSelection={() => setSelectedText('')}
+              mode="sidebar"
+            />
+            <NotesSidePanel
+              isOpen={notesOpen}
+              onClose={() => setNotesOpen(false)}
+              mode="sidebar"
+            />
+          </>
         )}
       </div>
 
       {/* 全螢幕覆蓋模式：主畫面（地圖/進度/複習） */}
       {!isContentPage && (
-        <ChatPanel
-          isOpen={chatOpen}
-          onClose={() => setChatOpen(false)}
-          selectedText={selectedText}
-          onClearSelection={() => setSelectedText('')}
-          mode="overlay"
-        />
+        <>
+          <ChatPanel
+            isOpen={chatOpen}
+            onClose={() => setChatOpen(false)}
+            selectedText={selectedText}
+            onClearSelection={() => setSelectedText('')}
+            mode="overlay"
+          />
+          <NotesSidePanel
+            isOpen={notesOpen}
+            onClose={() => setNotesOpen(false)}
+            mode="overlay"
+          />
+        </>
       )}
 
       {/* 選取文字後的浮動「問小迪」按鈕 */}
@@ -291,7 +311,7 @@ function Layout() {
         className={`fixed flex flex-col gap-2 sm:gap-3 z-50 transition-all duration-300 ${
           isArena ? 'bottom-3 scale-75 opacity-70 hover:opacity-100 hover:scale-100' : 'bottom-4 sm:bottom-6'
         }`}
-        style={{ right: chatOpen && isContentPage ? 'max(1rem, calc(min(380px, 100vw) + 1.5rem))' : isArena ? '0.75rem' : '1rem' }}
+        style={{ right: (chatOpen || notesOpen) && isContentPage ? 'max(1rem, calc(min(380px, 100vw) + 1.5rem))' : isArena ? '0.75rem' : '1rem' }}
         aria-label={t('float.navLabel', 'Quick navigation')}
       >
         <NavLink
@@ -344,8 +364,18 @@ function Layout() {
           <Users className="w-4 h-4 sm:w-5 sm:h-5" />
         </NavLink>
         <button
-          onClick={() => setChatOpen(prev => !prev)}
-          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl ${
+          onClick={() => { setNotesOpen(prev => { if (!prev) setChatOpen(false); return !prev }) }}
+          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl cursor-pointer ${
+            notesOpen ? 'bg-amber-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+          aria-label={`${t('notes:title', 'Notes')} (⌘N)`}
+          aria-expanded={notesOpen}
+        >
+          <StickyNote className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+        <button
+          onClick={() => { setChatOpen(prev => { if (!prev) setNotesOpen(false); return !prev }) }}
+          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition-all hover:shadow-xl cursor-pointer ${
             chatOpen ? 'bg-brand-accent text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
           }`}
           aria-label={`${t('float.askXiaoDi')} (⌘J)`}
