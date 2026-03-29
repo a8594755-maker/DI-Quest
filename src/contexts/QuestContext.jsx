@@ -296,7 +296,7 @@ export function QuestProvider({ children }) {
     if (!isAuthenticated) setCloudSynced(true)
   }, [isAuthenticated])
 
-  // Load from cloud on first auth — merge with local (keep the version with more progress)
+  // Load from cloud on first auth — cloud is the single source of truth
   useEffect(() => {
     if (!isAuthenticated || !user || cloudLoadedRef.current) return
     cloudLoadedRef.current = true
@@ -309,7 +309,6 @@ export function QuestProvider({ children }) {
           .eq('user_id', user.id)
           .single()
 
-        // Always check if user already checked in today via daily_checkins table
         const today = getLocalToday()
         const { data: checkinData } = await supabase
           .from('daily_checkins')
@@ -318,43 +317,17 @@ export function QuestProvider({ children }) {
           .eq('checkin_date', today)
           .maybeSingle()
 
-        const localState = loadState()
         const cloudProgress = data?.progress_data
         const hasCloud = cloudProgress && Object.keys(cloudProgress).length > 0
 
         if (hasCloud) {
-          // Merge: pick the version with more progress, not blindly overwrite
-          const localXp = localState.totalXp || 0
-          const cloudXp = cloudProgress.totalXp || 0
-          const localChallenges = Object.keys(localState.challengeStatus || {}).length
-          const cloudChallenges = Object.keys(cloudProgress.challengeStatus || {}).length
-
-          // Always deep merge — never discard either side
-          const merged = {
-            ...initialState,
-            ...cloudProgress,
-            ...localState,
-            challengeStatus: { ...cloudProgress.challengeStatus, ...localState.challengeStatus },
-            questStatus: { ...cloudProgress.questStatus, ...localState.questStatus },
-            reviewSchedule: { ...cloudProgress.reviewSchedule, ...localState.reviewSchedule },
-            achievements: [...new Set([...(cloudProgress.achievements || []), ...(localState.achievements || [])])],
-            totalXp: Math.max(localXp, cloudXp),
-            streakDays: Math.max(localState.streakDays || 0, cloudProgress.streakDays || 0),
-            longestStreak: Math.max(localState.longestStreak || 0, cloudProgress.longestStreak || 0),
-            analytics: {
-              challengeTimings: { ...(cloudProgress.analytics?.challengeTimings || {}), ...(localState.analytics?.challengeTimings || {}) },
-              dailyStats: { ...(cloudProgress.analytics?.dailyStats || {}), ...(localState.analytics?.dailyStats || {}) },
-            },
-            checkedInToday: !!checkinData,
-          }
-
-          dispatch({ type: 'SYNC_FROM_CLOUD', payload: merged })
+          // Cloud is source of truth — use cloud data directly
+          const payload = { ...initialState, ...cloudProgress, checkedInToday: !!checkinData }
+          dispatch({ type: 'SYNC_FROM_CLOUD', payload })
           dispatch({ type: 'UPDATE_STREAK' })
-
-          // Push merged result to cloud so both sides stay in sync
-          await saveToCloud(merged)
         } else {
-          // Cloud data empty — still sync checkin status, then save local to cloud
+          // First login, no cloud data yet — push local to cloud
+          const localState = loadState()
           if (checkinData) {
             dispatch({ type: 'SYNC_FROM_CLOUD', payload: { ...localState, checkedInToday: true } })
           }
