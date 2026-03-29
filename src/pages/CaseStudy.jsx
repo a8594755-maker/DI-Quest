@@ -13,6 +13,10 @@ import SimpleChart from '../components/SimpleChart'
 import MultipleChoice from '../components/MultipleChoice'
 import OpenEndedAnswer from '../components/OpenEndedAnswer'
 import CodeChallenge from '../components/CodeChallenge'
+import PythonChallenge from '../components/PythonChallenge'
+
+// Python worlds use Pyodide instead of sql.js
+const PYTHON_WORLD_IDS = new Set([15, 16, 17, 18, 19, 20, 21, 22])
 
 function CaseStudy() {
   const { t } = useTranslation(['case', 'common'])
@@ -203,6 +207,20 @@ function CaseStudy() {
           sampleAnswer={challenge.sampleAnswer}
           scenario={challenge.scenario}
           onSubmit={handleOpenEndedSubmit}
+          disabled={submitted}
+        />
+      ) : challenge.type === 'code' && PYTHON_WORLD_IDS.has(Number(worldId)) ? (
+        <PythonChallenge
+          key={`${questId}-${challengeId}`}
+          question={challenge.question}
+          starterCode={challenge.starterCode || ''}
+          expectedQuery={challenge.expectedQuery}
+          testCases={challenge.testCases}
+          onAnswer={(isCorrect, code) => {
+            setAttempts(prev => prev + 1)
+            setAnswerCorrect(isCorrect)
+            if (isCorrect) completeChallenge(100)
+          }}
           disabled={submitted}
         />
       ) : challenge.type === 'code' ? (
