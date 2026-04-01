@@ -1,6 +1,11 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
+/** Format a Date as YYYY-MM-DD in local timezone (avoids UTC shift from toISOString) */
+function toLocalDateStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 function StreakCalendar({ checkinDates = [], mode = 'week' }) {
   const { t } = useTranslation('social')
 
@@ -11,15 +16,14 @@ function StreakCalendar({ checkinDates = [], mode = 'week' }) {
     today.setHours(0, 0, 0, 0)
 
     const dateSet = new Set(checkinDates.map(d => {
-      const date = new Date(d)
-      date.setHours(0, 0, 0, 0)
-      return date.toISOString().slice(0, 10)
+      const date = new Date(d + 'T00:00:00')
+      return toLocalDateStr(date)
     }))
 
     for (let i = count - 1; i >= 0; i--) {
       const date = new Date(today)
       date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().slice(0, 10)
+      const dateStr = toLocalDateStr(date)
       const isToday = i === 0
       const isCheckedIn = dateSet.has(dateStr)
       const dayOfWeek = date.getDay()
